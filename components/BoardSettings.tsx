@@ -26,10 +26,17 @@ export function BoardSettings() {
 
   const copyLink = (): void => {
     const url = shareUrl(window.location.href, design)
-    window.history.replaceState(null, '', url)
-    void navigator.clipboard?.writeText(url)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2500)
+    // Адресную строку не трогаем: хэш - это только содержимое буфера обмена,
+    // иначе он навсегда пришпилит вкладку к снимку и съест автосохранение при перезагрузке.
+    navigator.clipboard
+      ?.writeText(url)
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2500)
+      })
+      .catch(() => {
+        // Буфер обмена недоступен - молча остаёмся без успеха, ничего не ломаем.
+      })
   }
 
   return (

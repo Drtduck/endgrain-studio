@@ -50,17 +50,28 @@ export function makeDebouncedSaver(save: (design: Design) => void, delayMs: numb
   }
 }
 
+export interface InitialDesign {
+  design: Design | null
+  /** true, только если документ реально декодирован из хэша, а не подставлен из localStorage. */
+  fromHash: boolean
+}
+
 /** Ссылка важнее автосохранения: человек прислал проект, его и открываем. */
-export function readInitialDesign(hash: string): Design | null {
+export function readInitialDesignDetailed(hash: string): InitialDesign {
   const raw = hash.replace(/^#/, '')
   if (raw.length > 0) {
     try {
-      return decodeDesignFromHash(raw)
+      return { design: decodeDesignFromHash(raw), fromHash: true }
     } catch {
       // Битая ссылка не должна стирать локальную работу: молча идём в localStorage.
     }
   }
-  return loadFromLocalStorage()
+  return { design: loadFromLocalStorage(), fromHash: false }
+}
+
+/** Ссылка важнее автосохранения: человек прислал проект, его и открываем. */
+export function readInitialDesign(hash: string): Design | null {
+  return readInitialDesignDetailed(hash).design
 }
 
 export function shareUrl(href: string, design: Design): string {
@@ -69,13 +80,24 @@ export function shareUrl(href: string, design: Design): string {
 }
 
 /**
+ * Стирает хэш из адресной строки после того, как документ из него восстановлен.
+ * Иначе ссылка на снимок навсегда перевешивает автосохранение: любая правка уйдёт
+ * в localStorage, но при перезагрузке хэш опять победит и молча съест эти правки.
+ */
+function clearHashFromAddressBar(): void {
+  if (typeof window === 'undefined') return
+  window.history.replaceState(null, '', window.location.pathname + window.location.search)
+}
+
+/**
  * Единственное место, где стор встречается с браузером: подъём документа при монтировании
  * (после гидратации, поэтому серверная и клиентская разметка совпадают) и автосохранение.
  */
 export function useStudioPersistence(): void {
   useEffect(() => {
-    const restored = readInitialDesign(window.location.hash)
+    const { design: restored, fromHash } = readInitialDesignDetailed(window.location.hash)
     if (restored) useStudio.getState().loadDesign(restored)
+    if (restored && fromHash) clearHashFromAddressBar()
 
     const saver = makeDebouncedSaver(saveToLocalStorage)
     const unsubscribe = useStudio.subscribe((state, prev) => {

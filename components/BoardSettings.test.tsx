@@ -59,4 +59,23 @@ describe('BoardSettings', () => {
     expect(String(writeText.mock.calls[0]?.[0])).toContain('#')
     expect(await screen.findByText('Ссылка скопирована')).toBeDefined()
   })
+
+  it('не трогает адресную строку при копировании ссылки', () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    const replaceState = vi.spyOn(window.history, 'replaceState')
+    render(<BoardSettings />)
+    fireEvent.click(screen.getByTestId('share-copy'))
+    expect(replaceState).not.toHaveBeenCalled()
+    replaceState.mockRestore()
+  })
+
+  it('не показывает успех, если буфер обмена отказал', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('нет доступа'))
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    render(<BoardSettings />)
+    fireEvent.click(screen.getByTestId('share-copy'))
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalledTimes(1))
+    expect(screen.queryByText('Ссылка скопирована')).toBeNull()
+  })
 })

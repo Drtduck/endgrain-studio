@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
 import { baseDesign } from '@/lib/engine'
 import { LS_CURRENT_KEY, encodeDesignToHash, serializeDesign } from '@/lib/persist'
-import { makeDebouncedSaver, readInitialDesign, shareUrl, SAVE_DEBOUNCE_MS } from './persist'
+import { makeDebouncedSaver, readInitialDesign, shareUrl, useStudioPersistence, SAVE_DEBOUNCE_MS } from './persist'
 
 describe('makeDebouncedSaver', () => {
   beforeEach(() => vi.useFakeTimers())
@@ -64,5 +65,28 @@ describe('shareUrl', () => {
     const url = shareUrl('https://endgrain.example/studio#старое', baseDesign())
     expect(url.startsWith('https://endgrain.example/studio#')).toBe(true)
     expect(url.includes('старое')).toBe(false)
+  })
+})
+
+describe('useStudioPersistence', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+    window.location.hash = ''
+  })
+  afterEach(() => {
+    window.location.hash = ''
+  })
+
+  it('снимает хэш ссылки из адресной строки после восстановления документа', () => {
+    window.location.hash = encodeDesignToHash(baseDesign({ name: 'из ссылки' }))
+    const { unmount } = renderHook(() => useStudioPersistence())
+    expect(window.location.hash).toBe('')
+    unmount()
+  })
+
+  it('не трогает адресную строку, если ссылки не было', () => {
+    const { unmount } = renderHook(() => useStudioPersistence())
+    expect(window.location.hash).toBe('')
+    unmount()
   })
 })
