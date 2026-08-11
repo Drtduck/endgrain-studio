@@ -36,7 +36,7 @@ export function cutPlanToCsv(plan: CutPlan, options: CsvOptions): string {
       )
     }
     panel.crosscuts.forEach((cut, index) => {
-      rows.push(['crosscut', panel.panelId, index + 1, plan.designName, panel.widthMm, '', cut.thicknessMm, cut.rowNumber ?? 'inlay'])
+      rows.push(['crosscut', panel.panelId, index + 1, '', panel.widthMm, '', cut.thicknessMm, cut.rowNumber ?? 'inlay'])
     })
   }
 

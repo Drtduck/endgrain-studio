@@ -22,9 +22,18 @@ describe('cutPlanToCsv', () => {
     expect(csv).not.toContain(',')
   })
 
-  it('экранирует разделитель и кавычки в названии', () => {
-    const tricky = cutPlanToCsv({ ...plan, designName: 'до;ска "тест"' }, { locale: 'ru' })
+  it('экранирует разделитель и кавычки в идентификаторе панели', () => {
+    const trickyId = 'до;ска "тест"'
+    const trickyPanels = plan.panels.map((p, i) => (i === 0 ? { ...p, panelId: trickyId } : p))
+    const tricky = cutPlanToCsv({ ...plan, panels: trickyPanels }, { locale: 'ru' })
     expect(tricky).toContain('"до;ска ""тест"""')
+  })
+
+  it('колонка species у поперечного реза пустая, а не название проекта', () => {
+    const crosscutLine = lines.find((l) => l.startsWith('crosscut'))
+    expect(crosscutLine).toBeDefined()
+    const cols = crosscutLine?.split(';') ?? []
+    expect(cols[3]).toBe('')
   })
 
   it('не содержит длинного тире', () => {

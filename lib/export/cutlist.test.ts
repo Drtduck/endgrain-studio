@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeCheckerboard } from '@/lib/designs/samples'
-import { panelLengthMm, panelWidthMm, rowBandsMm, slicesOfPanel, type Design } from '@/lib/engine'
+import { compile, panelLengthMm, panelWidthMm, rowBandsMm, slicesOfPanel, type Design } from '@/lib/engine'
 import { t } from '@/lib/i18n'
 import { buildCutPlan, buildGlueUpSteps } from './cutlist'
 
@@ -103,6 +103,24 @@ describe('buildCutPlan', () => {
     expect(() => buildCutPlan(orphan)).not.toThrow()
     expect(buildCutPlan(orphan).panels.every((p) => p.lengthMm === 0)).toBe(true)
   })
+
+  it('регрессия: габариты доски в плане берутся из скомпилированной модели, а не из target-размеров дизайна', () => {
+    // Пользователь подвинул слайдеры размера доски (target 300x400), но полосы не перефитились:
+    // фактическая склеенная доска остаётся 240x240. PDF, превью и карта раскроя должны
+    // сходиться на одной цифре, иначе доску по инструкции не собрать.
+    const mismatched: Design = {
+      ...design,
+      board: { ...design.board, targetWidthMm: 300, targetLengthMm: 400 },
+    }
+    const model = compile(mismatched)
+    const plan = buildCutPlan(mismatched)
+    expect(plan.boardWidthMm).toBe(model.widthMm)
+    expect(plan.boardLengthMm).toBe(model.lengthMm)
+    expect(plan.boardWidthMm).toBe(240)
+    expect(plan.boardLengthMm).toBe(240)
+    expect(plan.boardWidthMm).not.toBe(300)
+    expect(plan.boardLengthMm).not.toBe(400)
+  })
 })
 
 describe('buildGlueUpSteps', () => {
@@ -153,5 +171,55 @@ describe('buildGlueUpSteps', () => {
         expect(t(locale, step.messageKey, step.params)).not.toMatch(/\{[a-zA-Z]+\}/)
       }
     }
+  })
+
+  it('регрессия: русское склонение числительного в шагах crosscut и gluePanel для 1, 2 и 5', () => {
+    // Одна панель с ровно 1, 2 и 5 полосами: три панели, чтобы получить все три формы разом.
+    const glueDesign: Design = {
+      ...design,
+      panels: [
+        { id: 'ONE', elements: [{ kind: 'strip', speciesId: 'maple', widthMm: 30 }] },
+        { id: 'TWO', elements: [{ kind: 'strip', speciesId: 'maple', widthMm: 30 }, { kind: 'strip', speciesId: 'maple', widthMm: 30 }] },
+        {
+          id: 'FIVE',
+          elements: Array.from({ length: 5 }, () => ({ kind: 'strip' as const, speciesId: 'maple' as const, widthMm: 30 })),
+        },
+      ],
+      rows: [
+        { id: 'g1', panelId: 'ONE', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 },
+        { id: 'g2', panelId: 'TWO', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 },
+        { id: 'g3', panelId: 'FIVE', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 },
+      ],
+    }
+    const glueSteps = buildGlueUpSteps(buildCutPlan(glueDesign), 'ru')
+    const gluePanelSteps = glueSteps.filter((s) => s.kind === 'glue-panel')
+    const byPanel = (id: string) => gluePanelSteps.find((s) => s.panelId === id)
+    expect(t('ru', byPanel('ONE')!.messageKey, byPanel('ONE')!.params)).toContain('из 1 заготовки')
+    expect(t('ru', byPanel('TWO')!.messageKey, byPanel('TWO')!.params)).toContain('из 2 заготовок')
+    expect(t('ru', byPanel('FIVE')!.messageKey, byPanel('FIVE')!.params)).toContain('из 5 заготовок')
+
+    // crosscut: панель со срезами вложенного щита, число вклеек 1/2/5.
+    const inner = design.panels[0]
+    if (!inner) throw new Error('фикстура сломана')
+    const crosscutDesign = (count: number): Design => ({
+      ...design,
+      panels: [
+        inner,
+        {
+          id: 'CC',
+          elements: Array.from({ length: count }, () => ({ kind: 'sliceRef' as const, panelId: inner.id, thicknessMm: 5, angleDeg: 0, offsetMm: 0 })),
+        },
+      ],
+      rows: [{ id: 'cc', panelId: 'CC', thicknessMm: 5 * count, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+    })
+    const crosscutWord = (count: number): string => {
+      const p = buildCutPlan(crosscutDesign(count))
+      const steps = buildGlueUpSteps(p, 'ru')
+      const step = steps.find((s) => s.kind === 'crosscut' && s.panelId === inner.id)
+      return t('ru', step!.messageKey, step!.params)
+    }
+    expect(crosscutWord(1)).toContain('на 1 срез:')
+    expect(crosscutWord(2)).toContain('на 2 среза:')
+    expect(crosscutWord(5)).toContain('на 5 срезов:')
   })
 })

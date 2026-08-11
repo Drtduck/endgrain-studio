@@ -13,10 +13,12 @@ describe('чистая половина lib/export', () => {
     })
   }
 
-  it('барель не тянет браузерные модули', () => {
-    const source = readFileSync(join(process.cwd(), 'lib/export/index.ts'), 'utf8')
-    for (const browserOnly of ['./png', './pdf', './download', './pdfFont']) {
-      expect(source).not.toContain(browserOnly)
-    }
-  })
+  for (const file of PURE_FILES) {
+    it(`${file} не тянет браузерные модули относительным импортом`, () => {
+      const source = readFileSync(join(process.cwd(), 'lib/export', file), 'utf8')
+      for (const browserOnly of ['./png', './pdf', './download', './pdfFont']) {
+        expect(source, `${file} содержит импорт ${browserOnly}`).not.toContain(browserOnly)
+      }
+    })
+  }
 })

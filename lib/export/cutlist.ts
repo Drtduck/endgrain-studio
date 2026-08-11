@@ -1,4 +1,5 @@
 import {
+  compile,
   isSliceRef,
   isStrip,
   panelLengthMm,
@@ -12,7 +13,7 @@ import {
   type RowId,
   type SpeciesId,
 } from '@/lib/engine'
-import { t, type Locale, type MessageKey } from '@/lib/i18n'
+import { plural, t, type Locale, type MessageKey } from '@/lib/i18n'
 import { bothUnits, speciesName } from './format'
 
 export interface StripPiece {
@@ -120,6 +121,11 @@ export function buildCutPlan(design: Design): CutPlan {
   // Нумерация рядов берётся у rowBandsMm, а не у design.rows: движок пропускает
   // ряды с несуществующей панелью, и на холсте пользователь видит именно эту нумерацию.
   const bands = rowBandsMm(design)
+  // Габариты итоговой доски берутся из скомпилированной модели, а не из design.board.target*:
+  // пользователь может подвинуть слайдер размера, не подгоняя полосы под него, и тогда
+  // фактическая доска после сборки будет отличаться от заданной цели. PDF, SVG-превью и
+  // финальный шаг склейки должны показывать одну и ту же цифру, поэтому источник один - compile().
+  const compiledModel = compile(design)
   const rowNumberById = new Map<RowId, number>(bands.map((b, index) => [b.id, index + 1]))
 
   const rows: RowPlan[] = bands.flatMap((band, index) => {
@@ -162,8 +168,8 @@ export function buildCutPlan(design: Design): CutPlan {
     rows,
     kerfMm: design.kerfMm,
     planingAllowanceMm: design.planingAllowanceMm,
-    boardWidthMm: design.board.targetWidthMm,
-    boardLengthMm: design.board.targetLengthMm,
+    boardWidthMm: compiledModel.widthMm,
+    boardLengthMm: compiledModel.lengthMm,
     boardThicknessMm: design.board.thicknessMm,
     stripCount: panels.reduce((s, p) => s + p.pieces.filter((x) => x.kind === 'strip').length, 0),
     crosscutCount: panels.reduce((s, p) => s + p.crosscuts.length, 0),
@@ -217,6 +223,10 @@ export function buildGlueUpSteps(plan: CutPlan, locale: Locale): readonly GlueUp
     push('glue-panel', 'steps.gluePanel', {
       panel: panel.panelId,
       count: panel.pieces.length,
+      // "из N X": предлог требует родительного падежа. У родительного падежа своя пара форм -
+      // единственное для 1 ("заготовки") и множественное для остальных ("заготовок"),
+      // трёхчленное деление one/few/many тут вырождается в двухчленное.
+      countWord: plural(locale, panel.pieces.length, { ru: ['заготовки', 'заготовок', 'заготовок'], en: ['piece', 'pieces'] }),
       width: bothUnits(panel.widthMm, locale),
     }, panel.panelId)
 
@@ -228,6 +238,7 @@ export function buildGlueUpSteps(plan: CutPlan, locale: Locale): readonly GlueUp
     push('crosscut', 'steps.crosscut', {
       panel: panel.panelId,
       count: panel.crosscuts.length,
+      countWord: plural(locale, panel.crosscuts.length, { ru: ['срез', 'среза', 'срезов'], en: ['slice', 'slices'] }),
       list: panel.crosscuts
         .map((c) => (c.rowNumber === null ? bothUnits(c.thicknessMm, locale) : `${bothUnits(c.thicknessMm, locale)} -> ${c.rowNumber}`))
         .join('; '),
