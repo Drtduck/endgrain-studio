@@ -81,11 +81,13 @@ describe('PhotoImport', () => {
   })
 
   it('ползунок числа пород меняет узор', async () => {
-    const { container } = render(<PhotoImport />)
+    render(<PhotoImport />)
     await upload()
-    const before = container.querySelector('svg')?.innerHTML
+    const before = screen.getByTestId('photo-preview').querySelector('svg')?.innerHTML
     fireEvent.change(screen.getByTestId('photo-colors'), { target: { value: '5' } })
-    await waitFor(() => expect(container.querySelector('svg')?.innerHTML).not.toBe(before))
+    await waitFor(() =>
+      expect(screen.getByTestId('photo-preview').querySelector('svg')?.innerHTML).not.toBe(before),
+    )
   })
 
   it('ползунок щитов меняет число склеек в подписи', async () => {
