@@ -19,3 +19,14 @@ export {
   type Genome,
 } from './genome'
 export { FAMILIES, familyById, toDesign, type GeneratorFamily } from './families'
+export {
+  POPULATION_SIZE,
+  applyParams,
+  crossover,
+  mutate,
+  nextGeneration,
+  reshuffle,
+  seedPopulation,
+  type Individual,
+  type Population,
+} from './evolve'
