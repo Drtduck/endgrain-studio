@@ -14,7 +14,7 @@ export function LocaleToggle({ locale, onChange }: { locale: Locale; onChange: (
   return (
     <div className="flex gap-1" role="group" aria-label={t(locale, 'aria.localeGroup')}>
       {(['ru', 'en'] as const).map((l) => (
-        <Button key={l} size="sm" variant={l === locale ? 'default' : 'outline'} onClick={() => onChange(l)}>
+        <Button key={l} data-testid={`locale-${l}`} size="sm" variant={l === locale ? 'default' : 'outline'} onClick={() => onChange(l)}>
           {t(locale, l === 'ru' ? 'locale.ru' : 'locale.en')}
         </Button>
       ))}

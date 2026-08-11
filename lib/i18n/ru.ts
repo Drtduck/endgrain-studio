@@ -208,6 +208,16 @@ const ru = {
   'cut.totals': 'Полос: {strips}, резов: {cuts}, склеек: {glueUps}',
   'cut.truncated': 'Внимание: модель обрезана по лимиту ячеек, экспорт неполный',
   'cut.pcs': 'шт',
+  'export.title': 'Экспорт',
+  'export.hint': 'PNG и SVG для показа, CSV и PDF для цеха',
+  'export.png': 'PNG',
+  'export.svg': 'SVG',
+  'export.csv': 'CSV',
+  'export.pdf': 'PDF',
+  'export.busy': 'Готовим',
+  'export.error': 'Не получилось собрать файл. Попробуйте ещё раз',
+  'export.caption': '{name}: {width} на {length}, толщина {thickness}',
+  'aria.exportPanel': 'экспорт проекта',
 } as const
 
 export default ru

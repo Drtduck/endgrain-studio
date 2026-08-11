@@ -210,6 +210,16 @@ const en: Record<keyof typeof ru, string> = {
   'cut.totals': 'Strips: {strips}, cuts: {cuts}, glue-ups: {glueUps}',
   'cut.truncated': 'Warning: the model was truncated by the cell budget, this export is incomplete',
   'cut.pcs': 'pcs',
+  'export.title': 'Export',
+  'export.hint': 'PNG and SVG to show, CSV and PDF for the shop',
+  'export.png': 'PNG',
+  'export.svg': 'SVG',
+  'export.csv': 'CSV',
+  'export.pdf': 'PDF',
+  'export.busy': 'Working',
+  'export.error': 'Could not build the file. Please try again',
+  'export.caption': '{name}: {width} by {length}, thickness {thickness}',
+  'aria.exportPanel': 'project export',
 }
 
 export default en

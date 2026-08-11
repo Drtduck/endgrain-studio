@@ -5,6 +5,7 @@ import { BoardCanvas } from '@/components/BoardCanvas'
 import { BoardSettings } from '@/components/BoardSettings'
 import { ComplexityMeter } from '@/components/ComplexityMeter'
 import { DiagnosticsPanel } from '@/components/DiagnosticsPanel'
+import { ExportPanel } from '@/components/ExportPanel'
 import { ForkDialog } from '@/components/ForkDialog'
 import { GeneratorPanel } from '@/components/GeneratorPanel'
 import { HistoryControls } from '@/components/HistoryControls'
@@ -67,6 +68,7 @@ export function StudioShell() {
             <SpeciesPalette />
             <BoardSettings />
             <ComplexityMeter locale={locale} calc={calc} diagnostics={diagnostics} unit={unit} model={model} />
+            <ExportPanel />
             <DiagnosticsPanel />
           </aside>
         </div>
