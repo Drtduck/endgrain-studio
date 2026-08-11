@@ -17,3 +17,4 @@ export {
 export { compile } from './compile'
 export { validate, hasErrors, type ValidateOptions } from './validate'
 export { baseDesign, stripsPanel } from './fixtures'
+export { applyPaint, splitPanel, type PaintCost, type PaintResult } from './edit'
