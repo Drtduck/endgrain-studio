@@ -14,3 +14,5 @@ export {
   usageCount,
   nextPanelId,
 } from './panels'
+export { compile } from './compile'
+export { baseDesign, stripsPanel } from './fixtures'
