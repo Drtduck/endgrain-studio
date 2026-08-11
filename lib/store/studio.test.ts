@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { baseDesign } from '@/lib/engine'
+import { baseDesign, validate } from '@/lib/engine'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import { seedPopulation } from '@/lib/generators'
 import { FAMILY_IDS } from '@/lib/generators/genome'
@@ -100,6 +100,19 @@ describe('studio store: settings, selection, history', () => {
     const reverted = selectDesign(store.getState())
     expect(reverted.board.targetLengthMm).toBe(60)
     expect(reverted.rows.map((r) => r.thicknessMm)).toEqual(beforeThicknesses)
+  })
+
+  it('крайнее уменьшение ширины доски не роняет стор, а даёт MIN_STRIP_WIDTH при валидации', () => {
+    const store = createStudioStore(baseDesign())
+    expect(() => store.getState().setBoardWidthMm(0.5)).not.toThrow()
+    const design = selectDesign(store.getState())
+    expect(design.board.targetWidthMm).toBe(0.5)
+    for (const panel of design.panels) {
+      for (const el of panel.elements) {
+        if (el.kind === 'strip') expect(el.widthMm).toBeGreaterThanOrEqual(0.5)
+      }
+    }
+    expect(validate(design).map((d) => d.code)).toContain('MIN_STRIP_WIDTH')
   })
 
   it('setBoardWidthMm/LengthMm no-ops on non finite, zero or negative input', () => {
