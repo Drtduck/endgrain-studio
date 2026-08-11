@@ -19,6 +19,11 @@ import { buildInstances, cameraDistance, type SpeciesGroup } from '@/lib/render3
 
 const NO_ROTATION = new Quaternion()
 
+// three.js цвета не понимают CSS-переменные, поэтому держим значения токенов явными
+// константами: SCENE_BG = --bg-canvas, SCENE_GROUND = затемнённый --bg-canvas для hemisphere light.
+const SCENE_BG = '#E9E3D8'
+const SCENE_GROUND = '#B9A893'
+
 /**
  * Одна порода = один InstancedMesh. Матрицы и цвета пишутся императивно:
  * React-элемент на каждую ячейку стоил бы 4000 узлов дерева ради данных,
@@ -110,9 +115,9 @@ export function Board3D({ model, label }: { model: BoardModel; label: string }) 
       aria-label={label}
       className="h-full w-full"
     >
-      <color attach="background" args={['#f3efe9']} />
+      <color attach="background" args={[SCENE_BG]} />
       <ambientLight intensity={0.55} />
-      <hemisphereLight intensity={0.35} groundColor="#b9a893" />
+      <hemisphereLight intensity={0.35} groundColor={SCENE_GROUND} />
       <directionalLight
         position={[distance, distance * 1.5, distance * 0.6]}
         intensity={1.4}
