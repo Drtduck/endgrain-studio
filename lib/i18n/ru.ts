@@ -189,9 +189,9 @@ const ru = {
   'steps.title': 'Схема переклеек',
   'steps.rip': 'Распустить полосы для щита {panel}: {pieces}. Длина каждой полосы {length}, толщина заготовки {thickness}',
   'steps.inlay': 'Нарезать щит {source} на срезы по {thickness} и вклеить их в щит {panel} со сдвигом {offset}',
-  'steps.gluePanel': 'Склеить щит {panel} из {count} заготовок. Ширина щита {width}',
+  'steps.gluePanel': 'Склеить щит {panel} из {count} {countWord}. Ширина щита {width}',
   'steps.plane': 'Отфуговать и прострогать щит {panel} в толщину {thickness}',
-  'steps.crosscut': 'Распустить щит {panel} поперёк на {count} срезов: {list}. Пропил {kerf}',
+  'steps.crosscut': 'Распустить щит {panel} поперёк на {count} {countWord}: {list}. Пропил {kerf}',
   'steps.arrange': 'Разложить {count} рядов в порядке с 1 по {count}. Перевернуть: {flip}. Зеркалить: {mirror}',
   'steps.finalGlue': 'Склеить финальную доску: {width} на {length}',
   'steps.flatten': 'Выровнять доску в толщину {thickness}, снять фаски, отшлифовать',
@@ -217,6 +217,7 @@ const ru = {
   'export.busy': 'Готовим',
   'export.error': 'Не получилось собрать файл. Попробуйте ещё раз',
   'export.caption': '{name}: {width} на {length}, толщина {thickness}',
+  'export.truncated': 'Модель обрезана по лимиту ячеек, экспорт неполный',
   'aria.exportPanel': 'экспорт проекта',
 } as const
 

@@ -28,12 +28,15 @@ export function ExportPanel() {
   const [busy, setBusy] = useState<ExportFormat | null>(null)
   const [failed, setFailed] = useState(false)
 
-  const caption = t(locale, 'export.caption', {
-    name: design.name,
-    width: bothUnits(model.widthMm, locale, 0),
-    length: bothUnits(model.lengthMm, locale, 0),
-    thickness: bothUnits(model.thicknessMm, locale, 0),
-  })
+  // SVG/PNG подписи должны нести то же предупреждение, что и первая страница PDF:
+  // усечённая по бюджету ячеек модель одинаково неполна в любом формате экспорта.
+  const caption =
+    t(locale, 'export.caption', {
+      name: design.name,
+      width: bothUnits(model.widthMm, locale, 0),
+      length: bothUnits(model.lengthMm, locale, 0),
+      thickness: bothUnits(model.thicknessMm, locale, 0),
+    }) + (model.truncated ? ` ${t(locale, 'export.truncated')}` : '')
 
   const run = async (format: ExportFormat): Promise<void> => {
     setBusy(format)

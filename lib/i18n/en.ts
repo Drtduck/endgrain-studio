@@ -191,9 +191,9 @@ const en: Record<keyof typeof ru, string> = {
   'steps.title': 'Glue-up sequence',
   'steps.rip': 'Rip strips for panel {panel}: {pieces}. Each strip {length} long, stock thickness {thickness}',
   'steps.inlay': 'Crosscut panel {source} into {thickness} slices and glue them into panel {panel} with a {offset} offset',
-  'steps.gluePanel': 'Glue up panel {panel} from {count} pieces. Panel width {width}',
+  'steps.gluePanel': 'Glue up panel {panel} from {count} {countWord}. Panel width {width}',
   'steps.plane': 'Joint and plane panel {panel} to {thickness}',
-  'steps.crosscut': 'Crosscut panel {panel} into {count} slices: {list}. Kerf {kerf}',
+  'steps.crosscut': 'Crosscut panel {panel} into {count} {countWord}: {list}. Kerf {kerf}',
   'steps.arrange': 'Lay out {count} rows in order 1 to {count}. Flip: {flip}. Mirror: {mirror}',
   'steps.finalGlue': 'Glue the final board: {width} by {length}',
   'steps.flatten': 'Flatten the board to {thickness}, chamfer the edges, sand',
@@ -219,6 +219,7 @@ const en: Record<keyof typeof ru, string> = {
   'export.busy': 'Working',
   'export.error': 'Could not build the file. Please try again',
   'export.caption': '{name}: {width} by {length}, thickness {thickness}',
+  'export.truncated': 'The model was truncated by the cell budget, this export is incomplete',
   'aria.exportPanel': 'project export',
 }
 

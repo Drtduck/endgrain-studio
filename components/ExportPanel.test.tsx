@@ -12,9 +12,24 @@ vi.mock('@/lib/export/download', () => ({ downloadBlob: (...a: unknown[]) => dow
 vi.mock('@/lib/export/png', () => ({ svgToPngBlob: () => svgToPngBlob() }))
 vi.mock('@/lib/export/pdf', () => ({ buildInstructionPdf: () => buildInstructionPdf() }))
 
+// truncatedFlag живёт вне модуля-мока через vi.hoisted: фабрика vi.mock поднимается над
+// импортами, обычный `let` в этом файле попал бы в TDZ на момент её выполнения.
+const { truncatedFlag } = vi.hoisted(() => ({ truncatedFlag: { value: false } }))
+vi.mock('@/lib/store/derived', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/store/derived')>('@/lib/store/derived')
+  return {
+    ...actual,
+    useDerived: () => {
+      const real = actual.useDerived()
+      return truncatedFlag.value ? { ...real, model: { ...real.model, truncated: true } } : real
+    },
+  }
+})
+
 describe('ExportPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    truncatedFlag.value = false
     useStudio.getState().resetStudio()
   })
 
@@ -71,6 +86,17 @@ describe('ExportPanel', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
     expect(screen.getByTestId('export-pdf')).toBeEnabled()
     expect(downloadBlob).not.toHaveBeenCalled()
+  })
+
+  it('SVG и PNG подпись несёт предупреждение об усечённой модели', async () => {
+    truncatedFlag.value = true
+    render(<ExportPanel />)
+
+    fireEvent.click(screen.getByTestId('export-svg'))
+    expect(String(downloadText.mock.calls[0]?.[0])).toContain('обрезана по лимиту ячеек')
+
+    fireEvent.click(screen.getByTestId('export-png'))
+    await waitFor(() => expect(downloadBlob).toHaveBeenCalledTimes(1))
   })
 
   it('следует локали интерфейса', () => {

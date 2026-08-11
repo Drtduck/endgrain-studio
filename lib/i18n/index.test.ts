@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { dictionaries, t } from './index'
+import { dictionaries, plural, t } from './index'
 import ru from './ru'
 import en from './en'
 
@@ -37,5 +37,26 @@ describe('i18n', () => {
     const out = t('ru', 'diag.RAGGED_BOARD', { minMm: 100.10000000000001, maxMm: 120 })
     expect(out).not.toContain('000000')
     expect(out).toContain('100.1')
+  })
+
+  describe('plural', () => {
+    const forms = { ru: ['срез', 'среза', 'срезов'], en: ['slice', 'slices'] } as const
+
+    it('russian one/few/many by count', () => {
+      expect(plural('ru', 1, forms)).toBe('срез')
+      expect(plural('ru', 21, forms)).toBe('срез')
+      expect(plural('ru', 2, forms)).toBe('среза')
+      expect(plural('ru', 4, forms)).toBe('среза')
+      expect(plural('ru', 5, forms)).toBe('срезов')
+      expect(plural('ru', 0, forms)).toBe('срезов')
+      expect(plural('ru', 11, forms)).toBe('срезов')
+      expect(plural('ru', 14, forms)).toBe('срезов')
+    })
+
+    it('english singular/plural by count', () => {
+      expect(plural('en', 1, forms)).toBe('slice')
+      expect(plural('en', 2, forms)).toBe('slices')
+      expect(plural('en', 5, forms)).toBe('slices')
+    })
   })
 })
