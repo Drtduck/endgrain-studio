@@ -167,7 +167,7 @@ export function GeneratorPanel() {
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Button data-testid="gen-shuffle" className="w-full" onClick={() => commit(reshuffle(population))}>
+        <Button data-testid="gen-shuffle" className="w-full sm:flex-1" onClick={() => commit(reshuffle(population))}>
           {t(locale, 'gen.shuffle')}
         </Button>
         <Button

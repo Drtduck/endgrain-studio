@@ -188,7 +188,7 @@ export function RowInspector() {
       </CardHeader>
       <CardContent className="space-y-2">
         {design.rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t(locale, 'rows.empty')}</p>
+          <p className="text-sm text-ink-muted">{t(locale, 'rows.empty')}</p>
         ) : (
           <ul className="space-y-2">
             {design.rows.map((row, index) => (

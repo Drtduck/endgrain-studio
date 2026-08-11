@@ -72,7 +72,7 @@ export function ExportPanel() {
     <Card aria-label={t(locale, 'aria.exportPanel')}>
       <CardHeader>
         <CardTitle className="text-base">{t(locale, 'export.title')}</CardTitle>
-        <p className="text-sm text-muted-foreground">{t(locale, 'export.hint')}</p>
+        <p className="text-sm text-ink-muted">{t(locale, 'export.hint')}</p>
       </CardHeader>
       <CardContent className="space-y-2">
         <div className="flex flex-wrap gap-2">
