@@ -27,4 +27,20 @@ describe('BoardSvg', () => {
     const en = render(<BoardSvg model={model} locale="en" />)
     expect(en.container.querySelector('svg')?.getAttribute('aria-label')).toBe('board preview')
   })
+
+  it('обводит наведённую и выбранную ячейку, не меняя заливку', () => {
+    const model = compile(makeCheckerboard({ cols: 2, rows: 2 }))
+    const { container } = render(
+      <BoardSvg model={model} locale="ru" highlightCellId="r0:1" selectedCellId="r1:0" />,
+    )
+    const hovered = container.querySelector('rect[data-cell="r0:1"]')
+    const selected = container.querySelector('rect[data-cell="r1:0"]')
+    const plain = container.querySelector('rect[data-cell="r0:0"]')
+    expect(hovered?.getAttribute('stroke')).toBe('#111111')
+    expect(selected?.getAttribute('stroke')).toBe('#111111')
+    expect(selected?.getAttribute('stroke-width')).toBe('1.6')
+    expect(hovered?.getAttribute('stroke-width')).toBe('1')
+    expect(plain?.getAttribute('stroke-width')).toBe('0.4')
+    expect(hovered?.getAttribute('fill')).toBe('#e3caa1')
+  })
 })
