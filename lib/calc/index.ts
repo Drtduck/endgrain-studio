@@ -1,5 +1,5 @@
 import { isStrip, panelLengthMm, type BoardModel, type Design, type SpeciesId } from '@/lib/engine'
-import { getSpeciesById } from '@/lib/species'
+import { SPECIES_BY_ID } from '@/lib/species'
 import { mm3ToBoardFeet } from '@/lib/units'
 
 export interface LumberNeed {
@@ -46,15 +46,16 @@ export function calcProject(design: Design, model: BoardModel): CalcResult {
 
   const bySpecies: LumberNeed[] = [...rawBySpecies.entries()]
     .map(([speciesId, { rawVolumeMm3, linearMeters }]) => {
-      const species = getSpeciesById(speciesId)
+      // Неизвестная порода (не прошедшая validate) не должна валить расчёт: даёт нулевые стоимость и вес.
+      const species = SPECIES_BY_ID.get(speciesId)
       const boardFeet = mm3ToBoardFeet(rawVolumeMm3)
       return {
         speciesId,
         rawVolumeMm3,
         boardFeet,
         linearMeters,
-        costUsd: boardFeet * species.pricePerBoardFootUsd,
-        weightKg: ((finishedBySpecies.get(speciesId) ?? 0) * species.densityKgM3) / 1e9,
+        costUsd: species ? boardFeet * species.pricePerBoardFootUsd : 0,
+        weightKg: species ? ((finishedBySpecies.get(speciesId) ?? 0) * species.densityKgM3) / 1e9 : 0,
       }
     })
     .sort((a, b) => b.costUsd - a.costUsd || a.speciesId.localeCompare(b.speciesId))

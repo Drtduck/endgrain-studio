@@ -105,6 +105,7 @@ export type DiagnosticCode =
   | 'ANGLE_UNSUPPORTED'
   | 'SHRINKAGE_MISMATCH'
   | 'CELL_BUDGET'
+  | 'UNKNOWN_SPECIES'
 
 export interface DiagnosticTarget {
   readonly panelId?: PanelId

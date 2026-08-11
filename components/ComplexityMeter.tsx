@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { BoardModel, Diagnostic } from '@/lib/engine'
 import type { CalcResult } from '@/lib/calc'
 import { t, type Locale, type MessageKey } from '@/lib/i18n'
-import { getSpeciesById } from '@/lib/species'
+import { SPECIES_BY_ID } from '@/lib/species'
 import { formatMm } from '@/lib/units'
 
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
@@ -56,16 +56,20 @@ export function ComplexityMeter({
         <div>
           <p className="mb-1 text-sm font-medium">{t(locale, 'meter.lumberBySpecies')}</p>
           <ul className="space-y-0.5 text-sm text-muted-foreground">
-            {calc.bySpecies.map((s) => (
-              <li key={s.speciesId}>
-                {t(locale, 'meter.speciesRow', {
-                  name: locale === 'ru' ? getSpeciesById(s.speciesId).nameRu : getSpeciesById(s.speciesId).nameEn,
-                  meters: s.linearMeters.toFixed(2),
-                  boardFeet: s.boardFeet.toFixed(2),
-                  costUsd: usd.format(s.costUsd),
-                })}
-              </li>
-            ))}
+            {calc.bySpecies.map((s) => {
+              const species = SPECIES_BY_ID.get(s.speciesId)
+              const name = species ? (locale === 'ru' ? species.nameRu : species.nameEn) : s.speciesId
+              return (
+                <li key={s.speciesId}>
+                  {t(locale, 'meter.speciesRow', {
+                    name,
+                    meters: s.linearMeters.toFixed(2),
+                    boardFeet: s.boardFeet.toFixed(2),
+                    costUsd: usd.format(s.costUsd),
+                  })}
+                </li>
+              )
+            })}
           </ul>
         </div>
 

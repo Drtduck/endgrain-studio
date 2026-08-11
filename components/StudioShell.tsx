@@ -8,14 +8,18 @@ import { calcProject } from '@/lib/calc'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import { compile, validate } from '@/lib/engine'
 import { t, type Locale } from '@/lib/i18n'
-import { shrinkageMap } from '@/lib/species'
+import { SPECIES, shrinkageMap } from '@/lib/species'
 
 export function StudioShell() {
   const [locale, setLocale] = useState<Locale>('ru')
   const design = useMemo(() => makeCheckerboard(), [])
   const model = useMemo(() => compile(design), [design])
   const calc = useMemo(() => calcProject(design, model), [design, model])
-  const diagnostics = useMemo(() => validate(design, { shrinkageByPct: shrinkageMap() }), [design])
+  const knownSpeciesIds = useMemo(() => SPECIES.map((s) => s.id), [])
+  const diagnostics = useMemo(
+    () => validate(design, { shrinkageByPct: shrinkageMap(), knownSpeciesIds }),
+    [design, knownSpeciesIds],
+  )
 
   return (
     <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 p-6">

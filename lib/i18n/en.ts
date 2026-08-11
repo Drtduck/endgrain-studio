@@ -32,6 +32,7 @@ const en: Record<keyof typeof ru, string> = {
   'diag.ANGLE_UNSUPPORTED': 'Cut angle {angleDeg} is not supported in this version, only 0 is allowed',
   'diag.SHRINKAGE_MISMATCH': 'Neighbouring species {a} and {b} differ in shrinkage by {deltaPp} pp against a {limitPp} limit',
   'diag.CELL_BUDGET': '{cells} cells against a {limit} limit',
+  'diag.UNKNOWN_SPECIES': 'Species {speciesId} in panel {panelId} is not in the catalogue',
 }
 
 export default en

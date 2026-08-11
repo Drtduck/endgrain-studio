@@ -69,6 +69,18 @@ describe('validate', () => {
     expect(codes(d)).not.toContain('SHRINKAGE_MISMATCH')
   })
 
+  it('flags a speciesId missing from the supplied catalogue', () => {
+    const d = baseDesign({ panels: [stripsPanel('A', ['walnut', 'unobtainium'], 25)], rows: [
+      { id: 'r1', panelId: 'A', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 },
+    ] })
+    expect(codes(d)).not.toContain('UNKNOWN_SPECIES')
+    const diags = validate(d, { knownSpeciesIds: ['walnut', 'maple'] })
+    const diag = diags.find((x) => x.code === 'UNKNOWN_SPECIES')
+    expect(diag?.level).toBe('error')
+    expect(diag?.messageKey).toBe('diag.UNKNOWN_SPECIES')
+    expect(diag?.target).toMatchObject({ panelId: 'A', elementIndex: 1 })
+  })
+
   it('reports CELL_BUDGET as an error when a sub-mm sliceRef strip would exceed MAX_CELLS', () => {
     const d = baseDesign({
       panels: [

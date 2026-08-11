@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { baseDesign, compile } from '@/lib/engine'
+import { baseDesign, compile, stripsPanel } from '@/lib/engine'
 import { calcProject } from './index'
 
 describe('calcProject', () => {
@@ -35,6 +35,20 @@ describe('calcProject', () => {
     expect(result.totalBoardFeet).toBeCloseTo(result.rawVolumeMm3 / 2359737.216, 6)
     // 120 куб. см ореха и клёна весят меньше килограмма
     expect(result.totalWeightKg).toBeCloseTo((50 * 60 * 40 * ((610 + 705) / 2)) / 1e9, 3)
+  })
+
+  it('treats an unknown species as zero cost/weight instead of throwing', () => {
+    const withUnknown = baseDesign({
+      panels: [stripsPanel('A', ['walnut', 'unobtainium'], 25)],
+      rows: [{ id: 'r1', panelId: 'A', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+    })
+    const m = compile(withUnknown)
+    expect(() => calcProject(withUnknown, m)).not.toThrow()
+    const r = calcProject(withUnknown, m)
+    const unknown = r.bySpecies.find((s) => s.speciesId === 'unobtainium')
+    expect(unknown).toBeDefined()
+    expect(unknown?.costUsd).toBe(0)
+    expect(unknown?.weightKg).toBe(0)
   })
 
   it('handles an empty design without dividing by zero', () => {

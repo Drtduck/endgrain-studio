@@ -20,6 +20,8 @@ import {
 
 export interface ValidateOptions {
   readonly shrinkageByPct?: Readonly<Record<SpeciesId, number>>
+  /** Справочник допустимых пород. Когда задан, полосы с неизвестным speciesId помечаются UNKNOWN_SPECIES. */
+  readonly knownSpeciesIds?: readonly SpeciesId[]
 }
 
 const LEVEL_ORDER: Record<DiagnosticLevel, number> = { error: 0, warning: 1, info: 2 }
@@ -42,6 +44,7 @@ export function hasErrors(diagnostics: readonly Diagnostic[]): boolean {
 export function validate(design: Design, opts: ValidateOptions = {}): Diagnostic[] {
   const out: Diagnostic[] = []
   const { board } = design
+  const knownSpecies = opts.knownSpeciesIds ? new Set(opts.knownSpeciesIds) : undefined
 
   const outOfRange = (v: number, lo: number, hi: number) => !Number.isFinite(v) || v < lo || v > hi
   if (
@@ -89,6 +92,16 @@ export function validate(design: Design, opts: ValidateOptions = {}): Diagnostic
               'MIN_STRIP_WIDTH',
               'error',
               { panelId: panel.id, widthMm: el.widthMm, minMm: MIN_STRIP_WIDTH_MM },
+              { panelId: panel.id, elementIndex },
+            ),
+          )
+        }
+        if (knownSpecies && !knownSpecies.has(el.speciesId)) {
+          out.push(
+            diag(
+              'UNKNOWN_SPECIES',
+              'error',
+              { panelId: panel.id, speciesId: el.speciesId },
               { panelId: panel.id, elementIndex },
             ),
           )

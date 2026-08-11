@@ -30,6 +30,7 @@ const ru = {
   'diag.ANGLE_UNSUPPORTED': 'Угол реза {angleDeg} не поддерживается в этой версии, допустим только 0',
   'diag.SHRINKAGE_MISMATCH': 'Соседние породы {a} и {b} различаются по усушке на {deltaPp} п.п. при допуске {limitPp}',
   'diag.CELL_BUDGET': 'Ячеек {cells} при лимите {limit}',
+  'diag.UNKNOWN_SPECIES': 'Порода {speciesId} в панели {panelId} не найдена в справочнике',
 } as const
 
 export default ru
