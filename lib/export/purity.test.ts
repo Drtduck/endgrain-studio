@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const PURE_FILES = ['svg.ts', 'filename.ts', 'index.ts']
+const PURE_FILES = ['svg.ts', 'filename.ts', 'format.ts', 'cutlist.ts', 'csv.ts', 'index.ts']
 const FORBIDDEN = ['document.', 'window.', 'new Blob', 'URL.createObjectURL', 'canvas', 'Math.random', 'Date.now']
 
 describe('чистая половина lib/export', () => {
