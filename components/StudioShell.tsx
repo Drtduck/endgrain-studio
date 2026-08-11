@@ -33,7 +33,7 @@ export function StudioShell() {
 
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
         <section aria-label={t(locale, 'board.title')} className="flex-1">
-          <BoardSvg model={model} />
+          <BoardSvg model={model} locale={locale} />
         </section>
         <ComplexityMeter locale={locale} calc={calc} diagnostics={diagnostics} unit="mm" model={model} />
       </div>

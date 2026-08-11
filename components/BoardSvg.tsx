@@ -1,8 +1,9 @@
 import type { BoardModel } from '@/lib/engine'
+import { t, type Locale } from '@/lib/i18n'
 import { speciesHex } from '@/lib/species'
 
-export function BoardSvg({ model, maxPx = 640 }: { model: BoardModel; maxPx?: number }) {
-  if (model.widthMm <= 0 || model.lengthMm <= 0) return <svg role="img" aria-label="пустая доска" />
+export function BoardSvg({ model, locale, maxPx = 640 }: { model: BoardModel; locale: Locale; maxPx?: number }) {
+  if (model.widthMm <= 0 || model.lengthMm <= 0) return <svg role="img" aria-label={t(locale, 'aria.emptyBoard')} />
 
   const scale = maxPx / Math.max(model.widthMm, model.lengthMm)
 
@@ -12,7 +13,7 @@ export function BoardSvg({ model, maxPx = 640 }: { model: BoardModel; maxPx?: nu
       width={model.widthMm * scale}
       height={model.lengthMm * scale}
       role="img"
-      aria-label="превью доски"
+      aria-label={t(locale, 'aria.boardPreview')}
       className="rounded-lg shadow-sm"
     >
       {model.cells.map((cell) => (

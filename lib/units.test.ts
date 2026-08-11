@@ -14,9 +14,10 @@ describe('units', () => {
     expect(mm3ToBoardFeet(144 * 25.4 ** 3)).toBeCloseTo(1, 6)
   })
 
-  it('formats for display in the chosen unit', () => {
-    expect(formatMm(25.4, 'mm')).toBe('25.4 мм')
-    expect(formatMm(25.4, 'in')).toBe('1.00"')
-    expect(formatMm(300, 'mm', 0)).toBe('300 мм')
+  it('formats for display in the chosen unit, using the caller-supplied localized label', () => {
+    expect(formatMm(25.4, 'mm', 'мм')).toBe('25.4 мм')
+    expect(formatMm(25.4, 'mm', 'mm')).toBe('25.4 mm')
+    expect(formatMm(25.4, 'in', 'in')).toBe('1.00"')
+    expect(formatMm(300, 'mm', 'мм', 0)).toBe('300 мм')
   })
 })

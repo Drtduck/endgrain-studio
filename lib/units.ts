@@ -13,7 +13,11 @@ export function mm3ToBoardFeet(mm3: number): number {
   return mm3 / MM3_PER_BOARD_FOOT
 }
 
-/** Единственное место, где миллиметры превращаются в текст. */
-export function formatMm(mm: number, unit: 'mm' | 'in', digits = 1): string {
-  return unit === 'mm' ? `${mm.toFixed(digits)} мм` : `${mmToInch(mm).toFixed(2)}"`
+/**
+ * Единственное место, где миллиметры превращаются в текст.
+ * unitLabel - локализованная подпись мм (для дюймов используется символ "). Берётся из i18n
+ * ключом units.mm вызывающим кодом, чтобы этот модуль не знал о языке.
+ */
+export function formatMm(mm: number, unit: 'mm' | 'in', unitLabel: string, digits = 1): string {
+  return unit === 'mm' ? `${mm.toFixed(digits)} ${unitLabel}` : `${mmToInch(mm).toFixed(2)}"`
 }

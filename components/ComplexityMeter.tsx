@@ -21,6 +21,7 @@ export function ComplexityMeter({
   unit: 'mm' | 'in'
   model: BoardModel
 }) {
+  const unitLabel = t(locale, unit === 'mm' ? 'units.mm' : 'units.in')
   const rows: Array<[MessageKey, string]> = [
     ['meter.glueUps', String(calc.glueUpCount)],
     ['meter.cuts', String(calc.cutCount)],
@@ -28,7 +29,7 @@ export function ComplexityMeter({
     ['meter.boardFeet', `${calc.totalBoardFeet.toFixed(2)} bf`],
     ['meter.waste', `${calc.wastePct.toFixed(1)} %`],
     ['meter.cost', usd.format(calc.totalCostUsd)],
-    ['meter.weight', `${calc.totalWeightKg.toFixed(2)} кг`],
+    ['meter.weight', `${calc.totalWeightKg.toFixed(2)} ${t(locale, 'units.kg')}`],
   ]
 
   return (
@@ -37,9 +38,9 @@ export function ComplexityMeter({
         <CardTitle>{t(locale, 'meter.title')}</CardTitle>
         <p className="text-sm text-muted-foreground">
           {t(locale, 'board.size', {
-            widthMm: formatMm(model.widthMm, unit, 0),
-            lengthMm: formatMm(model.lengthMm, unit, 0),
-            thicknessMm: formatMm(model.thicknessMm, unit, 0),
+            widthMm: formatMm(model.widthMm, unit, unitLabel, 0),
+            lengthMm: formatMm(model.lengthMm, unit, unitLabel, 0),
+            thicknessMm: formatMm(model.thicknessMm, unit, unitLabel, 0),
           })}
         </p>
       </CardHeader>
