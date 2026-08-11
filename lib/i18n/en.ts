@@ -66,6 +66,18 @@ const en: Record<keyof typeof ru, string> = {
   'panels.moveDown': 'Right',
   'panels.empty': 'This panel has no strips',
   'panels.sliceRef': 'Slice of panel {panelId}, thickness {thicknessMm}',
+  'rows.title': 'Board rows',
+  'rows.row': 'Row {id}',
+  'rows.panel': 'Panel',
+  'rows.thickness': 'Slice thickness',
+  'rows.trim': 'End trim',
+  'rows.flip': 'Flip',
+  'rows.mirror': 'Mirror',
+  'rows.add': 'Add row',
+  'rows.remove': 'Remove row',
+  'rows.moveUp': 'Up',
+  'rows.moveDown': 'Down',
+  'rows.empty': 'The board has no rows yet',
 }
 
 export default en

@@ -64,6 +64,18 @@ const ru = {
   'panels.moveDown': 'Правее',
   'panels.empty': 'В панели нет полос',
   'panels.sliceRef': 'Срез панели {panelId}, толщина {thicknessMm}',
+  'rows.title': 'Ряды доски',
+  'rows.row': 'Ряд {id}',
+  'rows.panel': 'Панель',
+  'rows.thickness': 'Толщина среза',
+  'rows.trim': 'Торцевой припуск',
+  'rows.flip': 'Переворот',
+  'rows.mirror': 'Зеркало',
+  'rows.add': 'Добавить ряд',
+  'rows.remove': 'Удалить ряд',
+  'rows.moveUp': 'Выше',
+  'rows.moveDown': 'Ниже',
+  'rows.empty': 'В доске пока нет рядов',
 } as const
 
 export default ru
