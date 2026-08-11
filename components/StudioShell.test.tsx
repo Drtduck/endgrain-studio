@@ -1,8 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import { useStudio } from '@/lib/store/studio'
 import { StudioShell } from './StudioShell'
+
+vi.mock('@/components/Board3D', () => ({
+  Board3D: ({ label }: { label: string }) => <div data-testid="board3d-stub">{label}</div>,
+}))
 
 describe('StudioShell', () => {
   beforeEach(() => {
@@ -51,5 +55,26 @@ describe('StudioShell', () => {
     expect(container.querySelector('rect[data-cell="r0:0"]')?.getAttribute('fill')).toBe('#a8422a')
     fireEvent.click(screen.getByTestId('undo'))
     expect(container.querySelector('rect[data-cell="r0:0"]')?.getAttribute('fill')).toBe(before)
+  })
+
+  it('вкладка 3D заменяет холст сценой и сохраняет боковую колонку', async () => {
+    render(<StudioShell />)
+    fireEvent.click(screen.getByTestId('tab-view3d'))
+    expect(screen.getByTestId('view3d')).toBeDefined()
+    expect(screen.queryByTestId('board-canvas')).toBe(null)
+    expect(screen.getByText('Сложность проекта')).toBeDefined()
+    fireEvent.click(screen.getByTestId('tab-editor'))
+    expect(screen.getByTestId('board-canvas')).toBeDefined()
+  })
+
+  it('вкладка шаблонов отдаёт всю ширину галерее и возвращает в редактор после выбора', () => {
+    render(<StudioShell />)
+    fireEvent.click(screen.getByTestId('tab-templates'))
+    expect(screen.getByTestId('template-gallery')).toBeDefined()
+    expect(screen.queryByTestId('board-canvas')).toBe(null)
+
+    fireEvent.click(screen.getByTestId('template-chess-8x8'))
+    expect(useStudio.getState().view).toBe('editor')
+    expect(screen.getByTestId('board-canvas')).toBeDefined()
   })
 })

@@ -17,7 +17,17 @@ export default defineConfig({
     // Редактор рассчитан и на телефон: смоук гоняем в размере ноутбука, тачи покрыты pointer-событиями.
     viewport: { width: 1280, height: 900 },
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        // В headless нет GPU: без программного растеризатора Chromium не отдаёт WebGL-контекст,
+        // и 3D-вкладка честно показала бы заглушку вместо сцены.
+        launchOptions: { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
+      },
+    },
+  ],
   webServer: {
     command: `pnpm build && pnpm start --port ${PORT}`,
     url: baseURL,
