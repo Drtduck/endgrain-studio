@@ -15,12 +15,23 @@ vi.mock('./photoDecode', () => ({
 import { PhotoImport } from './PhotoImport'
 import { decodeToGrid } from './photoDecode'
 
+// Шесть разных цветов по рядам: при трёх и пяти запрошенных породах k-means должен
+// давать реально разные кластеры, а не упираться в потолок различимых цветов заготовки.
+const ROW_BANDS: readonly (readonly [number, number, number])[] = [
+  [235, 225, 200],
+  [210, 180, 140],
+  [180, 140, 90],
+  [150, 95, 60],
+  [100, 65, 40],
+  [45, 35, 30],
+]
+
 function bandsGrid(): PixelGrid {
   const cols = 8
   const rows = 6
   const rgba = new Uint8ClampedArray(cols * rows * 4)
   for (let row = 0; row < rows; row += 1) {
-    const band = row < 2 ? [235, 225, 200] : row < 4 ? [150, 95, 60] : [45, 35, 30]
+    const band = ROW_BANDS[row] ?? [0, 0, 0]
     for (let col = 0; col < cols; col += 1) {
       const offset = (row * cols + col) * 4
       rgba[offset] = band[0] ?? 0

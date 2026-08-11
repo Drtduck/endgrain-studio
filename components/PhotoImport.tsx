@@ -45,9 +45,7 @@ export function PhotoImport() {
     // Асинхронный обработчик события, а не эффект: правило set-state-in-effect не нарушается.
     decodeToGrid(file)
       .then((grid) => {
-        // Начинаем с минимальной палитры: рост числа пород всегда меняет узор, а не упирается
-        // в потолок различимых цветов конкретной фотографии.
-        setPhoto({ grid, fileName: file.name, colors: PHOTO_MIN_COLORS, panels: Math.max(2, Math.min(6, grid.rows)) })
+        setPhoto({ grid, fileName: file.name, colors: 3, panels: Math.max(2, Math.min(6, grid.rows)) })
         setStatus('idle')
       })
       .catch(() => setStatus('failed'))
