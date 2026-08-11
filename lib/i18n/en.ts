@@ -198,6 +198,8 @@ const en: Record<keyof typeof ru, string> = {
   'steps.finalGlue': 'Glue the final board: {width} by {length}',
   'steps.flatten': 'Flatten the board to {thickness}, chamfer the edges, sand',
   'steps.none': 'none',
+  'steps.flipMark': 'F - row is flipped',
+  'steps.mirrorMark': 'M - row is mirrored',
   'cut.title': 'Cut map',
   'cut.panel': 'Panel {panel}',
   'cut.panelSummary': 'width {width}, length {length}, planing thickness {thickness}',

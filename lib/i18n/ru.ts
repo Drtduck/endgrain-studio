@@ -196,6 +196,8 @@ const ru = {
   'steps.finalGlue': 'Склеить финальную доску: {width} на {length}',
   'steps.flatten': 'Выровнять доску в толщину {thickness}, снять фаски, отшлифовать',
   'steps.none': 'нет',
+  'steps.flipMark': 'F - ряд перевёрнут',
+  'steps.mirrorMark': 'M - ряд зеркалирован',
   'cut.title': 'Карта раскроя',
   'cut.panel': 'Щит {panel}',
   'cut.panelSummary': 'ширина {width}, длина {length}, толщина строгания {thickness}',
