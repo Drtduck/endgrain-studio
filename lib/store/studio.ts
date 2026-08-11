@@ -42,6 +42,12 @@ export interface StudioState {
   readonly selectedRowId: RowId | null
   readonly hoveredCellId: string | null
   readonly pendingFork: PendingFork | null
+  /**
+   * false только для свежего образца по умолчанию. Восстановление из localStorage/хэша
+   * сбрасывает историю (undo/redo пустые), поэтому одного canUndo||canRedo недостаточно,
+   * чтобы поймать «у пользователя уже есть реальная работа» - отсюда отдельный флаг.
+   */
+  readonly documentTouched: boolean
 
   setLocale(locale: Locale): void
   setUnit(unit: UnitSystem): void
@@ -97,6 +103,10 @@ export function selectCanUndo(s: StudioState): boolean {
 export function selectCanRedo(s: StudioState): boolean {
   return histCanRedo(s.history)
 }
+/** Есть ли реальная работа, которую жалко молча стереть выбором шаблона. */
+export function selectIsDirty(s: StudioState): boolean {
+  return s.documentTouched || histCanUndo(s.history) || histCanRedo(s.history)
+}
 
 const UI_DEFAULTS = {
   locale: 'ru' as Locale,
@@ -108,6 +118,7 @@ const UI_DEFAULTS = {
   selectedRowId: null,
   hoveredCellId: null,
   pendingFork: null,
+  documentTouched: false,
 }
 
 const DEFAULT_STRIP_WIDTH_MM = 25
@@ -127,7 +138,7 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
   return create<StudioState>((set, get) => {
     /** Единственная точка записи в документ: всё остальное ходит через неё, поэтому undo знает про каждую правку. */
     const edit = (recipe: (draft: import('immer').Draft<Design>) => void): void => {
-      set((s) => ({ history: commit(s.history, recipe) }))
+      set((s) => ({ history: commit(s.history, recipe), documentTouched: true }))
     }
     /** Числовые поля защищены от NaN и Infinity: битое значение из инпута не должно попасть в документ. */
     const editNumber = (mm: number, recipe: (draft: import('immer').Draft<Design>, value: number) => void): void => {
@@ -166,6 +177,7 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
             history: commitValue(s.history, result.design),
             selectedCellId: cell.id,
             pendingFork: null,
+            documentTouched: true,
           }))
           return
         }
@@ -187,6 +199,7 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
           history: commitValue(s.history, pending.next),
           pendingFork: null,
           selectedCellId: pending.cellId,
+          documentTouched: true,
         }))
       },
 
@@ -233,7 +246,7 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
         const design = get().history.present
         try {
           const next = splitPanel(design, panelId, elementIndex, atMm)
-          set((s) => ({ history: commitValue(s.history, next) }))
+          set((s) => ({ history: commitValue(s.history, next), documentTouched: true }))
         } catch (error) {
           // SPLIT_OUT_OF_RANGE, PANEL_NOT_FOUND, ELEMENT_NOT_FOUND: неверный ввод, не авария.
           if (error instanceof EngineError) return
@@ -331,7 +344,12 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
       setDesignName: (name) => edit((d) => { d.name = name }),
 
       loadDesign: (design) =>
-        set((s) => ({ history: resetHistory(s.history, design), pendingFork: null, selectedCellId: null })),
+        set((s) => ({
+          history: resetHistory(s.history, design),
+          pendingFork: null,
+          selectedCellId: null,
+          documentTouched: true,
+        })),
       resetStudio: (design) =>
         set((s) => ({ history: resetHistory(s.history, design ?? makeCheckerboard()), ...UI_DEFAULTS })),
       undo: () => set((s) => ({ history: histUndo(s.history), pendingFork: null })),

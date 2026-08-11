@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { compile, type BoardModel } from '@/lib/engine'
 import { TEMPLATES, TEMPLATE_GROUPS, groupNameKey, type BoardTemplate } from '@/lib/designs/templates'
 import { t } from '@/lib/i18n'
-import { selectCanRedo, selectCanUndo, useStudio } from '@/lib/store/studio'
+import { selectIsDirty, useStudio } from '@/lib/store/studio'
 
 /**
  * Превью считаются один раз на модуль: документы шаблонов неизменяемы,
@@ -20,17 +20,20 @@ export function TemplateGallery() {
   const locale = useStudio((s) => s.locale)
   const loadDesign = useStudio((s) => s.loadDesign)
   const setView = useStudio((s) => s.setView)
-  const dirty = useStudio((s) => selectCanUndo(s) || selectCanRedo(s))
+  const dirty = useStudio(selectIsDirty)
   const [pending, setPending] = useState<BoardTemplate | null>(null)
 
   const apply = (tpl: BoardTemplate): void => {
-    loadDesign(tpl.build())
+    // Загрузка шаблона обнуляет историю правок, поэтому имя фиксируем на языке пользователя сразу при применении.
+    loadDesign({ ...tpl.build(), name: t(locale, tpl.nameKey) })
     setPending(null)
     setView('editor')
   }
 
   const onPick = (tpl: BoardTemplate): void => {
-    // Загрузка шаблона обнуляет историю правок, поэтому спрашиваем, только если правки были.
+    // Загрузка шаблона обнуляет историю правок и заменяет документ, поэтому спрашиваем,
+    // если в текущем документе уже есть реальная работа (не только историю правок:
+    // восстановленный из localStorage/ссылки документ тоже нельзя тихо стереть).
     if (dirty) setPending(tpl)
     else apply(tpl)
   }

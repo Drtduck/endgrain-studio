@@ -53,4 +53,22 @@ describe('TemplateGallery', () => {
     act(() => { useStudio.getState().setLocale('en') })
     expect(screen.getByText('Classic checkerboard')).toBeDefined()
   })
+
+  it('регрессия: восстановленный документ (без истории undo/redo) тоже спрашивает подтверждение', () => {
+    // loadDesign - тот же путь, которым useStudioPersistence поднимает документ из
+    // localStorage или ссылки: история пустая, но правки в документе настоящие.
+    act(() => { useStudio.getState().loadDesign(makeCheckerboard({ cols: 3, rows: 3 })) })
+    expect(useStudio.getState().history.past.length).toBe(0)
+    render(<TemplateGallery />)
+    fireEvent.click(screen.getByTestId('template-brick-half'))
+    expect(screen.getByTestId('template-confirm-dialog')).toBeDefined()
+    expect(selectDesign(useStudio.getState()).id).not.toBe('brick-half')
+  })
+
+  it('применённое имя шаблона переведено на выбранный язык интерфейса', () => {
+    act(() => { useStudio.getState().setLocale('en') })
+    render(<TemplateGallery />)
+    fireEvent.click(screen.getByTestId('template-checkerboard-classic'))
+    expect(selectDesign(useStudio.getState()).name).toBe('Classic checkerboard')
+  })
 })

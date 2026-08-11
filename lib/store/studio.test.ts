@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { baseDesign } from '@/lib/engine'
 import { makeCheckerboard } from '@/lib/designs/samples'
-import { createStudioStore, selectCanRedo, selectCanUndo, selectDesign } from './studio'
+import { createStudioStore, selectCanRedo, selectCanUndo, selectDesign, selectIsDirty } from './studio'
 
 describe('studio store: settings, selection, history', () => {
   it('starts on the given design with Russian locale and millimetres', () => {
@@ -96,6 +96,26 @@ describe('studio store: settings, selection, history', () => {
     expect(s.activeSpeciesId).toBe('walnut')
     expect(s.selectedCellId).toBe(null)
     expect(s.pendingFork).toBe(null)
+  })
+
+  it('fresh sample is not dirty, but loadDesign marks it dirty even though history is empty', () => {
+    const store = createStudioStore(baseDesign())
+    expect(selectIsDirty(store.getState())).toBe(false)
+
+    // Восстановление из localStorage/ссылки идёт через loadDesign и обнуляет историю,
+    // поэтому canUndo/canRedo тут ничего не скажут - это регрессия на потерю данных из ревью.
+    store.getState().loadDesign(baseDesign({ id: 'восстановленный', name: 'восстановленный' }))
+    expect(selectCanUndo(store.getState())).toBe(false)
+    expect(selectCanRedo(store.getState())).toBe(false)
+    expect(selectIsDirty(store.getState())).toBe(true)
+  })
+
+  it('a real edit marks the document dirty, and resetStudio clears the flag again', () => {
+    const store = createStudioStore(baseDesign())
+    store.getState().setKerfMm(5)
+    expect(selectIsDirty(store.getState())).toBe(true)
+    store.getState().resetStudio(baseDesign())
+    expect(selectIsDirty(store.getState())).toBe(false)
   })
 })
 
