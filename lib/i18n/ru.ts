@@ -49,6 +49,21 @@ const ru = {
   'fork.lumber': '{name}: плюс {meters} м',
   'fork.confirm': 'Разветвить',
   'fork.cancel': 'Отмена',
+  'panels.title': 'Панели первой склейки',
+  'panels.panel': 'Панель {id}',
+  'panels.usage': 'срезов: {count}',
+  'panels.width': 'ширина {widthMm}',
+  'panels.length': 'длина заготовки {lengthMm}',
+  'panels.stripSpecies': 'Порода',
+  'panels.stripWidth': 'Ширина полосы',
+  'panels.addStrip': 'Добавить полосу',
+  'panels.removeStrip': 'Удалить полосу',
+  'panels.split': 'Разрезать',
+  'panels.splitAt': 'Разрез на',
+  'panels.moveUp': 'Левее',
+  'panels.moveDown': 'Правее',
+  'panels.empty': 'В панели нет полос',
+  'panels.sliceRef': 'Срез панели {panelId}, толщина {thicknessMm}',
 } as const
 
 export default ru

@@ -51,6 +51,21 @@ const en: Record<keyof typeof ru, string> = {
   'fork.lumber': '{name}: plus {meters} m',
   'fork.confirm': 'Fork',
   'fork.cancel': 'Cancel',
+  'panels.title': 'First glue-up panels',
+  'panels.panel': 'Panel {id}',
+  'panels.usage': 'slices: {count}',
+  'panels.width': 'width {widthMm}',
+  'panels.length': 'blank length {lengthMm}',
+  'panels.stripSpecies': 'Species',
+  'panels.stripWidth': 'Strip width',
+  'panels.addStrip': 'Add strip',
+  'panels.removeStrip': 'Remove strip',
+  'panels.split': 'Split',
+  'panels.splitAt': 'Split at',
+  'panels.moveUp': 'Left',
+  'panels.moveDown': 'Right',
+  'panels.empty': 'This panel has no strips',
+  'panels.sliceRef': 'Slice of panel {panelId}, thickness {thicknessMm}',
 }
 
 export default en
