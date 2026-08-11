@@ -2,7 +2,8 @@
 
 import { create, type StoreApi, type UseBoundStore } from 'zustand'
 import type { Cell, Design, PaintCost, PaintResult, PanelId, RowId, SpeciesId } from '@/lib/engine'
-import { EngineError, applyPaint, elementExtentMm, splitPanel, type PanelElement, type Row } from '@/lib/engine'
+import { EngineError, applyPaint, compile, elementExtentMm, splitPanel, type PanelElement, type Row } from '@/lib/engine'
+import { roundHalf } from '@/lib/designs/fit'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import type { Population } from '@/lib/generators'
 import type { Locale } from '@/lib/i18n'
@@ -358,8 +359,37 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
 
       moveRow: (fromIndex, toIndex) => edit((d) => { moveInPlace(d.rows, fromIndex, toIndex) }),
 
-      setBoardWidthMm: (mm) => editNumber(mm, (d, v) => { d.board.targetWidthMm = v }),
-      setBoardLengthMm: (mm) => editNumber(mm, (d, v) => { d.board.targetLengthMm = v }),
+      // Ширина/длина доски - выведенные величины (compile берёт их из полос/рядов), поэтому
+      // правка целевого габарита масштабирует весь узор пропорционально: иначе поле было бы
+      // мёртвой метаданной, не влияющей ни на что видимое.
+      setBoardWidthMm: (mm) => {
+        if (!Number.isFinite(mm) || mm <= 0) return
+        const derivedWidth = compile(get().history.present).widthMm
+        edit((d) => {
+          if (derivedWidth > 0) {
+            const factor = mm / derivedWidth
+            for (const panel of d.panels) {
+              for (const el of panel.elements) {
+                if (el.kind === 'strip') el.widthMm = Math.max(0.5, roundHalf(el.widthMm * factor))
+              }
+            }
+          }
+          d.board.targetWidthMm = mm
+        })
+      },
+      setBoardLengthMm: (mm) => {
+        if (!Number.isFinite(mm) || mm <= 0) return
+        const derivedLength = compile(get().history.present).lengthMm
+        edit((d) => {
+          if (derivedLength > 0) {
+            const factor = mm / derivedLength
+            for (const row of d.rows) {
+              row.thicknessMm = Math.max(0.5, roundHalf(row.thicknessMm * factor))
+            }
+          }
+          d.board.targetLengthMm = mm
+        })
+      },
       setBoardThicknessMm: (mm) => editNumber(mm, (d, v) => { d.board.thicknessMm = v }),
       setKerfMm: (mm) => editNumber(mm, (d, v) => { d.kerfMm = v }),
       setPlaningAllowanceMm: (mm) => editNumber(mm, (d, v) => { d.planingAllowanceMm = v }),

@@ -1,10 +1,12 @@
 'use client'
 
 import type { PointerEvent as ReactPointerEvent } from 'react'
+import { useMemo } from 'react'
 import { BoardSvg } from '@/components/BoardSvg'
+import { rowBandsMm } from '@/lib/engine'
 import { t } from '@/lib/i18n'
 import { useDerived } from '@/lib/store/derived'
-import { useStudio } from '@/lib/store/studio'
+import { selectDesign, useStudio } from '@/lib/store/studio'
 
 /** Ищем ячейку по data-cell вверх по дереву: BoardSvg остаётся чистым рендерером без обработчиков. */
 function cellIdOf(event: ReactPointerEvent<HTMLDivElement>): string | null {
@@ -19,7 +21,10 @@ export function BoardCanvas() {
   const selectedCellId = useStudio((s) => s.selectedCellId)
   const paintCell = useStudio((s) => s.paintCell)
   const hoverCell = useStudio((s) => s.hoverCell)
+  const design = useStudio(selectDesign)
   const { model } = useDerived()
+  // Колонка номеров рядов рядом с доской: помогает сверить ряд на холсте с инспектором рядов.
+  const rowLabels = useMemo(() => rowBandsMm(design), [design])
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
     const id = cellIdOf(event)
@@ -39,7 +44,13 @@ export function BoardCanvas() {
       onPointerOver={(event) => hoverCell(cellIdOf(event))}
       onPointerLeave={() => hoverCell(null)}
     >
-      <BoardSvg model={model} locale={locale} highlightCellId={hoveredCellId} selectedCellId={selectedCellId} />
+      <BoardSvg
+        model={model}
+        locale={locale}
+        highlightCellId={hoveredCellId}
+        selectedCellId={selectedCellId}
+        rowLabels={rowLabels}
+      />
     </div>
   )
 }

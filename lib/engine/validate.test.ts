@@ -69,6 +69,31 @@ describe('validate', () => {
     expect(codes(d)).not.toContain('SHRINKAGE_MISMATCH')
   })
 
+  it('dedupes SHRINKAGE_MISMATCH at design level regardless of species order', () => {
+    const species: import('./types').SpeciesId[] = ['maple', 'walnut', 'maple', 'walnut', 'maple', 'walnut', 'maple', 'walnut']
+    const d = baseDesign({
+      panels: [stripsPanel('A', species, 25)],
+      rows: [{ id: 'r1', panelId: 'A', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+    })
+    const diags = validate(d, { shrinkageByPct: { walnut: 7.8, maple: 9.9 } })
+    const mismatches = diags.filter((x) => x.code === 'SHRINKAGE_MISMATCH')
+    expect(mismatches).toHaveLength(1)
+    expect(mismatches[0]?.params.count).toBe(7)
+    expect(mismatches[0]?.params.deltaPp).toBeCloseTo(2.1, 5)
+    expect(mismatches[0]?.target).toBeUndefined()
+
+    // порядок пары не должен создавать вторую запись
+    const dReversed = baseDesign({
+      panels: [stripsPanel('A', ['walnut', 'maple'], 25), stripsPanel('B', ['maple', 'walnut'], 25)],
+      rows: [
+        { id: 'r1', panelId: 'A', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 },
+        { id: 'r2', panelId: 'B', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 },
+      ],
+    })
+    const diagsReversed = validate(dReversed, { shrinkageByPct: { walnut: 7.8, maple: 9.9 } })
+    expect(diagsReversed.filter((x) => x.code === 'SHRINKAGE_MISMATCH')).toHaveLength(1)
+  })
+
   it('flags a speciesId missing from the supplied catalogue', () => {
     const d = baseDesign({ panels: [stripsPanel('A', ['walnut', 'unobtainium'], 25)], rows: [
       { id: 'r1', panelId: 'A', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 },

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { baseDesign } from '@/lib/engine'
+import { baseDesign, validate } from '@/lib/engine'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import { seedPopulation } from '@/lib/generators'
 import { FAMILY_IDS } from '@/lib/generators/genome'
@@ -50,17 +50,83 @@ describe('studio store: settings, selection, history', () => {
 
   it('sets every remaining board field', () => {
     const store = createStudioStore(baseDesign())
-    store.getState().setBoardWidthMm(300)
-    store.getState().setBoardLengthMm(400)
     store.getState().setPlaningAllowanceMm(4)
     store.getState().setPlanerWidthMm(250)
     store.getState().setDesignName('Доска для мамы')
     const d = selectDesign(store.getState())
-    expect(d.board.targetWidthMm).toBe(300)
-    expect(d.board.targetLengthMm).toBe(400)
     expect(d.planingAllowanceMm).toBe(4)
     expect(d.planerWidthMm).toBe(250)
     expect(d.name).toBe('Доска для мамы')
+  })
+
+  it('setBoardWidthMm rescales every strip width proportionally in one undo step', () => {
+    // Панель A: полосы 25+25=50мм ширины (панель B такая же). Удваиваем ширину доски.
+    const store = createStudioStore(baseDesign())
+    const before = selectDesign(store.getState())
+    const beforeWidths = before.panels.map((p) => p.elements.map((el) => (el.kind === 'strip' ? el.widthMm : null)))
+
+    store.getState().setBoardWidthMm(100) // было 50 -> фактор 2
+
+    const after = selectDesign(store.getState())
+    expect(after.board.targetWidthMm).toBe(100)
+    for (const panel of after.panels) {
+      for (const el of panel.elements) {
+        if (el.kind === 'strip') expect(el.widthMm).toBe(50)
+      }
+    }
+    expect(selectCanUndo(store.getState())).toBe(true)
+    store.getState().undo()
+    const reverted = selectDesign(store.getState())
+    expect(reverted.board.targetWidthMm).toBe(50)
+    expect(
+      reverted.panels.map((p) => p.elements.map((el) => (el.kind === 'strip' ? el.widthMm : null))),
+    ).toEqual(beforeWidths)
+  })
+
+  it('setBoardLengthMm rescales every row thickness proportionally, keeps trims, one undo step', () => {
+    const store = createStudioStore(baseDesign())
+    const before = selectDesign(store.getState())
+    const beforeThicknesses = before.rows.map((r) => r.thicknessMm)
+    const beforeTrims = before.rows.map((r) => r.trimMm)
+
+    store.getState().setBoardLengthMm(120) // было 60 -> фактор 2
+
+    const after = selectDesign(store.getState())
+    expect(after.board.targetLengthMm).toBe(120)
+    for (const row of after.rows) expect(row.thicknessMm).toBe(60)
+    expect(after.rows.map((r) => r.trimMm)).toEqual(beforeTrims)
+    expect(selectCanUndo(store.getState())).toBe(true)
+    store.getState().undo()
+    const reverted = selectDesign(store.getState())
+    expect(reverted.board.targetLengthMm).toBe(60)
+    expect(reverted.rows.map((r) => r.thicknessMm)).toEqual(beforeThicknesses)
+  })
+
+  it('крайнее уменьшение ширины доски не роняет стор, а даёт MIN_STRIP_WIDTH при валидации', () => {
+    const store = createStudioStore(baseDesign())
+    expect(() => store.getState().setBoardWidthMm(0.5)).not.toThrow()
+    const design = selectDesign(store.getState())
+    expect(design.board.targetWidthMm).toBe(0.5)
+    for (const panel of design.panels) {
+      for (const el of panel.elements) {
+        if (el.kind === 'strip') expect(el.widthMm).toBeGreaterThanOrEqual(0.5)
+      }
+    }
+    expect(validate(design).map((d) => d.code)).toContain('MIN_STRIP_WIDTH')
+  })
+
+  it('setBoardWidthMm/LengthMm no-ops on non finite, zero or negative input', () => {
+    const store = createStudioStore(baseDesign())
+    store.getState().setBoardWidthMm(Number.NaN)
+    store.getState().setBoardWidthMm(0)
+    store.getState().setBoardWidthMm(-10)
+    store.getState().setBoardLengthMm(Number.NaN)
+    store.getState().setBoardLengthMm(0)
+    store.getState().setBoardLengthMm(-10)
+    expect(selectCanUndo(store.getState())).toBe(false)
+    const d = selectDesign(store.getState())
+    expect(d.board.targetWidthMm).toBe(50)
+    expect(d.board.targetLengthMm).toBe(60)
   })
 
   it('keeps selection out of the undo history', () => {

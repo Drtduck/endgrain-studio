@@ -1,5 +1,29 @@
 import { elementExtentMm, findPanel, isStrip, panelLengthMm, panelWidthMm, slicesOfPanel } from './panels'
-import { GEOM_EPS_MM, MAX_CELLS, type BoardModel, type Cell, type Design, type PanelId, type Row, type SliceRef } from './types'
+import { GEOM_EPS_MM, MAX_CELLS, type BoardModel, type Cell, type Design, type PanelId, type Row, type RowId, type SliceRef } from './types'
+
+/** Вертикальная полоса одного ряда доски: верхняя граница и высота, мм. Используется для меток рядов в UI. */
+export interface RowBand {
+  readonly id: RowId
+  readonly topMm: number
+  readonly heightMm: number
+}
+
+/**
+ * Границы рядов сверху вниз: тот же обход, что и compile, но без геометрии ячеек.
+ * Ряды со ссылкой на несуществующую панель пропускаются (как и в compile), поэтому
+ * длина результата может быть меньше design.rows.length, а нумерация в UI идёт по этому списку.
+ */
+export function rowBandsMm(design: Design): RowBand[] {
+  const out: RowBand[] = []
+  let yMm = 0
+  for (const row of design.rows) {
+    const panel = findPanel(design, row.panelId)
+    if (!panel) continue
+    out.push({ id: row.id, topMm: yMm, heightMm: row.thicknessMm })
+    yMm += row.thicknessMm
+  }
+  return out
+}
 
 /** Мутируемый бюджет ячеек, общий на весь compile: останавливает генерацию до OOM. */
 interface CellBudget {

@@ -1,8 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { baseDesign } from '@/lib/engine'
+import { baseDesign, stripsPanel } from '@/lib/engine'
 import { useStudio } from '@/lib/store/studio'
 import { SpeciesPalette } from './SpeciesPalette'
+
+const twoSpeciesDesign = () =>
+  baseDesign({
+    panels: [stripsPanel('A', ['walnut', 'maple'], 25)],
+    rows: [{ id: 'r1', panelId: 'A', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+  })
 
 describe('SpeciesPalette', () => {
   beforeEach(() => useStudio.getState().resetStudio(baseDesign()))
@@ -18,12 +24,40 @@ describe('SpeciesPalette', () => {
     expect(useStudio.getState().activeSpeciesId).toBe('padauk')
   })
 
-  it('помечает активную породу через aria-pressed и показывает её имя на языке интерфейса', () => {
+  it('показывает подпись кисти на языке интерфейса', () => {
     const { rerender } = render(<SpeciesPalette />)
     expect(screen.getByTestId('species-walnut').getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getByText('Выбрана: Орех')).toBeDefined()
+    expect(screen.getByText('Кисть: Орех')).toBeDefined()
     useStudio.getState().setLocale('en')
     rerender(<SpeciesPalette />)
-    expect(screen.getByText('Selected: Black walnut')).toBeDefined()
+    expect(screen.getByText('Brush: Black walnut')).toBeDefined()
+  })
+
+  it('data-used стоит только у пород, реально присутствующих в модели', () => {
+    useStudio.getState().resetStudio(twoSpeciesDesign())
+    render(<SpeciesPalette />)
+    expect(screen.getByTestId('species-walnut').getAttribute('data-used')).toBe('true')
+    expect(screen.getByTestId('species-maple').getAttribute('data-used')).toBe('true')
+    expect(screen.getByTestId('species-padauk').getAttribute('data-used')).toBeNull()
+  })
+
+  it('клик по неиспользуемой породе меняет кисть, но не помечает её data-used', () => {
+    useStudio.getState().resetStudio(twoSpeciesDesign())
+    render(<SpeciesPalette />)
+    fireEvent.click(screen.getByTestId('species-padauk'))
+    expect(useStudio.getState().activeSpeciesId).toBe('padauk')
+    expect(screen.getByTestId('species-padauk').getAttribute('data-used')).toBeNull()
+    expect(screen.getByTestId('species-padauk').getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('счётчик "в проекте" равен числу уникальных пород в модели', () => {
+    useStudio.getState().resetStudio(twoSpeciesDesign())
+    render(<SpeciesPalette />)
+    expect(screen.getByText('В проекте: 2')).toBeDefined()
+  })
+
+  it('показывает подсказку', () => {
+    render(<SpeciesPalette />)
+    expect(screen.getByText(/Выберите породу/)).toBeDefined()
   })
 })

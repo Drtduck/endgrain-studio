@@ -1,7 +1,7 @@
 'use client'
 
-import { useLayoutEffect, useMemo, useRef } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { useEffect, useLayoutEffect, useMemo, useRef, type ElementRef, type RefObject } from 'react'
+import { Canvas, useThree } from '@react-three/fiber'
 import { ContactShadows, OrbitControls } from '@react-three/drei'
 import {
   Color,
@@ -68,11 +68,39 @@ function SpeciesInstances({ group }: { group: SpeciesGroup }) {
   )
 }
 
+/**
+ * Camera prop у <Canvas> применяется только при монтировании (R3F так устроен), поэтому смена
+ * размера доски без пересоздания сцены оставляла камеру на старом расстоянии. Этот компонент
+ * живёт внутри Canvas и явно переносит камеру и цель контролов при каждом изменении cameraDistance.
+ */
+function CameraRig({
+  distance,
+  controlsRef,
+}: {
+  distance: number
+  controlsRef: RefObject<ElementRef<typeof OrbitControls> | null>
+}) {
+  const { camera } = useThree()
+
+  useEffect(() => {
+    camera.position.set(distance * 0.7, distance * 0.8, distance * 0.9)
+    camera.updateProjectionMatrix()
+    const controls = controlsRef.current
+    if (controls) {
+      controls.target.set(0, 0, 0)
+      controls.update()
+    }
+  }, [distance, camera, controlsRef])
+
+  return null
+}
+
 export function Board3D({ model, label }: { model: BoardModel; label: string }) {
   const instances = useMemo(() => buildInstances(model), [model])
   const distance = cameraDistance(instances)
   // Пустая доска даёт sizeUnits 0 и вырожденную ортокамеру теней, поэтому масштаб не должен падать ниже пола.
   const shadowScale = Math.max(Math.max(instances.sizeUnits[0], instances.sizeUnits[2]) * 2.4, 0.2)
+  const controlsRef = useRef<ElementRef<typeof OrbitControls> | null>(null)
 
   return (
     <Canvas
@@ -97,6 +125,7 @@ export function Board3D({ model, label }: { model: BoardModel; label: string }) 
       ))}
       <ContactShadows position={[0, -0.002, 0]} opacity={0.42} scale={shadowScale} blur={2.2} far={1.5} />
       <OrbitControls
+        ref={controlsRef}
         makeDefault
         enablePan
         enableZoom
@@ -105,6 +134,7 @@ export function Board3D({ model, label }: { model: BoardModel; label: string }) 
         minDistance={distance * 0.3}
         maxDistance={distance * 3}
       />
+      <CameraRig distance={distance} controlsRef={controlsRef} />
     </Canvas>
   )
 }

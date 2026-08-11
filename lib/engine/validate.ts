@@ -41,10 +41,19 @@ export function hasErrors(diagnostics: readonly Diagnostic[]): boolean {
   return diagnostics.some((d) => d.level === 'error')
 }
 
+interface ShrinkPairEntry {
+  readonly a: string
+  readonly b: string
+  readonly deltaPp: number
+  count: number
+}
+
 export function validate(design: Design, opts: ValidateOptions = {}): Diagnostic[] {
   const out: Diagnostic[] = []
   const { board } = design
   const knownSpecies = opts.knownSpeciesIds ? new Set(opts.knownSpeciesIds) : undefined
+  /** Дедуп SHRINKAGE_MISMATCH на уровне всего проекта: одна запись на неупорядоченную пару пород. */
+  const shrinkPairs = new Map<string, ShrinkPairEntry>()
 
   const outOfRange = (v: number, lo: number, hi: number) => !Number.isFinite(v) || v < lo || v > hi
   if (
@@ -149,18 +158,31 @@ export function validate(design: Design, opts: ValidateOptions = {}): Diagnostic
         const sa = shrink[a.speciesId]
         const sb = shrink[b.speciesId]
         if (sa === undefined || sb === undefined) continue
-        if (Math.abs(sa - sb) > SHRINKAGE_DELTA_PP) {
-          out.push(
-            diag(
-              'SHRINKAGE_MISMATCH',
-              'warning',
-              { panelId: panel.id, a: a.speciesId, b: b.speciesId, deltaPp: Math.abs(sa - sb), limitPp: SHRINKAGE_DELTA_PP },
-              { panelId: panel.id, elementIndex: i },
-            ),
-          )
+        const delta = Math.abs(sa - sb)
+        if (delta > SHRINKAGE_DELTA_PP) {
+          const [pairA, pairB] = [a.speciesId, b.speciesId].sort()
+          const key = `${pairA}|${pairB}`
+          const existing = shrinkPairs.get(key)
+          if (existing) {
+            existing.count += 1
+          } else if (pairA !== undefined && pairB !== undefined) {
+            shrinkPairs.set(key, { a: pairA, b: pairB, deltaPp: Math.round(delta * 10) / 10, count: 1 })
+          }
         }
       }
     }
+  }
+
+  for (const entry of shrinkPairs.values()) {
+    out.push(
+      diag('SHRINKAGE_MISMATCH', 'warning', {
+        a: entry.a,
+        b: entry.b,
+        deltaPp: entry.deltaPp,
+        limitPp: SHRINKAGE_DELTA_PP,
+        count: entry.count,
+      }),
+    )
   }
 
   const rowWidths: number[] = []

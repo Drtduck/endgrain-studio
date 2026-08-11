@@ -72,7 +72,7 @@ export function BoardSettings() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-2 items-end gap-2 sm:grid-cols-3">
           <NumberFieldMm id="board-width" testId="board-width" labelKey="board.width" valueMm={design.board.targetWidthMm} unit={unit} locale={locale} minMm={BOARD_MIN_MM} maxMm={BOARD_MAX_MM} onCommitMm={setBoardWidthMm} />
           <NumberFieldMm id="board-length" testId="board-length" labelKey="board.length" valueMm={design.board.targetLengthMm} unit={unit} locale={locale} minMm={BOARD_MIN_MM} maxMm={BOARD_MAX_MM} onCommitMm={setBoardLengthMm} />
           <NumberFieldMm id="board-thickness" testId="board-thickness" labelKey="board.thickness" valueMm={design.board.thicknessMm} unit={unit} locale={locale} minMm={THICKNESS_MIN_MM} maxMm={THICKNESS_MAX_MM} onCommitMm={setBoardThicknessMm} />

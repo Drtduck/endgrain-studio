@@ -11,6 +11,8 @@ export function t(locale: Locale, key: MessageKey, params: Record<string, string
   if (template === undefined) return String(key)
   return template.replace(/\{(\w+)\}/g, (match, name: string) => {
     const value = params[name]
-    return value === undefined ? match : String(value)
+    if (value === undefined) return match
+    if (typeof value === 'number') return String(Number(value.toFixed(2)))
+    return String(value)
   })
 }

@@ -63,7 +63,7 @@ export function StudioShell() {
             )}
           </div>
 
-          <aside className="flex flex-col gap-4">
+          <aside className="flex flex-col gap-4 lg:sticky lg:top-4 lg:max-h-screen lg:self-start lg:overflow-y-auto">
             <SpeciesPalette />
             <BoardSettings />
             <ComplexityMeter locale={locale} calc={calc} diagnostics={diagnostics} unit={unit} model={model} />
