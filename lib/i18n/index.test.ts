@@ -32,4 +32,10 @@ describe('i18n', () => {
     // @ts-expect-error намеренно несуществующий ключ
     expect(t('ru', 'нет.такого.ключа')).toBe('нет.такого.ключа')
   })
+
+  it('formats numeric params without float tails', () => {
+    const out = t('ru', 'diag.RAGGED_BOARD', { minMm: 100.10000000000001, maxMm: 120 })
+    expect(out).not.toContain('000000')
+    expect(out).toContain('100.1')
+  })
 })

@@ -47,7 +47,7 @@ const ru = {
   'diag.DIMENSION_SANITY': 'Габариты вне диапазона: ширина {widthMm}, длина {lengthMm}, толщина {thicknessMm}, kerf {kerfMm}',
   'diag.RAGGED_BOARD': 'Ряды разной ширины ({minMm} и {maxMm} мм): доска получится неровной',
   'diag.ANGLE_UNSUPPORTED': 'Угол реза {angleDeg} не поддерживается в этой версии, допустим только 0',
-  'diag.SHRINKAGE_MISMATCH': 'Соседние породы {a} и {b} различаются по усушке на {deltaPp} п.п. при допуске {limitPp}',
+  'diag.SHRINKAGE_MISMATCH': 'Соседние породы {a} и {b} различаются по усушке на {deltaPp} п.п. при допуске {limitPp} (таких стыков в проекте: {count})',
   'diag.CELL_BUDGET': 'Ячеек {cells} при лимите {limit}',
   'diag.UNKNOWN_SPECIES': 'Порода {speciesId} в панели {panelId} не найдена в справочнике',
   'palette.title': 'Породы',

@@ -49,7 +49,7 @@ const en: Record<keyof typeof ru, string> = {
   'diag.DIMENSION_SANITY': 'Dimensions out of range: width {widthMm}, length {lengthMm}, thickness {thicknessMm}, kerf {kerfMm}',
   'diag.RAGGED_BOARD': 'Rows differ in width ({minMm} and {maxMm} mm), the board will be ragged',
   'diag.ANGLE_UNSUPPORTED': 'Cut angle {angleDeg} is not supported in this version, only 0 is allowed',
-  'diag.SHRINKAGE_MISMATCH': 'Neighbouring species {a} and {b} differ in shrinkage by {deltaPp} pp against a {limitPp} limit',
+  'diag.SHRINKAGE_MISMATCH': 'Neighbouring species {a} and {b} differ in shrinkage by {deltaPp} pp against a {limitPp} limit (such joints in the project: {count})',
   'diag.CELL_BUDGET': '{cells} cells against a {limit} limit',
   'diag.UNKNOWN_SPECIES': 'Species {speciesId} in panel {panelId} is not in the catalogue',
   'palette.title': 'Species',
