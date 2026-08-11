@@ -15,4 +15,5 @@ export {
   nextPanelId,
 } from './panels'
 export { compile } from './compile'
+export { validate, hasErrors, type ValidateOptions } from './validate'
 export { baseDesign, stripsPanel } from './fixtures'

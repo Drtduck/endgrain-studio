@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
 import { compile } from './compile'
-import { baseDesign } from './fixtures'
+import { baseDesign, stripsPanel } from './fixtures'
 import { panelLengthMm } from './panels'
+import { validate, hasErrors } from './validate'
 import type { Design } from './types'
 
 const speciesArb = fc.constantFrom('walnut', 'maple', 'cherry', 'padauk', 'wenge')
@@ -79,6 +80,32 @@ describe('compile invariants', () => {
         }
       }),
       { numRuns: 200 },
+    )
+  })
+})
+
+describe('depth limit invariant', () => {
+  it('always rejects depth 3 and never rejects depth 2', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 1, max: 3 }), (depth) => {
+        const panels = [stripsPanel('L0', ['walnut', 'maple'], 12)]
+        for (let i = 1; i < depth; i += 1) {
+          panels.push({
+            id: `L${i}`,
+            elements: [{ kind: 'sliceRef', panelId: `L${i - 1}`, thicknessMm: 12, angleDeg: 0, offsetMm: 0 }],
+          })
+        }
+        const top = `L${depth - 1}`
+        const d: Design = baseDesign({
+          panels,
+          rows: [{ id: 'r1', panelId: top, thicknessMm: 24, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+        })
+        const found = validate(d).some((x) => x.code === 'DEPTH_LIMIT')
+        expect(found).toBe(depth >= 3)
+        expect(() => compile(d)).not.toThrow()
+        if (depth < 3) expect(hasErrors(validate(d))).toBe(false)
+      }),
+      { numRuns: 30 },
     )
   })
 })
