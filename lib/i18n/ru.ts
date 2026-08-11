@@ -123,6 +123,15 @@ const ru = {
   'tpl.chess-8x8': 'Шахматная доска 8 на 8',
   'tpl.mosaic-random': 'Мозаика',
   'tpl.inlay-band': 'Вставка мелким срезом',
+  'templates.title': 'Библиотека шаблонов',
+  'templates.subtitle': 'Выберите узор, дальше его можно править руками',
+  'templates.size': '{widthMm} × {lengthMm} мм',
+  'templates.glueUps': 'склеек: {count}',
+  'templates.confirmTitle': 'Заменить текущий проект?',
+  'templates.confirmBody': 'Шаблон «{name}» заменит доску целиком, а история правок обнулится.',
+  'templates.confirmApply': 'Заменить',
+  'templates.confirmCancel': 'Отмена',
+  'aria.templateGallery': 'галерея шаблонов доски',
 } as const
 
 export default ru

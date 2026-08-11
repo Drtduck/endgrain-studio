@@ -125,6 +125,15 @@ const en: Record<keyof typeof ru, string> = {
   'tpl.chess-8x8': 'Chessboard 8 by 8',
   'tpl.mosaic-random': 'Mosaic',
   'tpl.inlay-band': 'Inlay band',
+  'templates.title': 'Template library',
+  'templates.subtitle': 'Pick a pattern, then edit it by hand',
+  'templates.size': '{widthMm} × {lengthMm} mm',
+  'templates.glueUps': 'glue-ups: {count}',
+  'templates.confirmTitle': 'Replace the current project?',
+  'templates.confirmBody': 'Template "{name}" replaces the whole board and clears the edit history.',
+  'templates.confirmApply': 'Replace',
+  'templates.confirmCancel': 'Cancel',
+  'aria.templateGallery': 'board template gallery',
 }
 
 export default en

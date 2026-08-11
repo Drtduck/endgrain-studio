@@ -12,6 +12,7 @@ import { PanelInspector } from '@/components/PanelInspector'
 import { RowInspector } from '@/components/RowInspector'
 import { SpeciesPalette } from '@/components/SpeciesPalette'
 import { StudioTabs } from '@/components/StudioTabs'
+import { TemplateGallery } from '@/components/TemplateGallery'
 import { t } from '@/lib/i18n'
 import { useDerived } from '@/lib/store/derived'
 import { useStudioPersistence } from '@/lib/store/persist'
@@ -40,28 +41,32 @@ export function StudioShell() {
 
       <StudioTabs />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="flex flex-col gap-4">
-          {view === 'view3d' ? (
-            <Board3DPanel />
-          ) : (
-            <>
-              <section aria-label={t(locale, 'board.title')} className="overflow-x-auto">
-                <BoardCanvas />
-              </section>
-              <PanelInspector />
-              <RowInspector />
-            </>
-          )}
-        </div>
+      {view === 'templates' ? (
+        <TemplateGallery />
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="flex flex-col gap-4">
+            {view === 'view3d' ? (
+              <Board3DPanel />
+            ) : (
+              <>
+                <section aria-label={t(locale, 'board.title')} className="overflow-x-auto">
+                  <BoardCanvas />
+                </section>
+                <PanelInspector />
+                <RowInspector />
+              </>
+            )}
+          </div>
 
-        <aside className="flex flex-col gap-4">
-          <SpeciesPalette />
-          <BoardSettings />
-          <ComplexityMeter locale={locale} calc={calc} diagnostics={diagnostics} unit={unit} model={model} />
-          <DiagnosticsPanel />
-        </aside>
-      </div>
+          <aside className="flex flex-col gap-4">
+            <SpeciesPalette />
+            <BoardSettings />
+            <ComplexityMeter locale={locale} calc={calc} diagnostics={diagnostics} unit={unit} model={model} />
+            <DiagnosticsPanel />
+          </aside>
+        </div>
+      )}
 
       <ForkDialog />
     </main>

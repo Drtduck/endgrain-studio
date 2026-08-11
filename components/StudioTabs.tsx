@@ -6,6 +6,7 @@ import { useStudio, type StudioView } from '@/lib/store/studio'
 
 const TABS: readonly { readonly view: StudioView; readonly labelKey: MessageKey }[] = [
   { view: 'editor', labelKey: 'tabs.editor' },
+  { view: 'templates', labelKey: 'tabs.templates' },
   { view: 'view3d', labelKey: 'tabs.view3d' },
 ]
 
