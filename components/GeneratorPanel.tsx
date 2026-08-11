@@ -161,7 +161,7 @@ export function GeneratorPanel() {
           />
         </label>
 
-        <span data-testid="gen-generation" className="font-mono text-xs tabular-nums text-ink-muted">
+        <span data-testid="gen-generation" className="self-center font-mono text-xs tabular-nums text-ink-muted">
           {t(locale, 'gen.generation', { number: population.generation })}
         </span>
       </div>

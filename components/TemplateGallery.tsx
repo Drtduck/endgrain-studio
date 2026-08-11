@@ -67,7 +67,7 @@ export function TemplateGallery() {
                       type="button"
                       data-testid={`template-${tpl.id}`}
                       onClick={() => onPick(tpl)}
-                      className="flex w-full cursor-pointer flex-col overflow-hidden rounded-lg border border-line-subtle bg-surface-raised text-left shadow-sm transition-[box-shadow,border-color] duration-hover ease-out hover:border-accent-border hover:shadow-md"
+                      className="flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-lg border border-line-subtle bg-surface-raised text-left shadow-sm transition-[box-shadow,border-color] duration-hover ease-out hover:border-accent-border hover:shadow-md"
                     >
                       <div className="flex items-center justify-center bg-surface-panel p-2.5">
                         {model ? <BoardSvg model={model} locale={locale} maxPx={140} /> : null}

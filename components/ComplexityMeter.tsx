@@ -1,6 +1,5 @@
 import { CardTitle } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
-import type { BoardModel, Diagnostic } from '@/lib/engine'
+import type { BoardModel } from '@/lib/engine'
 import type { CalcResult } from '@/lib/calc'
 import { t, type Locale, type MessageKey } from '@/lib/i18n'
 import { SPECIES_BY_ID } from '@/lib/species'
@@ -11,13 +10,11 @@ const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' 
 export function ComplexityMeter({
   locale,
   calc,
-  diagnostics,
   unit,
   model,
 }: {
   locale: Locale
   calc: CalcResult
-  diagnostics: readonly Diagnostic[]
   unit: 'mm' | 'in'
   model: BoardModel
 }) {
@@ -85,20 +82,6 @@ export function ComplexityMeter({
         </ul>
       </div>
 
-      {diagnostics.length === 0 ? (
-        <p className="mt-3 text-[11px] text-ink-muted">{t(locale, 'meter.noIssues')}</p>
-      ) : (
-        <ul className="mt-3 space-y-0.5 text-[11px]">
-          {diagnostics.map((d, i) => (
-            <li
-              key={`${d.code}-${i}`}
-              className={cn('font-mono tabular-nums', d.level === 'error' ? 'text-error' : 'text-warning')}
-            >
-              {t(locale, d.messageKey as MessageKey, d.params)}
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   )
 }

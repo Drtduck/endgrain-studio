@@ -90,6 +90,7 @@ export function PhotoImport() {
       >
         <ImagePlus size={26} className="text-ink-muted" strokeWidth={1.6} />
         <p className="text-sm font-semibold">{t(locale, 'photo.drop')}</p>
+        <p className="text-xs text-ink-muted">{t(locale, 'photo.dropHint')}</p>
         <input
           ref={inputRef}
           data-testid="photo-file"
