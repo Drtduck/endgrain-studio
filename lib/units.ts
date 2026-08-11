@@ -1,3 +1,5 @@
+export type UnitSystem = 'mm' | 'in'
+
 export const MM_PER_INCH = 25.4
 export const MM3_PER_BOARD_FOOT = 144 * MM_PER_INCH ** 3 // 2359737.216
 
