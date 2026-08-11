@@ -1,0 +1,101 @@
+:root {
+  /* Фоны */
+  --bg-app:            #EFEAE1;
+  --bg-canvas:         #E9E3D8;
+  --surface:           #FBF9F5;
+  --surface-raised:    #FFFFFF;
+  --surface-sunken:    #E9E3D8;
+  --surface-panel:     #F4F0E9;
+  --overlay:           rgba(36, 30, 25, 0.44);
+
+  /* Текст */
+  --text-primary:      #241E19;
+  --text-secondary:    #5A5048;
+  --text-muted:        #8A7F73;
+  --text-inverse:      #FBF9F5;
+  --text-accent:       #14615A;
+
+  /* Границы */
+  --border-subtle:     #E2DACD;
+  --border-default:    #D2C8B8;
+  --border-strong:     #B4A692;
+
+  /* Акцент */
+  --accent:            #14615A;
+  --accent-hover:      #0F4E48;
+  --accent-active:     #0A3B36;
+  --accent-soft:       #DCEAE7;
+  --accent-border:     #9DC4BE;
+  --accent-fg:         #FBF9F5;
+
+  /* Состояния */
+  --success:           #3E7A3C;
+  --success-soft:      #E2EFDF;
+  --success-border:    #B3D0AE;
+  --success-text:      #2C5A2A;
+  --warning:           #B57113;
+  --warning-soft:      #FBEEDA;
+  --warning-border:    #E8CE9B;
+  --warning-text:      #7A4A08;
+  --error:             #A63328;
+  --error-soft:        #F8E3E0;
+  --error-border:      #E4B3AC;
+  --error-text:        #7E2419;
+
+  /* Выделение и фокус */
+  --selection:         #14615A;
+  --selection-halo:    rgba(20, 97, 90, 0.14);
+  --focus-ring:        0 0 0 3px var(--selection-halo);
+  --cell-outline:      rgba(36, 30, 25, 0.14);
+
+  /* Радиусы */
+  --radius-xs: 4px;  --radius-sm: 6px;  --radius-md: 8px;
+  --radius-lg: 12px; --radius-xl: 16px; --radius-full: 999px;
+
+  /* Тени */
+  --shadow-sm:     0 1px 2px rgba(36, 30, 25, 0.06);
+  --shadow-md:     0 2px 8px rgba(36, 30, 25, 0.10);
+  --shadow-lg:     0 8px 24px rgba(36, 30, 25, 0.10);
+  --shadow-dialog: 0 24px 64px rgba(36, 30, 25, 0.30);
+
+  /* Толщины границ */
+  --border-hairline: 1px;
+  --border-active:   1.5px;
+
+  /* Движение */
+  --dur-fast:   80ms;
+  --dur-hover: 120ms;
+  --dur-panel: 160ms;
+  --dur-modal: 240ms;
+  --ease-out:  cubic-bezier(0.2, 0.6, 0.2, 1);
+
+  /* Типографика */
+  --font-display: var(--font-bitter), Georgia, serif;
+  --font-ui:      var(--font-golos), system-ui, sans-serif;
+  --font-mono:    var(--font-jetbrains), ui-monospace, monospace;
+}
+
+.dark {
+  --bg-app:         #1C1815;
+  --bg-canvas:      #17130F;
+  --surface:        #241E19;
+  --surface-raised: #2C251F;
+  --surface-panel:  #201A16;
+  --text-primary:   #EFE7DA;
+  --text-secondary: #B4A692;
+  --text-muted:     #8A7F73;
+  --border-subtle:  #332B24;
+  --border-default: #43392F;
+  --border-strong:  #5A4E42;
+  --accent:         #2E8F85;
+  --accent-hover:   #37A398;
+  --accent-soft:    #17332F;
+  --accent-border:  #2E5F59;
+}
+
+body {
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}

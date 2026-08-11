@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="page">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #EFEAE1; }
+  a { color: #14615A; }
+  a:hover { color: #0F4E48; }
+</style>
+</helmet>
+
+<div style="font-family:'Golos Text',system-ui,sans-serif;color:#241E19;background:#EFEAE1;padding:48px 40px 96px;-webkit-font-smoothing:antialiased">
+<div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:56px">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#8A7F73">Дизайн-система v1.0</div>
+    <h1 style="font-family:Bitter,serif;font-weight:600;font-size:40px;line-height:1.1;margin:0;letter-spacing:-0.01em">Endgrain Studio</h1>
+    <p style="margin:0;max-width:620px;font-size:16px;line-height:1.6;color:#5A5048;text-wrap:pretty">Тёплый мастерской-минимализм. Интерфейс держит нейтральный тёплый серо-бежевый диапазон, чтобы 16 цветов пород на холсте оставались единственным источником насыщенного цвета. Акцент один: патинированный тиловый, он не встречается в древесной палитре и потому всегда читается как «управление», а не как материал.</p>
+  </div>
+
+  <!-- ЦВЕТА -->
+  <section style="display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid #D2C8B8;padding-bottom:12px">
+      <h2 style="font-family:Bitter,serif;font-weight:600;font-size:24px;margin:0">1. Токены цвета</h2>
+      <span style="font-size:13px;color:#8A7F73">светлая тема основная</span>
+    </div>
+    <sc-for list="{{ colorGroups }}" as="g" hint-placeholder-count="4">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#8A7F73">{{ g.title }}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px">
+          <sc-for list="{{ g.items }}" as="t" hint-placeholder-count="5">
+            <div style="background:#FBF9F5;border:1px solid #E2DACD;border-radius:8px;overflow:hidden">
+              <div style="height:52px;background:{{ t.hex }};border-bottom:1px solid #E2DACD"></div>
+              <div style="padding:8px 10px;display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#241E19">{{ t.name }}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A7F73">{{ t.hex }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+  </section>
+
+  <!-- ПОРОДЫ -->
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid #D2C8B8;padding-bottom:12px">
+      <h2 style="font-family:Bitter,serif;font-weight:600;font-size:24px;margin:0">2. Палитра пород</h2>
+      <span style="font-size:13px;color:#8A7F73">данные материала, не токены интерфейса</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px">
+      <sc-for list="{{ woods }}" as="w" hint-placeholder-count="16">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="height:64px;border-radius:6px;background:{{ w.hex }};box-shadow:inset 0 0 0 1px rgba(36,30,25,0.12)"></div>
+          <div style="display:flex;flex-direction:column;gap:1px">
+            <div style="font-size:13px;font-weight:500">{{ w.ru }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A7F73">{{ w.hex }} · {{ w.en }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- ТИПОГРАФИКА -->
+  <section style="display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid #D2C8B8;padding-bottom:12px">
+      <h2 style="font-family:Bitter,serif;font-weight:600;font-size:24px;margin:0">3. Типографика</h2>
+      <span style="font-size:13px;color:#8A7F73">Bitter · Golos Text · JetBrains Mono</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+      <div style="background:#FBF9F5;border:1px solid #E2DACD;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-family:Bitter,serif;font-size:34px;font-weight:600;line-height:1">Аа Bb 24</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#14615A">Bitter</div>
+        <div style="font-size:13px;color:#5A5048;line-height:1.5">Заголовки, названия экранов, шапка. Вес 500 и 600. Слэб-серифная фактура даёт мастерской характер без декоративности.</div>
+      </div>
+      <div style="background:#FBF9F5;border:1px solid #E2DACD;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:34px;font-weight:500;line-height:1">Аа Bb 24</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#14615A">Golos Text</div>
+        <div style="font-size:13px;color:#5A5048;line-height:1.5">Интерфейс целиком: вкладки, кнопки, подписи, тексты диагностик. Кириллица родная, узкие формы экономят место в панелях.</div>
+      </div>
+      <div style="background:#FBF9F5;border:1px solid #E2DACD;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:34px;font-weight:500;line-height:1">1234,5</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#14615A">JetBrains Mono</div>
+        <div style="font-size:13px;color:#5A5048;line-height:1.5">Только числа: метр сложности, числовые поля, размеры, цена. Табличные цифры не дёргают верстку при пересчёте.</div>
+      </div>
+    </div>
+    <div style="background:#FBF9F5;border:1px solid #E2DACD;border-radius:12px;overflow:hidden">
+      <sc-for list="{{ typeScale }}" as="s" hint-placeholder-count="8">
+        <div style="display:grid;grid-template-columns:150px 1fr 200px;gap:20px;align-items:baseline;padding:14px 20px;border-bottom:1px solid #EFEAE1">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A7F73">{{ s.token }}</div>
+          <div style="font-family:{{ s.family }};font-size:{{ s.size }};font-weight:{{ s.weight }};line-height:1.2;letter-spacing:{{ s.tracking }};text-transform:{{ s.transform }};color:#241E19">{{ s.sample }}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A7F73;text-align:right">{{ s.spec }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- ГЕОМЕТРИЯ -->
+  <section style="display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid #D2C8B8;padding-bottom:12px">
+      <h2 style="font-family:Bitter,serif;font-weight:600;font-size:24px;margin:0">4. Геометрия</h2>
+      <span style="font-size:13px;color:#8A7F73">радиусы, шкала отступов, тени, границы</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="background:#FBF9F5;border:1px solid #E2DACD;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#8A7F73">Радиусы</div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap">
+          <sc-for list="{{ radii }}" as="r" hint-placeholder-count="5">
+            <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
+              <div style="width:64px;height:48px;background:#E9E3D8;border:1px solid #D2C8B8;border-radius:{{ r.value }}"></div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A5048">{{ r.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size:13px;color:#5A5048;line-height:1.5">Ячейка холста радиуса не имеет: доска склеена из прямых брусков. Радиус появляется только у элементов интерфейса.</div>
+      </div>
+      <div style="background:#FBF9F5;border:1px solid #E2DACD;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#8A7F73">Тени</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <sc-for list="{{ shadows }}" as="sh" hint-placeholder-count="4">
+            <div style="display:flex;flex-direction:column;gap:8px;align-items:center">
+              <div style="width:84px;height:52px;background:#FFFFFF;border-radius:8px;box-shadow:{{ sh.value }}"></div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A5048">{{ sh.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size:13px;color:#5A5048;line-height:1.5">Тени мягкие и тёплые: чёрный заменён на #241E19 с низкой альфой. Панели держатся на границах, тень только у всплывающего.</div>
+      </div>
+    </div>
+    <div style="background:#FBF9F5;border:1px solid #E2DACD;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#8A7F73">Отступы, шаг 4</div>
+      <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap">
+        <sc-for list="{{ spacing }}" as="sp" hint-placeholder-count="10">
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
+            <div style="width:{{ sp.px }};height:{{ sp.px }};background:#9DC4BE;border-radius:2px"></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A7F73">{{ sp.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- СБОРКА -->
+  <section style="display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid #D2C8B8;padding-bottom:12px">
+      <h2 style="font-family:Bitter,serif;font-weight:600;font-size:24px;margin:0">5. Компоненты в сборе</h2>
+      <span style="font-size:13px;color:#8A7F73">живой фрагмент редактора</span>
+    </div>
+
+    <div style="border:1px solid #D2C8B8;border-radius:16px;overflow:hidden;background:#EFEAE1;box-shadow:0 8px 24px rgba(36,30,25,0.10)">
+
+      <!-- Шапка -->
+      <div style="display:flex;align-items:center;gap:16px;min-height:56px;padding:8px 16px;flex-wrap:wrap;background:#FBF9F5;border-bottom:1px solid #D2C8B8">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div style="width:22px;height:22px;border-radius:4px;background:#14615A;display:flex;align-items:center;justify-content:center;color:#FBF9F5;font-family:Bitter,serif;font-size:13px;font-weight:600">E</div>
+          <div style="font-family:Bitter,serif;font-size:17px;font-weight:600;letter-spacing:-0.01em">Endgrain Studio</div>
+        </div>
+        <div style="display:flex;gap:2px">
+          <div style="padding:7px 13px;border-radius:6px;font-size:14px;font-weight:600;background:#DCEAE7;color:#14615A">Редактор</div>
+          <div style="padding:7px 13px;border-radius:6px;font-size:14px;font-weight:500;color:#5A5048" style-hover="background:#EFEAE1;color:#241E19">Шаблоны</div>
+          <div style="padding:7px 13px;border-radius:6px;font-size:14px;font-weight:500;color:#5A5048" style-hover="background:#EFEAE1;color:#241E19">Генератор</div>
+          <div style="padding:7px 13px;border-radius:6px;font-size:14px;font-weight:500;color:#5A5048" style-hover="background:#EFEAE1;color:#241E19">Фото</div>
+          <div style="padding:7px 13px;border-radius:6px;font-size:14px;font-weight:500;color:#5A5048" style-hover="background:#EFEAE1;color:#241E19">3D</div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="display:flex;padding:2px;background:#E9E3D8;border-radius:8px;gap:2px">
+            <div style="padding:5px 11px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:12px;background:#FFFFFF;color:#241E19;box-shadow:0 1px 2px rgba(36,30,25,0.10)">мм</div>
+            <div style="padding:5px 11px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#8A7F73">in</div>
+          </div>
+          <div style="display:flex;padding:2px;background:#E9E3D8;border-radius:8px;gap:2px">
+            <div style="padding:5px 11px;border-radius:6px;font-size:12px;font-weight:600;background:#FFFFFF;color:#241E19;box-shadow:0 1px 2px rgba(36,30,25,0.10)">RU</div>
+            <div style="padding:5px 11px;border-radius:6px;font-size:12px;font-weight:600;color:#8A7F73">EN</div>
+          </div>
+          <div style="width:1px;height:24px;background:#E2DACD"></div>
+          <div style="display:flex;gap:2px">
+            <div style="width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#5A5048" style-hover="background:#EFEAE1">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h7a3 3 0 0 1 0 6H7"></path><path d="M6 4 3 7l3 3"></path></svg>
+            </div>
+            <div style="width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#B4A692">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 7H6a3 3 0 0 0 0 6h3"></path><path d="m10 4 3 3-3 3"></path></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Рабочая область -->
+      <div style="display:grid;grid-template-columns:minmax(0,236px) minmax(0,1fr) minmax(0,268px);gap:1px;background:#E2DACD">
+
+        <!-- Левая панель: породы -->
+        <div style="background:#F4F0E9;padding:16px 14px;display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#8A7F73">Породы</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#14615A">16</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+              <sc-for list="{{ woods }}" as="w" hint-placeholder-count="16">
+                <div title="{{ w.ru }}" style="aspect-ratio:1;border-radius:5px;background:{{ w.hex }};box-shadow:{{ w.ring }};cursor:pointer"></div>
+              </sc-for>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#FBF9F5;border:1px solid #E2DACD;border-radius:8px">
+              <div style="width:20px;height:20px;border-radius:4px;background:#B23A2A;box-shadow:inset 0 0 0 1px rgba(36,30,25,0.15)"></div>
+              <div style="display:flex;flex-direction:column">
+                <div style="font-size:13px;font-weight:500;line-height:1.3">Падук</div>
+                <div style="font-size:11px;color:#8A7F73;line-height:1.3">активная кисть</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:1px;background:#E2DACD"></div>
+
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#8A7F73">Размеры доски</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="font-size:11px;color:#8A7F73">Ширина</div>
+                <div style="display:flex;align-items:center;height:34px;background:#FFFFFF;border:1px solid #D2C8B8;border-radius:6px;padding:0 8px;gap:4px">
+                  <div style="flex:1;font-family:'JetBrains Mono',monospace;font-size:14px;font-variant-numeric:tabular-nums">320</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A7F73">мм</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="font-size:11px;color:#8A7F73">Глубина</div>
+                <div style="display:flex;align-items:center;height:34px;background:#FFFFFF;border:1.5px solid #14615A;border-radius:6px;padding:0 8px;gap:4px;box-shadow:0 0 0 3px rgba(20,97,90,0.14)">
+                  <div style="flex:1;font-family:'JetBrains Mono',monospace;font-size:14px;font-variant-numeric:tabular-nums">240</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A7F73">мм</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="font-size:11px;color:#8A7F73">Толщина</div>
+                <div style="display:flex;align-items:center;height:34px;background:#FFFFFF;border:1px solid #D2C8B8;border-radius:6px;padding:0 8px;gap:4px">
+                  <div style="flex:1;font-family:'JetBrains Mono',monospace;font-size:14px;font-variant-numeric:tabular-nums">38</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A7F73">мм</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="font-size:11px;color:#8A7F73">Пропил</div>
+                <div style="display:flex;align-items:center;height:34px;background:#E9E3D8;border:1px solid #E2DACD;border-radius:6px;padding:0 8px;gap:4px">
+                  <div style="flex:1;font-family:'JetBrains Mono',monospace;font-size:14px;color:#B4A692;font-variant-numeric:tabular-nums">3,2</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#B4A692">мм</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Холст -->
+        <div style="background:#E9E3D8;padding:22px;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;min-width:0;overflow:auto">
+          <div style="display:flex;gap:8px;align-items:flex-start;min-width:0">
+            <div style="display:flex;flex-direction:column;gap:2px;padding-top:0">
+              <sc-for list="{{ rowNums }}" as="n" hint-placeholder-count="10">
+                <div style="height:26px;display:flex;align-items:center;justify-content:flex-end;width:20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A7F73">{{ n }}</div>
+              </sc-for>
+            </div>
+            <div style="background:#FBF9F5;padding:6px;border-radius:4px;box-shadow:0 2px 8px rgba(36,30,25,0.10)">
+              <div style="display:grid;grid-template-columns:repeat(14,26px);gap:2px">
+                <sc-for list="{{ boardCells }}" as="c" hint-placeholder-count="140">
+                  <div style="height:26px;background:{{ c }}"></div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A7F73">14 полос × 10 рядов · 320 × 240 мм</div>
+        </div>
+
+        <!-- Правая панель: метр + диагностика -->
+        <div style="background:#F4F0E9;padding:16px 14px;display:flex;flex-direction:column;gap:16px">
+          <div style="background:#FBF9F5;border:1px solid #E2DACD;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#8A7F73">Метр сложности</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 10px">
+              <sc-for list="{{ metrics }}" as="m" hint-placeholder-count="6">
+                <div style="display:flex;flex-direction:column;gap:2px">
+                  <div style="font-size:11px;color:#8A7F73">{{ m.label }}</div>
+                  <div style="display:flex;align-items:baseline;gap:3px">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:500;color:{{ m.color }};font-variant-numeric:tabular-nums;line-height:1.1">{{ m.value }}</div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A7F73">{{ m.unit }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="height:1px;background:#EFEAE1"></div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between">
+              <div style="font-size:13px;color:#5A5048">Себестоимость</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:600;font-variant-numeric:tabular-nums">3 480 ₽</div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#8A7F73">Диагностика</div>
+            <div style="display:flex;gap:9px;padding:11px 12px;background:#FBEEDA;border:1px solid #E8CE9B;border-radius:8px">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#B57113" stroke-width="1.6" stroke-linecap="round" style="flex:none;margin-top:1px"><path d="M8 2.5 14.5 13.5H1.5L8 2.5Z"></path><path d="M8 6.5v3.2"></path><path d="M8 11.8h.01"></path></svg>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-size:13px;font-weight:600;color:#7A4A08">Полоса 9 уже пропила</div>
+                <div style="font-size:12px;line-height:1.45;color:#5A5048">Ширина 2,8 мм меньше пропила пилы. Увеличьте до 4 мм или объедините с соседней.</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:9px;padding:11px 12px;background:#F8E3E0;border:1px solid #E4B3AC;border-radius:8px">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#A63328" stroke-width="1.6" stroke-linecap="round" style="flex:none;margin-top:1px"><circle cx="8" cy="8" r="6"></circle><path d="M8 5v3.4"></path><path d="M8 10.8h.01"></path></svg>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-size:13px;font-weight:600;color:#7E2419">Заготовка не влезает в станок</div>
+                <div style="font-size:12px;line-height:1.45;color:#5A5048">Склейка 620 мм при максимуме 600 мм. Уменьшите число рядов.</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:9px;padding:11px 12px;background:#E2EFDF;border:1px solid #B3D0AE;border-radius:8px">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3E7A3C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px"><circle cx="8" cy="8" r="6"></circle><path d="m5.4 8.2 1.9 1.9 3.4-3.9"></path></svg>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-size:13px;font-weight:600;color:#2C5A2A">Направление волокна выдержано</div>
+                <div style="font-size:12px;line-height:1.45;color:#5A5048">Все ряды повёрнуты торцом вверх.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Нижняя полка: инспектор рядов -->
+      <div style="background:#FBF9F5;border-top:1px solid #D2C8B8;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#8A7F73">Инспектор рядов</div>
+          <div style="display:flex;gap:6px">
+            <div style="height:30px;padding:0 12px;border-radius:6px;background:#14615A;color:#FBF9F5;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px" style-hover="background:#0F4E48">Добавить ряд</div>
+            <div style="height:30px;padding:0 12px;border-radius:6px;background:#FBF9F5;border:1px solid #D2C8B8;color:#241E19;font-size:13px;font-weight:500;display:flex;align-items:center" style-hover="background:#EFEAE1">Разрезать</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column">
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="3">
+            <div style="display:grid;grid-template-columns:88px 1fr 120px 120px 96px;gap:12px;align-items:center;padding:8px 10px;border-radius:8px;background:{{ r.bg }};border:1px solid {{ r.border }}">
+              <div style="font-size:13px;font-weight:600">{{ r.name }}</div>
+              <div style="display:flex;gap:2px">
+                <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="14">
+                  <div style="width:16px;height:16px;border-radius:2px;background:{{ c }}"></div>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;height:30px;background:#FFFFFF;border:1px solid #D2C8B8;border-radius:6px;padding:0 8px;gap:4px">
+                <div style="flex:1;font-family:'JetBrains Mono',monospace;font-size:13px;font-variant-numeric:tabular-nums">{{ r.height }}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A7F73">мм</div>
+              </div>
+              <div style="display:flex;align-items:center;height:30px;background:#FFFFFF;border:1px solid #D2C8B8;border-radius:6px;padding:0 8px;gap:4px">
+                <div style="flex:1;font-family:'JetBrains Mono',monospace;font-size:13px;font-variant-numeric:tabular-nums">{{ r.offset }}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A7F73">сдвиг</div>
+              </div>
+              <div style="display:flex;gap:2px;justify-content:flex-end;color:#8A7F73">
+                <div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center" style-hover="background:#EFEAE1;color:#241E19"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 3v10"></path><path d="m4.5 6.5 3.5-3.5 3.5 3.5"></path></svg></div>
+                <div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center" style-hover="background:#EFEAE1;color:#241E19"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 13V3"></path><path d="m4.5 9.5 3.5 3.5 3.5-3.5"></path></svg></div>
+                <div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center" style-hover="background:#F8E3E0;color:#A63328"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3.5 4.5h9"></path><path d="M6.5 4.5V3h3v1.5"></path><path d="M5 4.5 5.6 13h4.8l.6-8.5"></path></svg></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- КНОПКИ -->
+  <section style="display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid #D2C8B8;padding-bottom:12px">
+      <h2 style="font-family:Bitter,serif;font-weight:600;font-size:24px;margin:0">6. Кнопки и состояния</h2>
+      <span style="font-size:13px;color:#8A7F73">hover 120 мс, active 80 мс, ease-out</span>
+    </div>
+    <div style="background:#FBF9F5;border:1px solid #E2DACD;border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:20px">
+      <sc-for list="{{ buttonRows }}" as="b" hint-placeholder-count="4">
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:20px;align-items:center">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A7F73">{{ b.variant }}</div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <sc-for list="{{ b.states }}" as="s" hint-placeholder-count="5">
+              <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+                <div style="height:36px;padding:0 16px;display:flex;align-items:center;border-radius:8px;font-size:14px;font-weight:600;background:{{ s.bg }};color:{{ s.fg }};border:1px solid {{ s.border }};box-shadow:{{ s.shadow }};opacity:{{ s.opacity }}">{{ b.label }}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A7F73">{{ s.name }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- ШАБЛОНЫ / ГЕНЕРАТОР / ФОТО / ДИАЛОГ -->
+  <section style="display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid #D2C8B8;padding-bottom:12px">
+      <h2 style="font-family:Bitter,serif;font-weight:600;font-size:24px;margin:0">7. Галерея, генератор, фото, диалог</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+      <div style="background:#FBF9F5;border:1px solid #E2DACD;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#8A7F73">Карточка шаблона</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <sc-for list="{{ templates }}" as="t" hint-placeholder-count="2">
+            <div style="background:#FFFFFF;border:1px solid {{ t.border }};border-radius:10px;overflow:hidden;box-shadow:{{ t.shadow }}">
+              <div style="padding:10px;background:#F4F0E9">
+                <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:1px;aspect-ratio:8/6">
+                  <sc-for list="{{ t.cells }}" as="c" hint-placeholder-count="48">
+                    <div style="background:{{ c }}"></div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px;border-top:1px solid #E2DACD">
+                <div style="font-size:14px;font-weight:600">{{ t.name }}</div>
+                <div style="display:flex;gap:6px;align-items:center">
+                  <div style="padding:2px 7px;border-radius:999px;background:#E9E3D8;font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A5048">{{ t.badge }}</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A7F73">{{ t.meta }}</div>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="background:#FBF9F5;border:1px solid #E2DACD;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#8A7F73">Генератор</div>
+          <div style="display:flex;gap:4px">
+            <div style="padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#DCEAE7;color:#14615A">Ёлочка</div>
+            <div style="padding:4px 10px;border-radius:999px;font-size:12px;font-weight:500;background:#E9E3D8;color:#5A5048">Кирпич</div>
+            <div style="padding:4px 10px;border-radius:999px;font-size:12px;font-weight:500;background:#E9E3D8;color:#5A5048">Шеврон</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <sc-for list="{{ gen }}" as="g" hint-placeholder-count="9">
+            <div style="position:relative;border-radius:8px;overflow:hidden;border:1px solid {{ g.border }};background:#FFFFFF">
+              <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:1px;aspect-ratio:1;padding:4px;background:#F4F0E9">
+                <sc-for list="{{ g.cells }}" as="c" hint-placeholder-count="36">
+                  <div style="background:{{ c }}"></div>
+                </sc-for>
+              </div>
+              <div style="position:absolute;top:5px;right:5px;width:20px;height:20px;border-radius:999px;background:rgba(251,249,245,0.92);display:flex;align-items:center;justify-content:center">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="{{ g.starFill }}" stroke="{{ g.starStroke }}" stroke-width="1.3" stroke-linejoin="round"><path d="m8 2 1.9 3.9 4.1.6-3 2.9.7 4.2L8 11.6 4.3 13.6l.7-4.2-3-2.9 4.1-.6L8 2Z"></path></svg>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1;height:36px;border-radius:8px;background:#14615A;color:#FBF9F5;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center">Сгенерировать 9</div>
+          <div style="height:36px;padding:0 14px;border-radius:8px;background:#FBF9F5;border:1px solid #D2C8B8;font-size:14px;font-weight:500;display:flex;align-items:center">Эволюция</div>
+        </div>
+      </div>
+
+      <div style="background:#FBF9F5;border:1px solid #E2DACD;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#8A7F73">Импорт фото</div>
+        <div style="border:1.5px dashed #B4A692;border-radius:12px;background:#E9E3D8;padding:26px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8A7F73" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"></path><path d="m7.5 8.5 4.5-4.5 4.5 4.5"></path><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"></path></svg>
+          <div style="font-size:14px;font-weight:600">Перетащите фото сюда</div>
+          <div style="font-size:12px;color:#8A7F73">JPG или PNG, до 12 МБ</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <sc-for list="{{ sliders }}" as="s" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <div style="font-size:13px;color:#5A5048">{{ s.label }}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums">{{ s.value }}</div>
+              </div>
+              <div style="position:relative;height:4px;border-radius:999px;background:#E9E3D8">
+                <div style="position:absolute;left:0;top:0;bottom:0;width:{{ s.pct }};background:#14615A;border-radius:999px"></div>
+                <div style="position:absolute;top:-5px;left:{{ s.pct }};width:14px;height:14px;margin-left:-7px;border-radius:999px;background:#FFFFFF;border:1.5px solid #14615A;box-shadow:0 1px 2px rgba(36,30,25,0.16)"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="background:#E9E3D8;border:1px solid #E2DACD;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#8A7F73">Диалог подтверждения</div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;background:rgba(36,30,25,0.44);border-radius:8px;padding:28px">
+          <div style="width:100%;max-width:380px;background:#FBF9F5;border-radius:12px;box-shadow:0 24px 64px rgba(36,30,25,0.30);padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="font-family:Bitter,serif;font-size:18px;font-weight:600">Очистить холст</div>
+            <div style="font-size:14px;line-height:1.5;color:#5A5048">Узор из 140 ячеек будет удалён. Действие можно отменить через undo.</div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px">
+              <div style="height:36px;padding:0 14px;border-radius:8px;font-size:14px;font-weight:500;color:#5A5048;display:flex;align-items:center">Отмена</div>
+              <div style="height:36px;padding:0 16px;border-radius:8px;background:#A63328;color:#FBF9F5;font-size:14px;font-weight:600;display:flex;align-items:center">Очистить</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- СПЕКИ -->
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid #D2C8B8;padding-bottom:12px">
+      <h2 style="font-family:Bitter,serif;font-weight:600;font-size:24px;margin:0">8. Спецификации</h2>
+      <span style="font-size:13px;color:#8A7F73">все значения ссылаются на токены</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <sc-for list="{{ specs }}" as="s" hint-placeholder-count="8">
+        <div style="background:#FBF9F5;border:1px solid #E2DACD;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:15px;font-weight:600;font-family:Bitter,serif">{{ s.name }}</div>
+          <sc-for list="{{ s.lines }}" as="l" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:baseline">
+              <div style="font-size:12px;color:#8A7F73">{{ l.k }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.6;color:#241E19">{{ l.v }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- КОД -->
+  <sc-if value="{{ showCode }}" hint-placeholder-val="{{ true }}">
+    <section style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid #D2C8B8;padding-bottom:12px">
+        <h2 style="font-family:Bitter,serif;font-weight:600;font-size:24px;margin:0">9. Код</h2>
+        <span style="font-size:13px;color:#8A7F73">globals.css, tailwind.config.ts, next/font</span>
+      </div>
+      <sc-for list="{{ codeBlocks }}" as="c" hint-placeholder-count="3">
+        <div style="background:#241E19;border-radius:12px;overflow:hidden">
+          <div style="padding:10px 16px;border-bottom:1px solid #3B3229;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#B4A692">{{ c.title }}</div>
+          <pre style="margin:0;padding:16px;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.65;color:#E7DFD2;white-space:pre">{{ c.code }}</pre>
+        </div>
+      </sc-for>
+    </section>
+  </sc-if>
+
+  <!-- МИКРОВЗАИМОДЕЙСТВИЯ -->
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid #D2C8B8;padding-bottom:12px">
+      <h2 style="font-family:Bitter,serif;font-weight:600;font-size:24px;margin:0">10. Микровзаимодействия</h2>
+    </div>
+    <div style="background:#FBF9F5;border:1px solid #E2DACD;border-radius:12px;overflow:hidden">
+      <sc-for list="{{ motion }}" as="m" hint-placeholder-count="6">
+        <div style="display:grid;grid-template-columns:220px 150px 1fr;gap:16px;padding:12px 18px;border-bottom:1px solid #EFEAE1;align-items:baseline">
+          <div style="font-size:13px;font-weight:600">{{ m.what }}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#14615A">{{ m.timing }}</div>
+          <div style="font-size:13px;color:#5A5048;line-height:1.5">{{ m.note }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showCode&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Превью&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const W = {
+      maple:'#E7D2AC', birch:'#E3CAA1', ash:'#D8BE95', oak:'#C9A671',
+      beech:'#C79A6B', alder:'#C08A62', cherry:'#A85B33', sapele:'#7A3F26',
+      mahog:'#8E3B23', padauk:'#B23A2A', purple:'#6B3A72', yellow:'#D9B31A',
+      zebra:'#B9884A', walnut:'#5C3B24', wenge:'#3A2A20', ebony:'#241B16'
+    };
+    const woodList = [
+      ['Клён','Maple',W.maple],['Берёза','Birch',W.birch],['Ясень','Ash',W.ash],['Дуб','Oak',W.oak],
+      ['Бук','Beech',W.beech],['Ольха','Alder',W.alder],['Черешня','Cherry',W.cherry],['Сапеле','Sapele',W.sapele],
+      ['Махагони','Mahogany',W.mahog],['Падук','Padauk',W.padauk],['Амарант','Purpleheart',W.purple],['Еллоухарт','Yellowheart',W.yellow],
+      ['Зебрано','Zebrawood',W.zebra],['Орех','Walnut',W.walnut],['Венге','Wenge',W.wenge],['Эбен','Ebony',W.ebony]
+    ];
+    const woods = woodList.map((w, i) => ({
+      ru: w[0], en: w[1], hex: w[2],
+      ring: i === 9
+        ? 'inset 0 0 0 2px #FBF9F5, 0 0 0 2px #14615A'
+        : 'inset 0 0 0 1px rgba(36,30,25,0.14)'
+    }));
+
+    // Псевдослучайный, но стабильный узор ёлочки
+    const pal = [W.maple, W.oak, W.walnut, W.padauk, W.purple, W.wenge, W.yellow, W.cherry, W.birch, W.ebony];
+    const pick = (i, j, m) => pal[(i * 3 + j * 5 + m) % pal.length];
+    const boardCells = [];
+    for (let r = 0; r < 10; r++) for (let c = 0; c < 14; c++) boardCells.push(pick(r, c, r % 3));
+
+    const grid = (cols, rows, m) => {
+      const a = [];
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) a.push(pick(r + m, c, m));
+      return a;
+    };
+
+    const rowCells = (m) => { const a = []; for (let c = 0; c < 14; c++) a.push(pick(m, c, m)); return a; };
+
+    const codeCss = `:root {
+  /* Фоны */
+  --bg-app:            #EFEAE1;
+  --bg-canvas:         #E9E3D8;
+  --surface:           #FBF9F5;
+  --surface-raised:    #FFFFFF;
+  --surface-sunken:    #E9E3D8;
+  --surface-panel:     #F4F0E9;
+  --overlay:           rgba(36, 30, 25, 0.44);
+
+  /* Текст */
+  --text-primary:      #241E19;
+  --text-secondary:    #5A5048;
+  --text-muted:        #8A7F73;
+  --text-inverse:      #FBF9F5;
+  --text-accent:       #14615A;
+
+  /* Границы */
+  --border-subtle:     #E2DACD;
+  --border-default:    #D2C8B8;
+  --border-strong:     #B4A692;
+
+  /* Акцент */
+  --accent:            #14615A;
+  --accent-hover:      #0F4E48;
+  --accent-active:     #0A3B36;
+  --accent-soft:       #DCEAE7;
+  --accent-border:     #9DC4BE;
+  --accent-fg:         #FBF9F5;
+
+  /* Состояния */
+  --success:           #3E7A3C;
+  --success-soft:      #E2EFDF;
+  --success-border:    #B3D0AE;
+  --success-text:      #2C5A2A;
+  --warning:           #B57113;
+  --warning-soft:      #FBEEDA;
+  --warning-border:    #E8CE9B;
+  --warning-text:      #7A4A08;
+  --error:             #A63328;
+  --error-soft:        #F8E3E0;
+  --error-border:      #E4B3AC;
+  --error-text:        #7E2419;
+
+  /* Выделение и фокус */
+  --selection:         #14615A;
+  --selection-halo:    rgba(20, 97, 90, 0.14);
+  --focus-ring:        0 0 0 3px var(--selection-halo);
+  --cell-outline:      rgba(36, 30, 25, 0.14);
+
+  /* Радиусы */
+  --radius-xs: 4px;  --radius-sm: 6px;  --radius-md: 8px;
+  --radius-lg: 12px; --radius-xl: 16px; --radius-full: 999px;
+
+  /* Тени */
+  --shadow-sm:     0 1px 2px rgba(36, 30, 25, 0.06);
+  --shadow-md:     0 2px 8px rgba(36, 30, 25, 0.10);
+  --shadow-lg:     0 8px 24px rgba(36, 30, 25, 0.10);
+  --shadow-dialog: 0 24px 64px rgba(36, 30, 25, 0.30);
+
+  /* Границы, толщины */
+  --border-hairline: 1px;
+  --border-active:   1.5px;
+
+  /* Движение */
+  --dur-fast:   80ms;
+  --dur-hover: 120ms;
+  --dur-panel: 160ms;
+  --dur-modal: 240ms;
+  --ease-out:  cubic-bezier(0.2, 0.6, 0.2, 1);
+
+  /* Типографика */
+  --font-display: var(--font-bitter), Georgia, serif;
+  --font-ui:      var(--font-golos), system-ui, sans-serif;
+  --font-mono:    var(--font-jetbrains), ui-monospace, monospace;
+}
+
+.dark {
+  --bg-app:         #1C1815;
+  --bg-canvas:      #17130F;
+  --surface:        #241E19;
+  --surface-raised: #2C251F;
+  --surface-panel:  #201A16;
+  --text-primary:   #EFE7DA;
+  --text-secondary: #B4A692;
+  --text-muted:     #8A7F73;
+  --border-subtle:  #332B24;
+  --border-default: #43392F;
+  --border-strong:  #5A4E42;
+  --accent:         #2E8F85;
+  --accent-hover:   #37A398;
+  --accent-soft:    #17332F;
+  --accent-border:  #2E5F59;
+}`;
+
+    const codeTw = `// tailwind.config.ts
+export default {
+  theme: {
+    extend: {
+      colors: {
+        app:      'var(--bg-app)',
+        canvas:   'var(--bg-canvas)',
+        surface: {
+          DEFAULT: 'var(--surface)',
+          raised:  'var(--surface-raised)',
+          sunken:  'var(--surface-sunken)',
+          panel:   'var(--surface-panel)',
+        },
+        ink: {
+          DEFAULT:   'var(--text-primary)',
+          secondary: 'var(--text-secondary)',
+          muted:     'var(--text-muted)',
+          inverse:   'var(--text-inverse)',
+        },
+        line: {
+          subtle:  'var(--border-subtle)',
+          DEFAULT: 'var(--border-default)',
+          strong:  'var(--border-strong)',
+        },
+        accent: {
+          DEFAULT: 'var(--accent)',
+          hover:   'var(--accent-hover)',
+          active:  'var(--accent-active)',
+          soft:    'var(--accent-soft)',
+          border:  'var(--accent-border)',
+          fg:      'var(--accent-fg)',
+        },
+        success: { DEFAULT:'var(--success)', soft:'var(--success-soft)', border:'var(--success-border)', text:'var(--success-text)' },
+        warning: { DEFAULT:'var(--warning)', soft:'var(--warning-soft)', border:'var(--warning-border)', text:'var(--warning-text)' },
+        error:   { DEFAULT:'var(--error)',   soft:'var(--error-soft)',   border:'var(--error-border)',   text:'var(--error-text)' },
+      },
+      fontFamily: {
+        display: ['var(--font-bitter)', 'Georgia', 'serif'],
+        sans:    ['var(--font-golos)', 'system-ui', 'sans-serif'],
+        mono:    ['var(--font-jetbrains)', 'ui-monospace', 'monospace'],
+      },
+      borderRadius: {
+        xs: '4px', sm: '6px', md: '8px', lg: '12px', xl: '16px',
+      },
+      boxShadow: {
+        sm:     'var(--shadow-sm)',
+        md:     'var(--shadow-md)',
+        lg:     'var(--shadow-lg)',
+        dialog: 'var(--shadow-dialog)',
+        focus:  'var(--focus-ring)',
+      },
+      spacing: {
+        0.5: '2px', 1: '4px', 1.5: '6px', 2: '8px', 3: '12px',
+        4: '16px', 5: '20px', 6: '24px', 8: '32px', 10: '40px',
+        12: '48px', 16: '64px',
+      },
+      transitionDuration: { fast:'80ms', hover:'120ms', panel:'160ms', modal:'240ms' },
+      transitionTimingFunction: { out: 'cubic-bezier(0.2,0.6,0.2,1)' },
+    },
+  },
+}`;
+
+    const codeFont = `// app/fonts.ts
+import { Bitter, Golos_Text, JetBrains_Mono } from 'next/font/google';
+
+export const bitter = Bitter({
+  subsets: ['latin', 'cyrillic'],
+  weight: ['500', '600', '700'],
+  variable: '--font-bitter',
+  display: 'swap',
+});
+
+export const golos = Golos_Text({
+  subsets: ['latin', 'cyrillic'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-golos',
+  display: 'swap',
+});
+
+export const jetbrains = JetBrains_Mono({
+  subsets: ['latin', 'cyrillic'],
+  weight: ['400', '500', '700'],
+  variable: '--font-jetbrains',
+  display: 'swap',
+});
+
+// layout.tsx: <body className={\`\${bitter.variable} \${golos.variable} \${jetbrains.variable} font-sans\`}>
+
+// Точные имена в Google Fonts:
+//   Bitter
+//   Golos Text
+//   JetBrains Mono`;
+
+    return {
+      showCode: this.props.showCode ?? true,
+      woods,
+      boardCells,
+      rowNums: [1,2,3,4,5,6,7,8,9,10],
+
+      colorGroups: [
+        { title: 'Фоны и поверхности', items: [
+          {name:'--bg-app', hex:'#EFEAE1'}, {name:'--bg-canvas', hex:'#E9E3D8'},
+          {name:'--surface', hex:'#FBF9F5'}, {name:'--surface-raised', hex:'#FFFFFF'},
+          {name:'--surface-panel', hex:'#F4F0E9'} ] },
+        { title: 'Текст', items: [
+          {name:'--text-primary', hex:'#241E19'}, {name:'--text-secondary', hex:'#5A5048'},
+          {name:'--text-muted', hex:'#8A7F73'}, {name:'--text-inverse', hex:'#FBF9F5'},
+          {name:'--text-accent', hex:'#14615A'} ] },
+        { title: 'Границы и акцент', items: [
+          {name:'--border-subtle', hex:'#E2DACD'}, {name:'--border-default', hex:'#D2C8B8'},
+          {name:'--border-strong', hex:'#B4A692'}, {name:'--accent', hex:'#14615A'},
+          {name:'--accent-hover', hex:'#0F4E48'}, {name:'--accent-soft', hex:'#DCEAE7'},
+          {name:'--accent-border', hex:'#9DC4BE'} ] },
+        { title: 'Состояния', items: [
+          {name:'--success', hex:'#3E7A3C'}, {name:'--success-soft', hex:'#E2EFDF'},
+          {name:'--warning', hex:'#B57113'}, {name:'--warning-soft', hex:'#FBEEDA'},
+          {name:'--error', hex:'#A63328'}, {name:'--error-soft', hex:'#F8E3E0'},
+          {name:'--selection', hex:'#14615A'} ] },
+      ],
+
+      typeScale: [
+        {token:'display', family:'Bitter, serif', size:'40px', weight:600, tracking:'-0.01em', transform:'none', sample:'Endgrain Studio', spec:'40 / 44 · 600'},
+        {token:'h1', family:'Bitter, serif', size:'32px', weight:600, tracking:'-0.01em', transform:'none', sample:'Редактор узора', spec:'32 / 38 · 600'},
+        {token:'h2', family:'Bitter, serif', size:'24px', weight:600, tracking:'0', transform:'none', sample:'Галерея шаблонов', spec:'24 / 30 · 600'},
+        {token:'h3', family:'Bitter, serif', size:'18px', weight:600, tracking:'0', transform:'none', sample:'Настройки доски', spec:'18 / 24 · 600'},
+        {token:'body-lg', family:"'Golos Text', sans-serif", size:'16px', weight:400, tracking:'0', transform:'none', sample:'Основной текст описаний и подсказок', spec:'16 / 24 · 400'},
+        {token:'body', family:"'Golos Text', sans-serif", size:'14px', weight:400, tracking:'0', transform:'none', sample:'Текст интерфейса, кнопки, вкладки', spec:'14 / 20 · 400 / 600'},
+        {token:'small', family:"'Golos Text', sans-serif", size:'13px', weight:400, tracking:'0', transform:'none', sample:'Пояснения в диагностиках', spec:'13 / 18 · 400'},
+        {token:'caption', family:"'Golos Text', sans-serif", size:'11px', weight:500, tracking:'0.12em', transform:'uppercase', sample:'Метр сложности', spec:'11 / 16 · 500 · +0.12em'},
+        {token:'metric-lg', family:"'JetBrains Mono', monospace", size:'28px', weight:600, tracking:'0', transform:'none', sample:'3 480 ₽', spec:'28 / 32 · 600 · tabular'},
+        {token:'metric', family:"'JetBrains Mono', monospace", size:'20px', weight:500, tracking:'0', transform:'none', sample:'1 240', spec:'20 / 24 · 500 · tabular'},
+        {token:'numeric-field', family:"'JetBrains Mono', monospace", size:'14px', weight:400, tracking:'0', transform:'none', sample:'320,0', spec:'14 / 20 · 400 · tabular'},
+      ],
+
+      radii: [
+        {label:'xs 4', value:'4px'}, {label:'sm 6', value:'6px'}, {label:'md 8', value:'8px'},
+        {label:'lg 12', value:'12px'}, {label:'xl 16', value:'16px'}, {label:'full', value:'999px'}
+      ],
+      shadows: [
+        {label:'sm', value:'0 1px 2px rgba(36,30,25,0.06)'},
+        {label:'md', value:'0 2px 8px rgba(36,30,25,0.10)'},
+        {label:'lg', value:'0 8px 24px rgba(36,30,25,0.10)'},
+        {label:'dialog', value:'0 24px 64px rgba(36,30,25,0.30)'},
+        {label:'focus', value:'0 0 0 3px rgba(20,97,90,0.14)'}
+      ],
+      spacing: [2,4,6,8,12,16,20,24,32,40,48,64].map(n => ({px: n + 'px', label: String(n)})),
+
+      metrics: [
+        {label:'Склейки', value:'3', unit:'шт', color:'#241E19'},
+        {label:'Резы', value:'46', unit:'шт', color:'#241E19'},
+        {label:'Объём', value:'2,9', unit:'л', color:'#241E19'},
+        {label:'Отходы', value:'18', unit:'%', color:'#B57113'},
+        {label:'Вес', value:'2,4', unit:'кг', color:'#241E19'},
+        {label:'Пород', value:'7', unit:'шт', color:'#241E19'},
+      ],
+
+      rows: [
+        {name:'Ряд 1', height:'26,0', offset:'0', cells: rowCells(0), bg:'#FBF9F5', border:'#E2DACD'},
+        {name:'Ряд 2', height:'26,0', offset:'12', cells: rowCells(1), bg:'#DCEAE7', border:'#9DC4BE'},
+        {name:'Ряд 3', height:'22,5', offset:'24', cells: rowCells(2), bg:'#FBF9F5', border:'#E2DACD'},
+      ],
+
+      buttonRows: [
+        {variant:'primary', label:'Сохранить', states:[
+          {name:'default', bg:'#14615A', fg:'#FBF9F5', border:'#14615A', shadow:'0 1px 2px rgba(36,30,25,0.06)', opacity:1},
+          {name:'hover', bg:'#0F4E48', fg:'#FBF9F5', border:'#0F4E48', shadow:'0 2px 8px rgba(36,30,25,0.10)', opacity:1},
+          {name:'active', bg:'#0A3B36', fg:'#FBF9F5', border:'#0A3B36', shadow:'none', opacity:1},
+          {name:'focus', bg:'#14615A', fg:'#FBF9F5', border:'#14615A', shadow:'0 0 0 3px rgba(20,97,90,0.28)', opacity:1},
+          {name:'disabled', bg:'#C7D8D5', fg:'#FBF9F5', border:'#C7D8D5', shadow:'none', opacity:1}
+        ]},
+        {variant:'secondary', label:'Дублировать', states:[
+          {name:'default', bg:'#FBF9F5', fg:'#241E19', border:'#D2C8B8', shadow:'0 1px 2px rgba(36,30,25,0.06)', opacity:1},
+          {name:'hover', bg:'#EFEAE1', fg:'#241E19', border:'#B4A692', shadow:'none', opacity:1},
+          {name:'active', bg:'#E9E3D8', fg:'#241E19', border:'#B4A692', shadow:'none', opacity:1},
+          {name:'focus', bg:'#FBF9F5', fg:'#241E19', border:'#14615A', shadow:'0 0 0 3px rgba(20,97,90,0.14)', opacity:1},
+          {name:'disabled', bg:'#F4F0E9', fg:'#B4A692', border:'#E2DACD', shadow:'none', opacity:1}
+        ]},
+        {variant:'ghost', label:'Сбросить', states:[
+          {name:'default', bg:'transparent', fg:'#5A5048', border:'transparent', shadow:'none', opacity:1},
+          {name:'hover', bg:'#EFEAE1', fg:'#241E19', border:'transparent', shadow:'none', opacity:1},
+          {name:'active', bg:'#E9E3D8', fg:'#241E19', border:'transparent', shadow:'none', opacity:1},
+          {name:'focus', bg:'transparent', fg:'#241E19', border:'#14615A', shadow:'0 0 0 3px rgba(20,97,90,0.14)', opacity:1},
+          {name:'disabled', bg:'transparent', fg:'#B4A692', border:'transparent', shadow:'none', opacity:1}
+        ]},
+        {variant:'destructive', label:'Удалить', states:[
+          {name:'default', bg:'#A63328', fg:'#FBF9F5', border:'#A63328', shadow:'0 1px 2px rgba(36,30,25,0.06)', opacity:1},
+          {name:'hover', bg:'#8C2820', fg:'#FBF9F5', border:'#8C2820', shadow:'0 2px 8px rgba(36,30,25,0.10)', opacity:1},
+          {name:'active', bg:'#731F19', fg:'#FBF9F5', border:'#731F19', shadow:'none', opacity:1},
+          {name:'focus', bg:'#A63328', fg:'#FBF9F5', border:'#A63328', shadow:'0 0 0 3px rgba(166,51,40,0.24)', opacity:1},
+          {name:'disabled', bg:'#E4B3AC', fg:'#FBF9F5', border:'#E4B3AC', shadow:'none', opacity:1}
+        ]},
+      ],
+
+      templates: [
+        {name:'Ёлочка классик', badge:'6 пород', meta:'320×240', cells: grid(8,6,1), border:'#9DC4BE', shadow:'0 2px 8px rgba(36,30,25,0.10)'},
+        {name:'Кирпич со сдвигом', badge:'4 породы', meta:'400×300', cells: grid(8,6,4), border:'#E2DACD', shadow:'0 1px 2px rgba(36,30,25,0.06)'},
+      ],
+
+      gen: [0,1,2,3,4,5,6,7,8].map(i => ({
+        cells: grid(6,6,i + 2),
+        border: i === 4 ? '#14615A' : '#E2DACD',
+        starFill: (i === 1 || i === 4) ? '#D9B31A' : 'none',
+        starStroke: (i === 1 || i === 4) ? '#B57113' : '#8A7F73'
+      })),
+
+      sliders: [
+        {label:'Контраст', value:'62', pct:'62%'},
+        {label:'Число пород', value:'8', pct:'45%'},
+        {label:'Размер ячейки', value:'26 мм', pct:'34%'},
+      ],
+
+      specs: [
+        {name:'Вкладки шапки', lines:[
+          {k:'фон', v:'--surface, низ 1px --border-default'},
+          {k:'вкладка', v:'padding 7/13, radius --radius-sm, body 14'},
+          {k:'активная', v:'bg --accent-soft, text --accent, вес 600'},
+          {k:'состояния', v:'hover bg --bg-app · focus --focus-ring'},
+        ]},
+        {name:'Свотч породы', lines:[
+          {k:'ячейка', v:'aspect 1:1, radius --radius-xs+1, сетка gap 6'},
+          {k:'обводка', v:'inset 0 0 0 1px --cell-outline'},
+          {k:'активный', v:'inset ring --surface + 2px --selection'},
+          {k:'hover', v:'transform scale(1.06), --dur-hover'},
+        ]},
+        {name:'Числовое поле', lines:[
+          {k:'высота', v:'34px (компакт) / 36px'},
+          {k:'фон', v:'--surface-raised, border 1px --border-default'},
+          {k:'текст', v:'--font-mono 14, tabular-nums, суффикс --text-muted'},
+          {k:'focus', v:'border 1.5px --accent + --focus-ring'},
+          {k:'disabled', v:'bg --surface-sunken, text --border-strong'},
+        ]},
+        {name:'Метр сложности', lines:[
+          {k:'контейнер', v:'--surface, radius --radius-lg, padding 14'},
+          {k:'подпись', v:'caption 11 --text-muted'},
+          {k:'число', v:'metric 20 mono, вне нормы -> --warning'},
+          {k:'итог', v:'metric-lg 28, отделён 1px --border-subtle'},
+        ]},
+        {name:'Диагностика', lines:[
+          {k:'warning', v:'bg --warning-soft, border --warning-border, иконка --warning'},
+          {k:'error', v:'bg --error-soft, border --error-border, иконка --error'},
+          {k:'success', v:'bg --success-soft, border --success-border'},
+          {k:'геометрия', v:'radius --radius-md, padding 11/12, gap 9'},
+        ]},
+        {name:'Карточка шаблона', lines:[
+          {k:'карточка', v:'--surface-raised, border 1px --border-subtle, radius --radius-lg'},
+          {k:'превью', v:'фон --surface-panel, padding 10, ячейки без радиуса'},
+          {k:'бейдж', v:'--surface-sunken, radius --radius-full, mono 10'},
+          {k:'hover', v:'shadow --shadow-md, border --accent-border'},
+        ]},
+        {name:'Холст доски', lines:[
+          {k:'фон', v:'--bg-canvas, доска на --surface с --shadow-md'},
+          {k:'ячейка', v:'без радиуса, gap 2px = линия клея'},
+          {k:'номера', v:'mono 10 --text-muted, справа от колонки'},
+          {k:'выделение', v:'обводка 2px --selection поверх ячейки'},
+        ]},
+        {name:'Диалог', lines:[
+          {k:'подложка', v:'--overlay, вход 240 мс'},
+          {k:'окно', v:'--surface, radius --radius-lg, --shadow-dialog, max 380'},
+          {k:'заголовок', v:'h3 Bitter 18'},
+          {k:'кнопки', v:'справа, ghost + primary или destructive'},
+        ]},
+      ],
+
+      motion: [
+        {what:'Кнопка, вкладка, свотч', timing:'120 мс ease-out', note:'Меняются только фон и граница. Никаких сдвигов по вертикали.'},
+        {what:'Нажатие', timing:'80 мс ease-out', note:'Затемнение на один шаг и снятие тени. Без scale у кнопок.'},
+        {what:'Свотч под курсором', timing:'120 мс ease-out', note:'scale(1.06), чтобы цвет было видно поверх соседей.'},
+        {what:'Фокус с клавиатуры', timing:'мгновенно', note:'Кольцо --focus-ring без анимации, чтобы не отставать от табуляции.'},
+        {what:'Панель, аккордеон', timing:'160 мс ease-out', note:'Высота и прозрачность вместе.'},
+        {what:'Диалог', timing:'240 мс ease-out', note:'Подложка fade, окно fade и translateY 8px.'},
+        {what:'Пересчёт метра', timing:'160 мс', note:'Число меняется без анимации, подсвечивается фон ячейки на 400 мс.'},
+        {what:'Кисть на холсте', timing:'0 мс', note:'Заливка ячейки мгновенная. Инструмент не должен ощущаться медленным.'},
+      ],
+
+      codeBlocks: [
+        {title:'app/globals.css', code: codeCss},
+        {title:'tailwind.config.ts', code: codeTw},
+        {title:'next/font/google', code: codeFont},
+      ],
+    };
+  }
+}
+
+</script>
+</body>
+</html>
