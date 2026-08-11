@@ -2,7 +2,7 @@
 
 import { create, type StoreApi, type UseBoundStore } from 'zustand'
 import type { Cell, Design, PaintCost, PaintResult, PanelId, RowId, SpeciesId } from '@/lib/engine'
-import { EngineError, applyPaint } from '@/lib/engine'
+import { EngineError, applyPaint, elementExtentMm, splitPanel, type PanelElement, type Row } from '@/lib/engine'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import type { Locale } from '@/lib/i18n'
 import type { UnitSystem } from '@/lib/units'
@@ -17,6 +17,7 @@ import {
   undo as histUndo,
   type HistoryState,
 } from './history'
+import { nextRowId } from './ids'
 
 export const DEFAULT_SPECIES_ID: SpeciesId = 'walnut'
 
@@ -104,6 +105,19 @@ const UI_DEFAULTS = {
   pendingFork: null,
 }
 
+const DEFAULT_STRIP_WIDTH_MM = 25
+const DEFAULT_ROW_THICKNESS_MM = 30
+const DEFAULT_ROW_TRIM_MM = 5
+
+/** Перестановка внутри массива: возвращает false, если индексы вне диапазона или совпадают. */
+function moveInPlace<T>(list: T[], from: number, to: number): boolean {
+  if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) return false
+  const [item] = list.splice(from, 1)
+  if (item === undefined) return false
+  list.splice(to, 0, item)
+  return true
+}
+
 export function createStudioStore(initialDesign: Design = makeCheckerboard()): StudioStore {
   return create<StudioState>((set, get) => {
     /** Единственная точка записи в документ: всё остальное ходит через неё, поэтому undo знает про каждую правку. */
@@ -172,21 +186,135 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
 
       cancelFork: () => set({ pendingFork: null }),
 
-      // Задача 4.
-      setStripWidth: () => {},
-      setStripSpecies: () => {},
-      addStrip: () => {},
-      removeStrip: () => {},
-      splitStripAt: () => {},
-      moveStrip: () => {},
-      setRowThickness: () => {},
-      setRowPanel: () => {},
-      setRowTrim: () => {},
-      toggleRowFlip: () => {},
-      toggleRowMirror: () => {},
-      addRow: () => {},
-      removeRow: () => {},
-      moveRow: () => {},
+      setStripWidth: (panelId, elementIndex, widthMm) => {
+        if (!Number.isFinite(widthMm) || widthMm <= 0) return
+        edit((d) => {
+          const el = d.panels.find((p) => p.id === panelId)?.elements[elementIndex]
+          if (!el || el.kind !== 'strip') return
+          el.widthMm = widthMm
+        })
+      },
+
+      setStripSpecies: (panelId, elementIndex, speciesId) =>
+        edit((d) => {
+          const el = d.panels.find((p) => p.id === panelId)?.elements[elementIndex]
+          if (!el || el.kind !== 'strip') return
+          el.speciesId = speciesId
+        }),
+
+      addStrip: (panelId, atIndex) => {
+        const speciesId = get().activeSpeciesId
+        edit((d) => {
+          const panel = d.panels.find((p) => p.id === panelId)
+          if (!panel) return
+          const index = Math.max(0, Math.min(atIndex, panel.elements.length))
+          const left = panel.elements[index - 1] ?? panel.elements[index]
+          const widthMm = left ? elementExtentMm(left) : DEFAULT_STRIP_WIDTH_MM
+          const strip: PanelElement = { kind: 'strip', speciesId, widthMm }
+          panel.elements.splice(index, 0, strip)
+        })
+      },
+
+      removeStrip: (panelId, elementIndex) =>
+        edit((d) => {
+          const panel = d.panels.find((p) => p.id === panelId)
+          if (!panel || !panel.elements[elementIndex]) return
+          panel.elements.splice(elementIndex, 1)
+        }),
+
+      splitStripAt: (panelId, elementIndex, atMm) => {
+        if (!Number.isFinite(atMm)) return
+        const design = get().history.present
+        try {
+          const next = splitPanel(design, panelId, elementIndex, atMm)
+          set((s) => ({ history: commitValue(s.history, next) }))
+        } catch (error) {
+          // SPLIT_OUT_OF_RANGE, PANEL_NOT_FOUND, ELEMENT_NOT_FOUND: неверный ввод, не авария.
+          if (error instanceof EngineError) return
+          throw error
+        }
+      },
+
+      moveStrip: (panelId, fromIndex, toIndex) =>
+        edit((d) => {
+          const panel = d.panels.find((p) => p.id === panelId)
+          if (!panel) return
+          moveInPlace(panel.elements, fromIndex, toIndex)
+        }),
+
+      setRowThickness: (rowId, thicknessMm) => {
+        if (!Number.isFinite(thicknessMm) || thicknessMm <= 0) return
+        edit((d) => {
+          const row = d.rows.find((r) => r.id === rowId)
+          if (!row) return
+          row.thicknessMm = thicknessMm
+        })
+      },
+
+      setRowPanel: (rowId, panelId) =>
+        edit((d) => {
+          const row = d.rows.find((r) => r.id === rowId)
+          if (!row) return
+          row.panelId = panelId
+        }),
+
+      setRowTrim: (rowId, trimMm) => {
+        if (!Number.isFinite(trimMm) || trimMm < 0) return
+        edit((d) => {
+          const row = d.rows.find((r) => r.id === rowId)
+          if (!row) return
+          row.trimMm = trimMm
+        })
+      },
+
+      toggleRowFlip: (rowId) =>
+        edit((d) => {
+          const row = d.rows.find((r) => r.id === rowId)
+          if (!row) return
+          row.flip = !row.flip
+        }),
+
+      toggleRowMirror: (rowId) =>
+        edit((d) => {
+          const row = d.rows.find((r) => r.id === rowId)
+          if (!row) return
+          row.mirror = !row.mirror
+        }),
+
+      addRow: (afterRowId) => {
+        const design = get().history.present
+        const id = nextRowId(design)
+        edit((d) => {
+          const index = afterRowId === null ? d.rows.length - 1 : d.rows.findIndex((r) => r.id === afterRowId)
+          const template = d.rows[index] ?? d.rows.at(-1)
+          if (template) {
+            const clone: Row = { ...template, id }
+            d.rows.splice(index + 1, 0, clone)
+            return
+          }
+          const firstPanel = d.panels[0]
+          if (!firstPanel) return
+          const first: Row = {
+            id,
+            panelId: firstPanel.id,
+            thicknessMm: DEFAULT_ROW_THICKNESS_MM,
+            angleDeg: 0,
+            flip: false,
+            mirror: false,
+            trimMm: DEFAULT_ROW_TRIM_MM,
+          }
+          d.rows.push(first)
+        })
+      },
+
+      removeRow: (rowId) =>
+        edit((d) => {
+          const index = d.rows.findIndex((r) => r.id === rowId)
+          if (index < 0) return
+          d.rows.splice(index, 1)
+        }),
+
+      moveRow: (fromIndex, toIndex) => edit((d) => { moveInPlace(d.rows, fromIndex, toIndex) }),
 
       setBoardWidthMm: (mm) => editNumber(mm, (d, v) => { d.board.targetWidthMm = v }),
       setBoardLengthMm: (mm) => editNumber(mm, (d, v) => { d.board.targetLengthMm = v }),
