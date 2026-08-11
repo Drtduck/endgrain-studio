@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { MM_PER_INCH, formatMm, inchToMm, mm3ToBoardFeet, mmToInch } from './units'
+import { displayToMm, mmToDisplay, unitStepMm } from './units'
 
 describe('units', () => {
   it('converts mm and inches', () => {
@@ -19,5 +20,43 @@ describe('units', () => {
     expect(formatMm(25.4, 'mm', 'mm')).toBe('25.4 mm')
     expect(formatMm(25.4, 'in', 'in')).toBe('1.00"')
     expect(formatMm(300, 'mm', 'мм', 0)).toBe('300 мм')
+  })
+})
+
+describe('представление размеров в полях ввода', () => {
+  it('печатает миллиметры без хвостовых нулей', () => {
+    expect(mmToDisplay(30, 'mm')).toBe('30')
+    expect(mmToDisplay(30.5, 'mm')).toBe('30.5')
+    expect(mmToDisplay(30.456, 'mm')).toBe('30.46')
+  })
+
+  it('печатает дюймы с тремя знаками', () => {
+    expect(mmToDisplay(25.4, 'in')).toBe('1')
+    expect(mmToDisplay(12.7, 'in')).toBe('0.5')
+  })
+
+  it('читает число в текущих единицах обратно в миллиметры', () => {
+    expect(displayToMm('30', 'mm')).toBe(30)
+    expect(displayToMm('1', 'in')).toBeCloseTo(25.4, 9)
+    expect(displayToMm('1,5', 'in')).toBeCloseTo(38.1, 9)
+  })
+
+  it('возвращает null на нечисловом вводе', () => {
+    expect(displayToMm('', 'mm')).toBe(null)
+    expect(displayToMm('  ', 'mm')).toBe(null)
+    expect(displayToMm('тридцать', 'mm')).toBe(null)
+    expect(displayToMm('Infinity', 'mm')).toBe(null)
+  })
+
+  it('round-trip не теряет значение в пределах отображаемой точности', () => {
+    for (const mm of [4, 25, 30.5, 330, 1200]) {
+      expect(displayToMm(mmToDisplay(mm, 'mm'), 'mm')).toBeCloseTo(mm, 2)
+      expect(displayToMm(mmToDisplay(mm, 'in'), 'in')).toBeCloseTo(mm, 1)
+    }
+  })
+
+  it('шаг поля соответствует единицам', () => {
+    expect(unitStepMm('mm')).toBe(1)
+    expect(unitStepMm('in')).toBeCloseTo(25.4 / 16, 9)
   })
 })
