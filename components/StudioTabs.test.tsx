@@ -22,6 +22,20 @@ describe('StudioTabs', () => {
     expect(screen.getByTestId('tab-view3d').getAttribute('aria-selected')).toBe('true')
   })
 
+  it('показывает пять вкладок, включая генератор и фото', () => {
+    render(<StudioTabs />)
+    for (const view of ['editor', 'templates', 'generate', 'photo', 'view3d']) {
+      expect(screen.getByTestId(`tab-${view}`)).toBeDefined()
+    }
+  })
+
+  it('клик по вкладке фото переключает вид в сторе', () => {
+    render(<StudioTabs />)
+    fireEvent.click(screen.getByTestId('tab-photo'))
+    expect(useStudio.getState().view).toBe('photo')
+    expect(screen.getByTestId('tab-photo').getAttribute('aria-selected')).toBe('true')
+  })
+
   it('переводится вместе с интерфейсом', () => {
     render(<StudioTabs />)
     expect(screen.getByText('Редактор')).toBeDefined()

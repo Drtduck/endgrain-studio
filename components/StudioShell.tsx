@@ -6,9 +6,11 @@ import { BoardSettings } from '@/components/BoardSettings'
 import { ComplexityMeter } from '@/components/ComplexityMeter'
 import { DiagnosticsPanel } from '@/components/DiagnosticsPanel'
 import { ForkDialog } from '@/components/ForkDialog'
+import { GeneratorPanel } from '@/components/GeneratorPanel'
 import { HistoryControls } from '@/components/HistoryControls'
 import { LocaleToggle } from '@/components/LocaleToggle'
 import { PanelInspector } from '@/components/PanelInspector'
+import { PhotoImport } from '@/components/PhotoImport'
 import { RowInspector } from '@/components/RowInspector'
 import { SpeciesPalette } from '@/components/SpeciesPalette'
 import { StudioTabs } from '@/components/StudioTabs'
@@ -16,7 +18,9 @@ import { TemplateGallery } from '@/components/TemplateGallery'
 import { t } from '@/lib/i18n'
 import { useDerived } from '@/lib/store/derived'
 import { useStudioPersistence } from '@/lib/store/persist'
-import { useStudio } from '@/lib/store/studio'
+import { useStudio, type StudioView } from '@/lib/store/studio'
+
+const FULL_WIDTH: readonly StudioView[] = ['templates', 'generate', 'photo']
 
 export function StudioShell() {
   const locale = useStudio((s) => s.locale)
@@ -41,8 +45,8 @@ export function StudioShell() {
 
       <StudioTabs />
 
-      {view === 'templates' ? (
-        <TemplateGallery />
+      {FULL_WIDTH.includes(view) ? (
+        view === 'templates' ? <TemplateGallery /> : view === 'generate' ? <GeneratorPanel /> : <PhotoImport />
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="flex flex-col gap-4">

@@ -4,7 +4,9 @@ import { create, type StoreApi, type UseBoundStore } from 'zustand'
 import type { Cell, Design, PaintCost, PaintResult, PanelId, RowId, SpeciesId } from '@/lib/engine'
 import { EngineError, applyPaint, elementExtentMm, splitPanel, type PanelElement, type Row } from '@/lib/engine'
 import { makeCheckerboard } from '@/lib/designs/samples'
+import type { Population } from '@/lib/generators'
 import type { Locale } from '@/lib/i18n'
+import type { PixelGrid } from '@/lib/photo'
 import type { UnitSystem } from '@/lib/units'
 import {
   canRedo as histCanRedo,
@@ -21,7 +23,20 @@ import { nextRowId } from './ids'
 
 export const DEFAULT_SPECIES_ID: SpeciesId = 'walnut'
 
-export type StudioView = 'editor' | 'templates' | 'view3d'
+export type StudioView = 'editor' | 'templates' | 'generate' | 'photo' | 'view3d'
+
+export interface GeneratorUiState {
+  readonly population: Population
+  readonly favouriteIds: readonly string[]
+}
+
+/** Разобранная картинка живёт в памяти вкладки и никогда не уезжает в localStorage или в ссылку. */
+export interface PhotoUiState {
+  readonly grid: PixelGrid
+  readonly fileName: string
+  readonly colors: number
+  readonly panels: number
+}
 
 export interface PendingFork {
   readonly cellId: string
@@ -42,6 +57,8 @@ export interface StudioState {
   readonly selectedRowId: RowId | null
   readonly hoveredCellId: string | null
   readonly pendingFork: PendingFork | null
+  readonly generator: GeneratorUiState | null
+  readonly photo: PhotoUiState | null
   /**
    * false только для свежего образца по умолчанию. Восстановление из localStorage/хэша
    * сбрасывает историю (undo/redo пустые), поэтому одного canUndo||canRedo недостаточно,
@@ -57,6 +74,8 @@ export interface StudioState {
   hoverCell(cellId: string | null): void
   selectPanel(panelId: PanelId | null): void
   selectRow(rowId: RowId | null): void
+  setGenerator(next: GeneratorUiState): void
+  setPhoto(next: PhotoUiState | null): void
 
   paintCell(cell: Cell): void
   confirmFork(): void
@@ -118,6 +137,8 @@ const UI_DEFAULTS = {
   selectedRowId: null,
   hoveredCellId: null,
   pendingFork: null,
+  generator: null,
+  photo: null,
   documentTouched: false,
 }
 
@@ -158,6 +179,8 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
       hoverCell: (hoveredCellId) => set({ hoveredCellId }),
       selectPanel: (selectedPanelId) => set({ selectedPanelId }),
       selectRow: (selectedRowId) => set({ selectedRowId }),
+      setGenerator: (generator) => set({ generator }),
+      setPhoto: (photo) => set({ photo }),
 
       paintCell: (cell) => {
         const state = get()

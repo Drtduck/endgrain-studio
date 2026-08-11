@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { BoardSvg } from '@/components/BoardSvg'
-import { Button } from '@/components/ui/button'
+import { ConfirmReplace } from '@/components/ConfirmReplace'
 import { compile, type BoardModel } from '@/lib/engine'
 import { TEMPLATES, TEMPLATE_GROUPS, groupNameKey, type BoardTemplate } from '@/lib/designs/templates'
 import { t } from '@/lib/i18n'
@@ -88,26 +88,15 @@ export function TemplateGallery() {
       })}
 
       {pending ? (
-        <div
-          data-testid="template-confirm-dialog"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t(locale, 'templates.confirmTitle')}
-          className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-lg border bg-background p-4 shadow-lg"
-        >
-          <h3 className="font-semibold">{t(locale, 'templates.confirmTitle')}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t(locale, 'templates.confirmBody', { name: t(locale, pending.nameKey) })}
-          </p>
-          <div className="mt-3 flex justify-end gap-2">
-            <Button data-testid="template-cancel" size="sm" variant="outline" onClick={() => setPending(null)}>
-              {t(locale, 'templates.confirmCancel')}
-            </Button>
-            <Button data-testid="template-confirm" size="sm" onClick={() => apply(pending)}>
-              {t(locale, 'templates.confirmApply')}
-            </Button>
-          </div>
-        </div>
+        <ConfirmReplace
+          testId="template"
+          title={t(locale, 'templates.confirmTitle')}
+          body={t(locale, 'templates.confirmBody', { name: t(locale, pending.nameKey) })}
+          confirmLabel={t(locale, 'templates.confirmApply')}
+          cancelLabel={t(locale, 'templates.confirmCancel')}
+          onConfirm={() => apply(pending)}
+          onCancel={() => setPending(null)}
+        />
       ) : null}
     </section>
   )

@@ -77,4 +77,20 @@ describe('StudioShell', () => {
     expect(useStudio.getState().view).toBe('editor')
     expect(screen.getByTestId('board-canvas')).toBeDefined()
   })
+
+  it('вкладка генератора отдаёт всю ширину панели, боковая колонка скрыта', () => {
+    render(<StudioShell />)
+    fireEvent.click(screen.getByTestId('tab-generate'))
+    expect(screen.getByTestId('generator-panel')).toBeDefined()
+    expect(screen.queryByTestId('board-canvas')).toBe(null)
+    expect(screen.queryByTestId('species-walnut')).toBe(null)
+  })
+
+  it('вкладка фото отдаёт всю ширину панели, боковая колонка скрыта', () => {
+    render(<StudioShell />)
+    fireEvent.click(screen.getByTestId('tab-photo'))
+    expect(screen.getByTestId('photo-panel')).toBeDefined()
+    expect(screen.queryByTestId('board-canvas')).toBe(null)
+    expect(screen.queryByTestId('species-walnut')).toBe(null)
+  })
 })

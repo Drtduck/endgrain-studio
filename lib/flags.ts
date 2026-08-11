@@ -2,5 +2,5 @@
 export const flags = {
   pro: process.env['NEXT_PUBLIC_PRO_UNLOCK'] === '1',
   threeD: true,
-  generators: false,
+  generators: true,
 } as const

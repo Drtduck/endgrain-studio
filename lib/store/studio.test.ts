@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { baseDesign } from '@/lib/engine'
 import { makeCheckerboard } from '@/lib/designs/samples'
+import { seedPopulation } from '@/lib/generators'
+import { FAMILY_IDS } from '@/lib/generators/genome'
 import { createStudioStore, selectCanRedo, selectCanUndo, selectDesign, selectIsDirty } from './studio'
 
 describe('studio store: settings, selection, history', () => {
@@ -134,5 +136,66 @@ describe('вкладки студии', () => {
     expect(store.getState().view).toBe('view3d')
     store.getState().resetStudio()
     expect(store.getState().view).toBe('editor')
+  })
+})
+
+describe('состояние вкладок генератора и фото', () => {
+  it('по умолчанию пусто', () => {
+    const store = createStudioStore()
+    expect(store.getState().generator).toBe(null)
+    expect(store.getState().photo).toBe(null)
+  })
+
+  it('знает про пять вкладок', () => {
+    const store = createStudioStore()
+    for (const view of ['editor', 'templates', 'generate', 'photo', 'view3d'] as const) {
+      store.getState().setView(view)
+      expect(store.getState().view).toBe(view)
+    }
+  })
+
+  it('хранит популяцию между переключениями вкладок', () => {
+    const store = createStudioStore()
+    const population = seedPopulation(1, FAMILY_IDS)
+    store.getState().setGenerator({ population, favouriteIds: ['g1i0'] })
+    store.getState().setView('editor')
+    store.getState().setView('generate')
+    expect(store.getState().generator?.population.items).toHaveLength(9)
+    expect(store.getState().generator?.favouriteIds).toEqual(['g1i0'])
+  })
+
+  it('загрузка документа из генератора не стирает популяцию', () => {
+    const store = createStudioStore()
+    store.getState().setGenerator({ population: seedPopulation(2, FAMILY_IDS), favouriteIds: [] })
+    store.getState().loadDesign(makeCheckerboard())
+    expect(store.getState().generator).not.toBe(null)
+    expect(store.getState().documentTouched).toBe(true)
+  })
+
+  it('resetStudio сбрасывает обе панели', () => {
+    const store = createStudioStore()
+    store.getState().setGenerator({ population: seedPopulation(3, FAMILY_IDS), favouriteIds: [] })
+    store.getState().setPhoto({
+      grid: { cols: 2, rows: 2, rgba: new Uint8ClampedArray(16) },
+      fileName: 'x.png',
+      colors: 3,
+      panels: 2,
+    })
+    store.getState().resetStudio()
+    expect(store.getState().generator).toBe(null)
+    expect(store.getState().photo).toBe(null)
+    expect(store.getState().view).toBe('editor')
+  })
+
+  it('setPhoto(null) очищает картинку', () => {
+    const store = createStudioStore()
+    store.getState().setPhoto({
+      grid: { cols: 1, rows: 1, rgba: new Uint8ClampedArray(4) },
+      fileName: 'y.png',
+      colors: 2,
+      panels: 1,
+    })
+    store.getState().setPhoto(null)
+    expect(store.getState().photo).toBe(null)
   })
 })
