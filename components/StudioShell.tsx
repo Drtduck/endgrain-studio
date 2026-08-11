@@ -1,5 +1,6 @@
 'use client'
 
+import { Board3DPanel } from '@/components/Board3DPanel'
 import { BoardCanvas } from '@/components/BoardCanvas'
 import { BoardSettings } from '@/components/BoardSettings'
 import { ComplexityMeter } from '@/components/ComplexityMeter'
@@ -10,6 +11,7 @@ import { LocaleToggle } from '@/components/LocaleToggle'
 import { PanelInspector } from '@/components/PanelInspector'
 import { RowInspector } from '@/components/RowInspector'
 import { SpeciesPalette } from '@/components/SpeciesPalette'
+import { StudioTabs } from '@/components/StudioTabs'
 import { t } from '@/lib/i18n'
 import { useDerived } from '@/lib/store/derived'
 import { useStudioPersistence } from '@/lib/store/persist'
@@ -18,6 +20,7 @@ import { useStudio } from '@/lib/store/studio'
 export function StudioShell() {
   const locale = useStudio((s) => s.locale)
   const unit = useStudio((s) => s.unit)
+  const view = useStudio((s) => s.view)
   const setLocale = useStudio((s) => s.setLocale)
   const { model, calc, diagnostics } = useDerived()
   useStudioPersistence()
@@ -35,13 +38,21 @@ export function StudioShell() {
         </div>
       </header>
 
+      <StudioTabs />
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="flex flex-col gap-4">
-          <section aria-label={t(locale, 'board.title')} className="overflow-x-auto">
-            <BoardCanvas />
-          </section>
-          <PanelInspector />
-          <RowInspector />
+          {view === 'view3d' ? (
+            <Board3DPanel />
+          ) : (
+            <>
+              <section aria-label={t(locale, 'board.title')} className="overflow-x-auto">
+                <BoardCanvas />
+              </section>
+              <PanelInspector />
+              <RowInspector />
+            </>
+          )}
         </div>
 
         <aside className="flex flex-col gap-4">

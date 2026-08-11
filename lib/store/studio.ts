@@ -21,6 +21,8 @@ import { nextRowId } from './ids'
 
 export const DEFAULT_SPECIES_ID: SpeciesId = 'walnut'
 
+export type StudioView = 'editor' | 'templates' | 'view3d'
+
 export interface PendingFork {
   readonly cellId: string
   readonly speciesId: SpeciesId
@@ -33,6 +35,7 @@ export interface StudioState {
   readonly history: HistoryState<Design>
   readonly locale: Locale
   readonly unit: UnitSystem
+  readonly view: StudioView
   readonly activeSpeciesId: SpeciesId
   readonly selectedCellId: string | null
   readonly selectedPanelId: PanelId | null
@@ -42,6 +45,7 @@ export interface StudioState {
 
   setLocale(locale: Locale): void
   setUnit(unit: UnitSystem): void
+  setView(view: StudioView): void
   setActiveSpecies(speciesId: SpeciesId): void
   selectCell(cellId: string | null): void
   hoverCell(cellId: string | null): void
@@ -97,6 +101,7 @@ export function selectCanRedo(s: StudioState): boolean {
 const UI_DEFAULTS = {
   locale: 'ru' as Locale,
   unit: 'mm' as UnitSystem,
+  view: 'editor' as StudioView,
   activeSpeciesId: DEFAULT_SPECIES_ID,
   selectedCellId: null,
   selectedPanelId: null,
@@ -136,6 +141,7 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
 
       setLocale: (locale) => set({ locale }),
       setUnit: (unit) => set({ unit }),
+      setView: (view) => set({ view }),
       setActiveSpecies: (activeSpeciesId) => set({ activeSpeciesId }),
       selectCell: (selectedCellId) => set({ selectedCellId }),
       hoverCell: (hoveredCellId) => set({ hoveredCellId }),

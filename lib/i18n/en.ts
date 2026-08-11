@@ -100,6 +100,10 @@ const en: Record<keyof typeof ru, string> = {
   'view3d.unsupported': 'This browser did not provide WebGL, so 3D is unavailable. The full pattern is on the Editor tab.',
   'view3d.truncated': 'Showing the first {shown} cells out of {total}: the scene is capped by budget',
   'aria.board3d': '3D preview of the board',
+  'tabs.editor': 'Editor',
+  'tabs.templates': 'Templates',
+  'tabs.view3d': '3D',
+  'aria.tabs': 'studio sections',
 }
 
 export default en

@@ -98,6 +98,10 @@ const ru = {
   'view3d.unsupported': 'Браузер не отдал WebGL, поэтому 3D недоступно. Узор целиком виден во вкладке «Редактор».',
   'view3d.truncated': 'Показаны первые {shown} ячеек из {total}: сцена ограничена бюджетом',
   'aria.board3d': 'трёхмерное превью доски',
+  'tabs.editor': 'Редактор',
+  'tabs.templates': 'Шаблоны',
+  'tabs.view3d': '3D',
+  'aria.tabs': 'разделы студии',
 } as const
 
 export default ru
