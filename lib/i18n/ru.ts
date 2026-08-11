@@ -132,6 +132,14 @@ const ru = {
   'templates.confirmApply': 'Заменить',
   'templates.confirmCancel': 'Отмена',
   'aria.templateGallery': 'галерея шаблонов доски',
+  'gen.family.symmetry-pmm': 'Зеркальная симметрия',
+  'gen.family.symmetry-p4m': 'Диагональная симметрия',
+  'gen.family.symmetry-p2': 'Поворотная симметрия',
+  'gen.family.stripes': 'Полосы',
+  'gen.family.brick': 'Кирпич',
+  'gen.family.gradient': 'Градиент',
+  'gen.family.chaos': 'Хаос',
+  'gen.family.inlay': 'Вставка',
 } as const
 
 export default ru

@@ -134,6 +134,14 @@ const en: Record<keyof typeof ru, string> = {
   'templates.confirmApply': 'Replace',
   'templates.confirmCancel': 'Cancel',
   'aria.templateGallery': 'board template gallery',
+  'gen.family.symmetry-pmm': 'Mirror symmetry',
+  'gen.family.symmetry-p4m': 'Diagonal symmetry',
+  'gen.family.symmetry-p2': 'Rotational symmetry',
+  'gen.family.stripes': 'Stripes',
+  'gen.family.brick': 'Brick',
+  'gen.family.gradient': 'Gradient',
+  'gen.family.chaos': 'Chaos',
+  'gen.family.inlay': 'Inlay',
 }
 
 export default en
