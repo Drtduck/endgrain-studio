@@ -16,65 +16,102 @@ import { RowInspector } from '@/components/RowInspector'
 import { SpeciesPalette } from '@/components/SpeciesPalette'
 import { StudioTabs } from '@/components/StudioTabs'
 import { TemplateGallery } from '@/components/TemplateGallery'
+import { Separator } from '@/components/ui/separator'
 import { t } from '@/lib/i18n'
 import { useDerived } from '@/lib/store/derived'
 import { useStudioPersistence } from '@/lib/store/persist'
 import { useStudio, type StudioView } from '@/lib/store/studio'
+import type { UnitSystem } from '@/lib/units'
+import { cn } from '@/lib/utils'
 
 const FULL_WIDTH: readonly StudioView[] = ['templates', 'generate', 'photo']
 
 export function StudioShell() {
   const locale = useStudio((s) => s.locale)
   const unit = useStudio((s) => s.unit)
+  const setUnit = useStudio((s) => s.setUnit)
   const view = useStudio((s) => s.view)
   const setLocale = useStudio((s) => s.setLocale)
   const { model, calc, diagnostics } = useDerived()
   useStudioPersistence()
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-7xl flex-col gap-6 p-4 sm:p-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{t(locale, 'app.title')}</h1>
-          <p className="text-sm text-muted-foreground">{t(locale, 'app.tagline')}</p>
-        </div>
+    <div className="min-h-screen bg-app">
+      <header
+        data-testid="app-header"
+        className="flex min-h-14 flex-wrap items-center gap-4 border-b border-line bg-surface px-4 py-2"
+      >
         <div className="flex items-center gap-2">
-          <HistoryControls />
-          <LocaleToggle locale={locale} onChange={setLocale} />
+          <span className="flex size-[22px] items-center justify-center rounded-xs bg-accent font-display text-[13px] text-ink-inverse">
+            E
+          </span>
+          <span className="font-display text-[17px] font-semibold">{t(locale, 'app.title')}</span>
         </div>
+
+        <Separator orientation="vertical" className="h-6" />
+
+        <StudioTabs />
+
+        <Separator orientation="vertical" className="h-6" />
+
+        <div className="inline-flex rounded-md bg-surface-sunken p-0.5" role="group" aria-label={t(locale, 'aria.unitGroup')}>
+          {(['mm', 'in'] as const).map((u: UnitSystem) => (
+            <button
+              key={u}
+              type="button"
+              data-testid={`unit-${u}`}
+              onClick={() => setUnit(u)}
+              className={cn(
+                'rounded-sm px-2 py-1 font-mono text-xs transition-colors duration-hover',
+                u === unit ? 'bg-surface-raised shadow-sm' : 'text-ink-secondary',
+              )}
+            >
+              {t(locale, u === 'mm' ? 'units.mm' : 'units.in')}
+            </button>
+          ))}
+        </div>
+
+        <LocaleToggle locale={locale} onChange={setLocale} />
+
+        <Separator orientation="vertical" className="h-6" />
+
+        <HistoryControls />
       </header>
 
-      <StudioTabs />
+      <main className="mx-auto flex max-w-[1440px] flex-col gap-6 px-4 py-4">
+        {FULL_WIDTH.includes(view) ? (
+          view === 'templates' ? <TemplateGallery /> : view === 'generate' ? <GeneratorPanel /> : <PhotoImport />
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,236px)_minmax(0,1fr)_minmax(0,268px)]">
+            <div className="flex min-w-0 flex-col gap-4 overflow-auto lg:order-2">
+              {view === 'view3d' ? (
+                <Board3DPanel />
+              ) : (
+                <>
+                  <section aria-label={t(locale, 'board.title')} className="overflow-x-auto">
+                    <BoardCanvas />
+                  </section>
+                  <PanelInspector />
+                  <RowInspector />
+                </>
+              )}
+            </div>
 
-      {FULL_WIDTH.includes(view) ? (
-        view === 'templates' ? <TemplateGallery /> : view === 'generate' ? <GeneratorPanel /> : <PhotoImport />
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <div className="flex flex-col gap-4">
-            {view === 'view3d' ? (
-              <Board3DPanel />
-            ) : (
-              <>
-                <section aria-label={t(locale, 'board.title')} className="overflow-x-auto">
-                  <BoardCanvas />
-                </section>
-                <PanelInspector />
-                <RowInspector />
-              </>
-            )}
+            <div className="lg:order-1">
+              <SpeciesPalette />
+            </div>
+
+            <aside className="flex flex-col gap-4 lg:order-3 lg:sticky lg:top-4 lg:max-h-screen lg:self-start lg:overflow-y-auto">
+              <BoardSettings />
+              <ComplexityMeter locale={locale} calc={calc} diagnostics={diagnostics} unit={unit} model={model} />
+              <ExportPanel />
+              <DiagnosticsPanel />
+            </aside>
           </div>
+        )}
 
-          <aside className="flex flex-col gap-4 lg:sticky lg:top-4 lg:max-h-screen lg:self-start lg:overflow-y-auto">
-            <SpeciesPalette />
-            <BoardSettings />
-            <ComplexityMeter locale={locale} calc={calc} diagnostics={diagnostics} unit={unit} model={model} />
-            <ExportPanel />
-            <DiagnosticsPanel />
-          </aside>
-        </div>
-      )}
-
-      <ForkDialog />
-    </main>
+        <ForkDialog />
+      </main>
+    </div>
   )
 }

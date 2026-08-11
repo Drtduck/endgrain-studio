@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { Redo2, Undo2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { t } from '@/lib/i18n'
 import { selectCanRedo, selectCanUndo, useStudio } from '@/lib/store/studio'
@@ -42,11 +43,27 @@ export function HistoryControls() {
 
   return (
     <div className="flex gap-1" role="group" aria-label={t(locale, 'aria.historyGroup')}>
-      <Button size="sm" variant="outline" data-testid="undo" disabled={!canUndo} onClick={undo}>
-        {t(locale, 'history.undo')}
+      <Button
+        size="icon"
+        variant="ghost"
+        className="size-8 rounded-sm disabled:text-line-strong disabled:hover:bg-transparent"
+        data-testid="undo"
+        aria-label={t(locale, 'history.undo')}
+        disabled={!canUndo}
+        onClick={undo}
+      >
+        <Undo2 size={16} strokeWidth={1.6} />
       </Button>
-      <Button size="sm" variant="outline" data-testid="redo" disabled={!canRedo} onClick={redo}>
-        {t(locale, 'history.redo')}
+      <Button
+        size="icon"
+        variant="ghost"
+        className="size-8 rounded-sm disabled:text-line-strong disabled:hover:bg-transparent"
+        data-testid="redo"
+        aria-label={t(locale, 'history.redo')}
+        disabled={!canRedo}
+        onClick={redo}
+      >
+        <Redo2 size={16} strokeWidth={1.6} />
       </Button>
     </div>
   )

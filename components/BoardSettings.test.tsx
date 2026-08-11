@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { baseDesign } from '@/lib/engine'
 import { useStudio } from '@/lib/store/studio'
 import { BoardSettings } from './BoardSettings'
@@ -38,14 +38,14 @@ describe('BoardSettings', () => {
   it('переключение на дюймы переписывает значения всех полей', () => {
     render(<BoardSettings />)
     expect((screen.getByTestId('board-thickness') as HTMLInputElement).value).toBe('40')
-    fireEvent.click(screen.getByTestId('unit-in'))
+    act(() => useStudio.getState().setUnit('in'))
     expect(useStudio.getState().unit).toBe('in')
     expect((screen.getByTestId('board-thickness') as HTMLInputElement).value).toBe('1.575')
   })
 
   it('ввод в дюймах сохраняется в миллиметрах', () => {
     render(<BoardSettings />)
-    fireEvent.click(screen.getByTestId('unit-in'))
+    act(() => useStudio.getState().setUnit('in'))
     commitField('board-thickness', '2')
     expect(design().board.thicknessMm).toBeCloseTo(50.8, 9)
   })

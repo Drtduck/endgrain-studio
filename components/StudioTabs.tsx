@@ -1,7 +1,7 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
 import { t, type MessageKey } from '@/lib/i18n'
+import { cn } from '@/lib/utils'
 import { useStudio, type StudioView } from '@/lib/store/studio'
 
 const TABS: readonly { readonly view: StudioView; readonly labelKey: MessageKey }[] = [
@@ -20,17 +20,22 @@ export function StudioTabs() {
   return (
     <div role="tablist" aria-label={t(locale, 'aria.tabs')} className="flex flex-wrap gap-1">
       {TABS.map((tab) => (
-        <Button
+        <button
           key={tab.view}
+          type="button"
           role="tab"
           data-testid={`tab-${tab.view}`}
           aria-selected={view === tab.view}
-          size="sm"
-          variant={view === tab.view ? 'default' : 'outline'}
           onClick={() => setView(tab.view)}
+          className={cn(
+            'rounded-sm px-[13px] py-[7px] text-sm transition-colors duration-hover ease-out focus-visible:shadow-focus focus-visible:outline-none',
+            view === tab.view
+              ? 'bg-accent-soft font-semibold text-accent'
+              : 'font-medium text-ink-secondary hover:bg-app hover:text-ink',
+          )}
         >
           {t(locale, tab.labelKey)}
-        </Button>
+        </button>
       ))}
     </div>
   )

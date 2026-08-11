@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect } from 'react'
-import { Button } from '@/components/ui/button'
 import { t, type Locale } from '@/lib/i18n'
+import { cn } from '@/lib/utils'
 
 export function LocaleToggle({ locale, onChange }: { locale: Locale; onChange: (l: Locale) => void }) {
   // layout.tsx фиксирует lang="ru" статически (серверный рендер); при переключении локали
@@ -12,11 +12,24 @@ export function LocaleToggle({ locale, onChange }: { locale: Locale; onChange: (
   }, [locale])
 
   return (
-    <div className="flex gap-1" role="group" aria-label={t(locale, 'aria.localeGroup')}>
+    <div
+      role="group"
+      aria-label={t(locale, 'aria.localeGroup')}
+      className="inline-flex rounded-md bg-surface-sunken p-0.5"
+    >
       {(['ru', 'en'] as const).map((l) => (
-        <Button key={l} data-testid={`locale-${l}`} size="sm" variant={l === locale ? 'default' : 'outline'} onClick={() => onChange(l)}>
+        <button
+          key={l}
+          type="button"
+          data-testid={`locale-${l}`}
+          onClick={() => onChange(l)}
+          className={cn(
+            'rounded-sm px-2 py-1 font-sans text-xs font-semibold transition-colors duration-hover',
+            l === locale ? 'bg-surface-raised shadow-sm' : 'text-ink-secondary',
+          )}
+        >
           {t(locale, l === 'ru' ? 'locale.ru' : 'locale.en')}
-        </Button>
+        </button>
       ))}
     </div>
   )

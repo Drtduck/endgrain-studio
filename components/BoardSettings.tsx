@@ -8,12 +8,10 @@ import { BOARD_MAX_MM, BOARD_MIN_MM, THICKNESS_MAX_MM, THICKNESS_MIN_MM } from '
 import { t } from '@/lib/i18n'
 import { shareUrl } from '@/lib/store/persist'
 import { selectDesign, useStudio } from '@/lib/store/studio'
-import type { UnitSystem } from '@/lib/units'
 
 export function BoardSettings() {
   const locale = useStudio((s) => s.locale)
   const unit = useStudio((s) => s.unit)
-  const setUnit = useStudio((s) => s.setUnit)
   const design = useStudio(selectDesign)
   const setDesignName = useStudio((s) => s.setDesignName)
   const setBoardWidthMm = useStudio((s) => s.setBoardWidthMm)
@@ -41,21 +39,8 @@ export function BoardSettings() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-2">
+      <CardHeader>
         <CardTitle className="text-base">{t(locale, 'board.settings')}</CardTitle>
-        <div className="flex gap-1" role="group" aria-label={t(locale, 'aria.unitGroup')}>
-          {(['mm', 'in'] as const).map((u: UnitSystem) => (
-            <Button
-              key={u}
-              size="sm"
-              variant={u === unit ? 'default' : 'outline'}
-              data-testid={`unit-${u}`}
-              onClick={() => setUnit(u)}
-            >
-              {t(locale, u === 'mm' ? 'units.mm' : 'units.in')}
-            </Button>
-          ))}
-        </div>
       </CardHeader>
 
       <CardContent className="space-y-3">
