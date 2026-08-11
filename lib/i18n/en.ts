@@ -40,6 +40,17 @@ const en: Record<keyof typeof ru, string> = {
   'diag.SHRINKAGE_MISMATCH': 'Neighbouring species {a} and {b} differ in shrinkage by {deltaPp} pp against a {limitPp} limit',
   'diag.CELL_BUDGET': '{cells} cells against a {limit} limit',
   'diag.UNKNOWN_SPECIES': 'Species {speciesId} in panel {panelId} is not in the catalogue',
+  'palette.title': 'Species',
+  'palette.active': 'Selected: {name}',
+  'aria.palette': 'species picker',
+  'aria.boardCanvas': 'board canvas, click paints a cell with the selected species',
+  'fork.title': 'This panel has to be forked',
+  'fork.body': 'This strip is used by several rows. To paint only this cell the panel gets glued up a second time.',
+  'fork.glueUps': 'Extra glue-ups: {count}',
+  'fork.cuts': 'Extra cuts: {count}',
+  'fork.lumber': '{name}: plus {meters} m',
+  'fork.confirm': 'Fork',
+  'fork.cancel': 'Cancel',
 }
 
 export default en

@@ -38,6 +38,17 @@ const ru = {
   'diag.SHRINKAGE_MISMATCH': 'Соседние породы {a} и {b} различаются по усушке на {deltaPp} п.п. при допуске {limitPp}',
   'diag.CELL_BUDGET': 'Ячеек {cells} при лимите {limit}',
   'diag.UNKNOWN_SPECIES': 'Порода {speciesId} в панели {panelId} не найдена в справочнике',
+  'palette.title': 'Породы',
+  'palette.active': 'Выбрана: {name}',
+  'aria.palette': 'выбор породы',
+  'aria.boardCanvas': 'холст доски, клик красит ячейку выбранной породой',
+  'fork.title': 'Панель придётся разветвить',
+  'fork.body': 'Эта полоса идёт в несколько рядов. Чтобы покрасить только эту ячейку, панель будет склеена ещё раз.',
+  'fork.glueUps': 'Дополнительных склеек: {count}',
+  'fork.cuts': 'Дополнительных резов: {count}',
+  'fork.lumber': '{name}: плюс {meters} м',
+  'fork.confirm': 'Разветвить',
+  'fork.cancel': 'Отмена',
 } as const
 
 export default ru
