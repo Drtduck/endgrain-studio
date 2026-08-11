@@ -92,6 +92,12 @@ const ru = {
   'diagnostics.none': 'Замечаний нет, доска изготовима',
   'diagnostics.counts': 'ошибок {errors}, предупреждений {warnings}',
   'diagnostics.at': 'панель {panelId}, ряд {rowId}',
+  'view3d.title': '3D-превью',
+  'view3d.loading': 'Собираем сцену',
+  'view3d.hint': 'Крутите мышью, колесо приближает, правая кнопка двигает',
+  'view3d.unsupported': 'Браузер не отдал WebGL, поэтому 3D недоступно. Узор целиком виден во вкладке «Редактор».',
+  'view3d.truncated': 'Показаны первые {shown} ячеек из {total}: сцена ограничена бюджетом',
+  'aria.board3d': 'трёхмерное превью доски',
 } as const
 
 export default ru

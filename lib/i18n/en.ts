@@ -94,6 +94,12 @@ const en: Record<keyof typeof ru, string> = {
   'diagnostics.none': 'No issues, the board is buildable',
   'diagnostics.counts': '{errors} errors, {warnings} warnings',
   'diagnostics.at': 'panel {panelId}, row {rowId}',
+  'view3d.title': '3D preview',
+  'view3d.loading': 'Building the scene',
+  'view3d.hint': 'Drag to orbit, scroll to zoom, right button to pan',
+  'view3d.unsupported': 'This browser did not provide WebGL, so 3D is unavailable. The full pattern is on the Editor tab.',
+  'view3d.truncated': 'Showing the first {shown} cells out of {total}: the scene is capped by budget',
+  'aria.board3d': '3D preview of the board',
 }
 
 export default en

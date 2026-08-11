@@ -1,0 +1,108 @@
+'use client'
+
+import { useLayoutEffect, useMemo, useRef } from 'react'
+import { Canvas } from '@react-three/fiber'
+import { ContactShadows, OrbitControls } from '@react-three/drei'
+import {
+  Color,
+  InstancedBufferAttribute,
+  Matrix4,
+  Quaternion,
+  Vector3,
+  type BufferGeometry,
+  type InstancedMesh,
+  type Material,
+} from 'three'
+import type { BoardModel } from '@/lib/engine'
+import { jitteredHex } from '@/lib/render3d/color'
+import { buildInstances, cameraDistance, type SpeciesGroup } from '@/lib/render3d/instances'
+
+const NO_ROTATION = new Quaternion()
+
+/**
+ * Одна порода = один InstancedMesh. Матрицы и цвета пишутся императивно:
+ * React-элемент на каждую ячейку стоил бы 4000 узлов дерева ради данных,
+ * которые всё равно уезжают в один буфер.
+ */
+function SpeciesInstances({ group }: { group: SpeciesGroup }) {
+  const meshRef = useRef<InstancedMesh>(null)
+
+  useLayoutEffect(() => {
+    const mesh = meshRef.current
+    if (!mesh) return
+    const matrix = new Matrix4()
+    const position = new Vector3()
+    const scale = new Vector3()
+    const color = new Color()
+    const colors = new Float32Array(group.items.length * 3)
+
+    group.items.forEach((item, index) => {
+      position.set(item.position[0], item.position[1], item.position[2])
+      scale.set(item.scale[0], item.scale[1], item.scale[2])
+      matrix.compose(position, NO_ROTATION, scale)
+      mesh.setMatrixAt(index, matrix)
+      color.set(jitteredHex(group.hex, item.jitter))
+      colors[index * 3] = color.r
+      colors[index * 3 + 1] = color.g
+      colors[index * 3 + 2] = color.b
+    })
+
+    mesh.instanceMatrix.needsUpdate = true
+    mesh.instanceColor = new InstancedBufferAttribute(colors, 3)
+    mesh.instanceColor.needsUpdate = true
+    mesh.computeBoundingSphere()
+  }, [group])
+
+  return (
+    <instancedMesh
+      ref={meshRef}
+      // Геометрия и материал приходят детьми, поэтому первые два аргумента конструктора пустые.
+      args={[undefined as unknown as BufferGeometry, undefined as unknown as Material, group.items.length]}
+      castShadow
+      receiveShadow
+    >
+      <boxGeometry args={[1, 1, 1]} />
+      <meshStandardMaterial roughness={0.72} metalness={0.02} />
+    </instancedMesh>
+  )
+}
+
+export function Board3D({ model, label }: { model: BoardModel; label: string }) {
+  const instances = useMemo(() => buildInstances(model), [model])
+  const distance = cameraDistance(instances)
+  const shadowScale = Math.max(instances.sizeUnits[0], instances.sizeUnits[2]) * 2.4
+
+  return (
+    <Canvas
+      shadows
+      dpr={[1, 2]}
+      camera={{ position: [distance * 0.7, distance * 0.8, distance * 0.9], fov: 40 }}
+      aria-label={label}
+      className="h-full w-full"
+    >
+      <color attach="background" args={['#f3efe9']} />
+      <ambientLight intensity={0.55} />
+      <hemisphereLight intensity={0.35} groundColor="#b9a893" />
+      <directionalLight
+        position={[distance, distance * 1.5, distance * 0.6]}
+        intensity={1.4}
+        castShadow
+        shadow-mapSize={[1024, 1024]}
+      />
+      {instances.groups.map((group) => (
+        // Число инстансов - аргумент конструктора, поэтому смена размера доски пересоздаёт меш.
+        <SpeciesInstances key={`${group.speciesId}:${group.items.length}`} group={group} />
+      ))}
+      <ContactShadows position={[0, -0.002, 0]} opacity={0.42} scale={shadowScale} blur={2.2} far={1.5} />
+      <OrbitControls
+        makeDefault
+        enablePan
+        enableZoom
+        enableRotate
+        target={[0, 0, 0]}
+        minDistance={distance * 0.3}
+        maxDistance={distance * 3}
+      />
+    </Canvas>
+  )
+}
