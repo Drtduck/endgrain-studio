@@ -90,6 +90,10 @@ const en: Record<keyof typeof ru, string> = {
   'rows.moveUp': 'Up',
   'rows.moveDown': 'Down',
   'rows.empty': 'The board has no rows yet',
+  'diagnostics.title': 'Buildability checks',
+  'diagnostics.none': 'No issues, the board is buildable',
+  'diagnostics.counts': '{errors} errors, {warnings} warnings',
+  'diagnostics.at': 'panel {panelId}, row {rowId}',
 }
 
 export default en

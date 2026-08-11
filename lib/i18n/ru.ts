@@ -88,6 +88,10 @@ const ru = {
   'rows.moveUp': 'Выше',
   'rows.moveDown': 'Ниже',
   'rows.empty': 'В доске пока нет рядов',
+  'diagnostics.title': 'Проверки изготовимости',
+  'diagnostics.none': 'Замечаний нет, доска изготовима',
+  'diagnostics.counts': 'ошибок {errors}, предупреждений {warnings}',
+  'diagnostics.at': 'панель {panelId}, ряд {rowId}',
 } as const
 
 export default ru
