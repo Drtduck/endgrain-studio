@@ -1,5 +1,5 @@
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CardTitle } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import type { BoardModel, Diagnostic } from '@/lib/engine'
 import type { CalcResult } from '@/lib/calc'
 import { t, type Locale, type MessageKey } from '@/lib/i18n'
@@ -22,70 +22,83 @@ export function ComplexityMeter({
   model: BoardModel
 }) {
   const unitLabel = t(locale, unit === 'mm' ? 'units.mm' : 'units.in')
-  const rows: Array<[MessageKey, string]> = [
-    ['meter.glueUps', String(calc.glueUpCount)],
-    ['meter.cuts', String(calc.cutCount)],
-    ['meter.cells', String(model.cells.length)],
-    ['meter.boardFeet', `${calc.totalBoardFeet.toFixed(2)} bf`],
-    ['meter.waste', `${calc.wastePct.toFixed(1)} %`],
-    ['meter.cost', usd.format(calc.totalCostUsd)],
-    ['meter.weight', `${calc.totalWeightKg.toFixed(2)} ${t(locale, 'units.kg')}`],
+  const kgLabel = t(locale, 'units.kg')
+  // Порог отходов: в макете подсвечена ячейка 18%, но у нас нет отдельной диагностики
+  // отходов (calc.wastePct считается, но верхняя граница нигде не задана), поэтому
+  // подсветку text-warning оставляем выключенной, а не изобретаем новый порог.
+  const rows: Array<[MessageKey, string, string]> = [
+    ['meter.glueUps', String(calc.glueUpCount), ''],
+    ['meter.cuts', String(calc.cutCount), ''],
+    ['meter.cells', String(model.cells.length), ''],
+    ['meter.boardFeet', calc.totalBoardFeet.toFixed(2), 'bf'],
+    ['meter.waste', calc.wastePct.toFixed(1), '%'],
+    ['meter.weight', calc.totalWeightKg.toFixed(2), kgLabel],
   ]
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
+    <div className="w-full max-w-sm rounded-lg border border-line-subtle bg-surface p-3.5">
+      <div className="mb-3">
         <CardTitle>{t(locale, 'meter.title')}</CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-ink-secondary">
           {t(locale, 'board.size', {
             widthMm: formatMm(model.widthMm, unit, unitLabel, 0),
             lengthMm: formatMm(model.lengthMm, unit, unitLabel, 0),
             thicknessMm: formatMm(model.thicknessMm, unit, unitLabel, 0),
           })}
         </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <dl className="grid grid-cols-2 gap-y-1 text-sm">
-          {rows.map(([key, value]) => (
-            <div key={key} className="contents">
-              <dt className="text-muted-foreground">{t(locale, key)}</dt>
-              <dd className="text-right font-medium tabular-nums">{value}</dd>
-            </div>
-          ))}
-        </dl>
+      </div>
 
-        <div>
-          <p className="mb-1 text-sm font-medium">{t(locale, 'meter.lumberBySpecies')}</p>
-          <ul className="space-y-0.5 text-sm text-muted-foreground">
-            {calc.bySpecies.map((s) => {
-              const species = SPECIES_BY_ID.get(s.speciesId)
-              const name = species ? (locale === 'ru' ? species.nameRu : species.nameEn) : s.speciesId
-              return (
-                <li key={s.speciesId}>
-                  {t(locale, 'meter.speciesRow', {
-                    name,
-                    meters: s.linearMeters.toFixed(2),
-                    boardFeet: s.boardFeet.toFixed(2),
-                    costUsd: usd.format(s.costUsd),
-                  })}
-                </li>
-              )
-            })}
-          </ul>
-        </div>
+      <dl className="grid grid-cols-2 gap-x-2.5 gap-y-3">
+        {rows.map(([key, value, unitText]) => (
+          <div key={key}>
+            <dt className="text-[11px] text-ink-muted">{t(locale, key)}</dt>
+            <dd className="flex items-baseline gap-1">
+              <span className="font-mono text-xl leading-6 font-medium tabular-nums">{value}</span>
+              {unitText ? <span className="font-mono text-[11px] text-ink-muted">{unitText}</span> : null}
+            </dd>
+          </div>
+        ))}
+      </dl>
 
-        {diagnostics.length === 0 ? (
-          <Badge variant="secondary">{t(locale, 'meter.noIssues')}</Badge>
-        ) : (
-          <ul className="space-y-1 text-sm">
-            {diagnostics.map((d, i) => (
-              <li key={`${d.code}-${i}`} className={d.level === 'error' ? 'text-red-600' : 'text-amber-600'}>
-                {t(locale, d.messageKey as MessageKey, d.params)}
+      <div className="mt-3 flex items-baseline justify-between border-t border-line-subtle pt-3">
+        <span className="text-[13px] text-ink-secondary">{t(locale, 'meter.cost')}</span>
+        <span className="font-mono text-[28px] leading-8 font-semibold tabular-nums">{usd.format(calc.totalCostUsd)}</span>
+      </div>
+
+      <div className="mt-3">
+        <p className="mb-1 text-[11px] text-ink-muted">{t(locale, 'meter.lumberBySpecies')}</p>
+        <ul className="space-y-0.5 text-[11px] text-ink-muted">
+          {calc.bySpecies.map((s) => {
+            const species = SPECIES_BY_ID.get(s.speciesId)
+            const name = species ? (locale === 'ru' ? species.nameRu : species.nameEn) : s.speciesId
+            return (
+              <li key={s.speciesId} className="font-mono tabular-nums">
+                {t(locale, 'meter.speciesRow', {
+                  name,
+                  meters: s.linearMeters.toFixed(2),
+                  boardFeet: s.boardFeet.toFixed(2),
+                  costUsd: usd.format(s.costUsd),
+                })}
               </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+            )
+          })}
+        </ul>
+      </div>
+
+      {diagnostics.length === 0 ? (
+        <p className="mt-3 text-[11px] text-ink-muted">{t(locale, 'meter.noIssues')}</p>
+      ) : (
+        <ul className="mt-3 space-y-0.5 text-[11px]">
+          {diagnostics.map((d, i) => (
+            <li
+              key={`${d.code}-${i}`}
+              className={cn('font-mono tabular-nums', d.level === 'error' ? 'text-error' : 'text-warning')}
+            >
+              {t(locale, d.messageKey as MessageKey, d.params)}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }

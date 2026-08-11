@@ -90,7 +90,11 @@ export function ExportPanel() {
           ))}
         </div>
         {failed ? (
-          <p data-testid="export-error" role="alert" className="text-sm text-red-600">
+          <p
+            data-testid="export-error"
+            role="alert"
+            className="rounded-md border border-error-border bg-error-soft px-3 py-[11px] text-[13px] font-semibold text-error-text"
+          >
             {t(locale, 'export.error')}
           </p>
         ) : null}
