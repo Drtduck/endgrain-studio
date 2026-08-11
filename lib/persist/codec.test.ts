@@ -52,6 +52,21 @@ describe('codec', () => {
     expect(encodeDesignToHash(big).length).toBeLessThan(2048)
   })
 
+  it('appends species used by strips but missing from design.species instead of preserving the palette verbatim', () => {
+    const withGap = baseDesign({
+      species: ['maple'],
+      panels: [stripsPanel('A', ['maple', 'walnut'], 25)],
+      rows: [{ id: 'r1', panelId: 'A', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+    })
+
+    const c = toCompact(withGap) as Record<string, unknown>
+    expect(c['s']).toEqual(['maple', 'walnut'])
+
+    const roundTripped = deserializeDesign(serializeDesign(withGap))
+    expect(roundTripped.species).toEqual(['maple', 'walnut'])
+    expect(roundTripped).not.toEqual(withGap) // палитра нормализуется, а не переносится дословно
+  })
+
   it('rejects a malformed document', () => {
     expect(() => parseDesign({ schemaVersion: 1, id: 'x' })).toThrow()
     expect(() => decodeDesignFromHash('не-сжатая-строка')).toThrow()
