@@ -48,6 +48,31 @@ test('смена толщины доски пересчитывает счётч
   await expect(page.getByText(/Габарит:/)).toContainText('2.36"')
 })
 
+test('толщина доски переживает перезагрузку страницы', async ({ page }) => {
+  // openStudio вешает clear-localStorage init-скрипт на каждую навигацию этой страницы,
+  // а нам как раз нужно, чтобы после reload() хранилище осталось нетронутым.
+  await page.goto('/')
+  await page.evaluate(() => window.localStorage.clear())
+  await page.reload()
+  await expect(page.getByTestId('board-canvas')).toBeVisible()
+
+  const thickness = page.getByTestId('board-thickness')
+  await thickness.fill('60')
+  await thickness.blur()
+
+  // Ждём дебаунс автосохранения: значение должно долететь до localStorage.
+  await page.waitForFunction(() => {
+    const raw = window.localStorage.getItem('endgrain.current.v1')
+    if (!raw) return false
+    const parsed = JSON.parse(raw) as { b?: number[] }
+    return parsed.b?.[2] === 60
+  })
+
+  await page.reload()
+  await expect(page.getByTestId('board-canvas')).toBeVisible()
+  await expect(page.getByTestId('board-thickness')).toHaveValue('60')
+})
+
 test('отмена возвращает покрашенную ячейку к прежней породе', async ({ page }) => {
   await openStudio(page)
   const before = await cell(page, 'r0:0').getAttribute('fill')
