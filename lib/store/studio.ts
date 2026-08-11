@@ -1,7 +1,8 @@
 'use client'
 
 import { create, type StoreApi, type UseBoundStore } from 'zustand'
-import type { Cell, Design, PaintCost, PanelId, RowId, SpeciesId } from '@/lib/engine'
+import type { Cell, Design, PaintCost, PaintResult, PanelId, RowId, SpeciesId } from '@/lib/engine'
+import { EngineError, applyPaint } from '@/lib/engine'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import type { Locale } from '@/lib/i18n'
 import type { UnitSystem } from '@/lib/units'
@@ -9,6 +10,7 @@ import {
   canRedo as histCanRedo,
   canUndo as histCanUndo,
   commit,
+  commitValue,
   initHistory,
   redo as histRedo,
   resetHistory,
@@ -103,7 +105,7 @@ const UI_DEFAULTS = {
 }
 
 export function createStudioStore(initialDesign: Design = makeCheckerboard()): StudioStore {
-  return create<StudioState>((set) => {
+  return create<StudioState>((set, get) => {
     /** Единственная точка записи в документ: всё остальное ходит через неё, поэтому undo знает про каждую правку. */
     const edit = (recipe: (draft: import('immer').Draft<Design>) => void): void => {
       set((s) => ({ history: commit(s.history, recipe) }))
@@ -126,9 +128,48 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
       selectPanel: (selectedPanelId) => set({ selectedPanelId }),
       selectRow: (selectedRowId) => set({ selectedRowId }),
 
-      // Задача 3.
-      paintCell: () => {},
-      confirmFork: () => {},
+      paintCell: (cell) => {
+        const state = get()
+        const design = state.history.present
+        let result: PaintResult
+        try {
+          result = applyPaint(design, cell, state.activeSpeciesId)
+        } catch (error) {
+          // Клик по ячейке, за которой не стоит полоса (или по устаревшей модели после undo):
+          // это не ошибка пользователя, просто нечего красить.
+          if (error instanceof EngineError) return
+          throw error
+        }
+        if (result.kind === 'noop') return
+        if (result.kind === 'inPlace') {
+          set((s) => ({
+            history: commitValue(s.history, result.design),
+            selectedCellId: cell.id,
+            pendingFork: null,
+          }))
+          return
+        }
+        set({
+          pendingFork: {
+            cellId: cell.id,
+            speciesId: state.activeSpeciesId,
+            next: result.design,
+            forkedPanelIds: result.forkedPanelIds,
+            cost: result.cost,
+          },
+        })
+      },
+
+      confirmFork: () => {
+        const pending = get().pendingFork
+        if (!pending) return
+        set((s) => ({
+          history: commitValue(s.history, pending.next),
+          pendingFork: null,
+          selectedCellId: pending.cellId,
+        }))
+      },
+
       cancelFork: () => set({ pendingFork: null }),
 
       // Задача 4.
