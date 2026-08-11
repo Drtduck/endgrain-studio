@@ -1,9 +1,7 @@
 import type { BoardModel, RowBand } from '@/lib/engine'
 import { t, type Locale } from '@/lib/i18n'
+import { boardLayout } from '@/lib/render2d/layout'
 import { speciesHex } from '@/lib/species'
-
-/** Ширина колонки с номерами рядов, мм в системе координат viewBox. */
-const ROW_LABEL_MARGIN_MM = 14
 
 export function BoardSvg({
   model,
@@ -27,15 +25,14 @@ export function BoardSvg({
   if (model.widthMm <= 0 || model.lengthMm <= 0) return <svg role="img" aria-label={t(locale, 'aria.emptyBoard')} />
 
   const hasLabels = Boolean(rowLabels && rowLabels.length > 0)
-  const marginMm = hasLabels ? ROW_LABEL_MARGIN_MM : 0
-  const totalWidthMm = model.widthMm + marginMm
-  const scale = maxPx / Math.max(totalWidthMm, model.lengthMm)
+  const layout = boardLayout(model, { maxPx, withRowLabels: hasLabels })
+  const marginMm = layout.marginMm
 
   return (
     <svg
-      viewBox={`0 0 ${totalWidthMm} ${model.lengthMm}`}
-      width={totalWidthMm * scale}
-      height={model.lengthMm * scale}
+      viewBox={layout.viewBox}
+      width={layout.widthPx}
+      height={layout.heightPx}
       role="img"
       aria-label={t(locale, 'aria.boardPreview')}
       className="max-w-full rounded-lg shadow-sm"
