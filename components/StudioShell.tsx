@@ -32,7 +32,7 @@ export function StudioShell() {
   const setUnit = useStudio((s) => s.setUnit)
   const view = useStudio((s) => s.view)
   const setLocale = useStudio((s) => s.setLocale)
-  const { model, calc, diagnostics } = useDerived()
+  const { model, calc } = useDerived()
   useStudioPersistence()
 
   return (
@@ -52,7 +52,7 @@ export function StudioShell() {
 
         <StudioTabs />
 
-        <Separator orientation="vertical" className="h-6" />
+        <div className="flex-1" />
 
         <div className="inline-flex rounded-md bg-surface-sunken p-0.5" role="group" aria-label={t(locale, 'aria.unitGroup')}>
           {(['mm', 'in'] as const).map((u: UnitSystem) => (
@@ -104,9 +104,9 @@ export function StudioShell() {
               <SpeciesPalette />
             </div>
 
-            <aside className="flex flex-col gap-4 lg:order-3 lg:sticky lg:top-4 lg:max-h-screen lg:self-start lg:overflow-y-auto">
+            <aside className="flex flex-col gap-4 [&>*]:shrink-0 lg:order-3 lg:sticky lg:top-4 lg:max-h-screen lg:self-start lg:overflow-y-auto">
               <BoardSettings />
-              <ComplexityMeter locale={locale} calc={calc} diagnostics={diagnostics} unit={unit} model={model} />
+              <ComplexityMeter locale={locale} calc={calc} unit={unit} model={model} />
               <ExportPanel />
               <DiagnosticsPanel />
             </aside>

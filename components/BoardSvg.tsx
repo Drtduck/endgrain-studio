@@ -41,7 +41,7 @@ export function BoardSvg({
       height={layout.heightPx}
       role="img"
       aria-label={t(locale, 'aria.boardPreview')}
-      className="max-w-full rounded-lg shadow-sm"
+      className="h-auto max-w-full rounded-lg shadow-sm"
     >
       {model.cells.map((cell) => {
         const isActive = cell.id === selectedCellId || cell.id === highlightCellId
