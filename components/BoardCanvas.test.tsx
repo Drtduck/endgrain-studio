@@ -40,4 +40,15 @@ describe('BoardCanvas', () => {
     expect(() => fireEvent.pointerDown(wrapper, { bubbles: true })).not.toThrow()
     expect(useStudio.getState().pendingFork).toBe(null)
   })
+
+  it('рисует номер для каждого ряда доски', () => {
+    useStudio.getState().resetStudio(makeCheckerboard({ cols: 2, rows: 4 }))
+    const { container } = render(<BoardCanvas />)
+    const rowCount = useStudio.getState().history.present.rows.length
+    const labels = container.querySelectorAll('[data-testid="row-label"]')
+    expect(labels).toHaveLength(rowCount)
+    expect(Array.from(labels).map((el) => el.textContent)).toEqual(
+      Array.from({ length: rowCount }, (_, i) => String(i + 1)),
+    )
+  })
 })

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { compile } from './compile'
+import { compile, rowBandsMm } from './compile'
 import { baseDesign, stripsPanel } from './fixtures'
 import { MAX_CELLS } from './types'
 
@@ -47,6 +47,20 @@ describe('compile: flat geometry', () => {
 
   it('reports truncated: false for a normal design', () => {
     expect(compile(baseDesign()).truncated).toBe(false)
+  })
+
+  it('rowBandsMm: топ/высота рядов сверху вниз, пропуская ряды с несуществующей панелью', () => {
+    const d = baseDesign({
+      rows: [
+        { id: 'r1', panelId: 'A', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 },
+        { id: 'ghost', panelId: 'GHOST', thicknessMm: 99, angleDeg: 0, flip: false, mirror: false, trimMm: 5 },
+        { id: 'r2', panelId: 'B', thicknessMm: 20, angleDeg: 0, flip: false, mirror: false, trimMm: 5 },
+      ],
+    })
+    expect(rowBandsMm(d)).toEqual([
+      { id: 'r1', topMm: 0, heightMm: 30 },
+      { id: 'r2', topMm: 30, heightMm: 20 },
+    ])
   })
 
   it('caps cell generation at MAX_CELLS and marks the model truncated for a sub-mm sliceRef strip', () => {

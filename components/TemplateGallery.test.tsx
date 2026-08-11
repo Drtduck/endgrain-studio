@@ -17,6 +17,11 @@ describe('TemplateGallery', () => {
     expect(container.querySelectorAll('[data-testid^="template-"] svg').length).toBe(TEMPLATES.length)
   })
 
+  it('превью шаблонов не рисуют номера рядов - это только для редактора', () => {
+    const { container } = render(<TemplateGallery />)
+    expect(container.querySelectorAll('[data-testid="row-label"]')).toHaveLength(0)
+  })
+
   it('на чистом проекте применяет шаблон сразу и уводит в редактор', () => {
     render(<TemplateGallery />)
     fireEvent.click(screen.getByTestId('template-stripes-wide'))

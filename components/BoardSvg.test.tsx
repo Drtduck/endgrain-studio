@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
-import { compile } from '@/lib/engine'
+import { compile, rowBandsMm } from '@/lib/engine'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import { BoardSvg } from './BoardSvg'
 
@@ -42,5 +42,23 @@ describe('BoardSvg', () => {
     expect(hovered?.getAttribute('stroke-width')).toBe('1')
     expect(plain?.getAttribute('stroke-width')).toBe('0.4')
     expect(hovered?.getAttribute('fill')).toBe('#e3caa1')
+  })
+
+  it('без rowLabels подписей рядов нет', () => {
+    const model = compile(makeCheckerboard({ cols: 2, rows: 2 }))
+    const { container } = render(<BoardSvg model={model} locale="ru" />)
+    expect(container.querySelectorAll('[data-testid="row-label"]')).toHaveLength(0)
+  })
+
+  it('с rowLabels рисует один текстовый элемент на ряд по порядку сверху вниз', () => {
+    const design = makeCheckerboard({ cols: 2, rows: 3 })
+    const model = compile(design)
+    const bands = rowBandsMm(design)
+    const { container } = render(<BoardSvg model={model} locale="ru" rowLabels={bands} />)
+    const labels = container.querySelectorAll('[data-testid="row-label"]')
+    expect(labels).toHaveLength(bands.length)
+    expect(Array.from(labels).map((el) => el.textContent)).toEqual(
+      bands.map((_, i) => String(i + 1)),
+    )
   })
 })

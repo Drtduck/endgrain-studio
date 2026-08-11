@@ -40,6 +40,7 @@ const en: Record<keyof typeof ru, string> = {
   'aria.unitGroup': 'measurement units',
   'aria.boardPreview': 'board preview',
   'aria.emptyBoard': 'empty board',
+  'aria.rowLabels': 'row numbers',
   'diag.MIN_STRIP_WIDTH': 'Strip {widthMm} mm is below the {minMm} mm minimum and will not hold in a clamp',
   'diag.PLANER_WIDTH': 'Panel {widthMm} mm is wider than the {limitMm} mm planer',
   'diag.PLANING_ALLOWANCE': 'Planing allowance {actualMm} mm is below the recommended {minMm} mm',

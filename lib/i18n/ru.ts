@@ -38,6 +38,7 @@ const ru = {
   'aria.unitGroup': 'единицы измерения',
   'aria.boardPreview': 'превью доски',
   'aria.emptyBoard': 'пустая доска',
+  'aria.rowLabels': 'номера рядов',
   'diag.MIN_STRIP_WIDTH': 'Полоса {widthMm} мм уже минимума {minMm} мм: не удержится в струбцине',
   'diag.PLANER_WIDTH': 'Панель {widthMm} мм шире рейсмуса {limitMm} мм',
   'diag.PLANING_ALLOWANCE': 'Припуск на строгание {actualMm} мм меньше рекомендуемых {minMm} мм',
