@@ -60,7 +60,7 @@ export function Board3DPanel() {
         </WebglBoundary>
       </div>
       <p className="text-xs text-muted-foreground">{t(locale, 'view3d.hint')}</p>
-      {shown < model.cells.length ? (
+      {model.truncated ? (
         <p className="text-xs text-amber-700">
           {t(locale, 'view3d.truncated', { shown, total: model.cells.length })}
         </p>

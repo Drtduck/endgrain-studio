@@ -48,6 +48,7 @@ function SpeciesInstances({ group }: { group: SpeciesGroup }) {
     })
 
     mesh.instanceMatrix.needsUpdate = true
+    mesh.instanceColor?.dispose()
     mesh.instanceColor = new InstancedBufferAttribute(colors, 3)
     mesh.instanceColor.needsUpdate = true
     mesh.computeBoundingSphere()
@@ -70,7 +71,8 @@ function SpeciesInstances({ group }: { group: SpeciesGroup }) {
 export function Board3D({ model, label }: { model: BoardModel; label: string }) {
   const instances = useMemo(() => buildInstances(model), [model])
   const distance = cameraDistance(instances)
-  const shadowScale = Math.max(instances.sizeUnits[0], instances.sizeUnits[2]) * 2.4
+  // Пустая доска даёт sizeUnits 0 и вырожденную ортокамеру теней, поэтому масштаб не должен падать ниже пола.
+  const shadowScale = Math.max(Math.max(instances.sizeUnits[0], instances.sizeUnits[2]) * 2.4, 0.2)
 
   return (
     <Canvas
