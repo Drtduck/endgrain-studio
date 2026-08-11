@@ -22,6 +22,9 @@ for (const { tab, marker } of TABS) {
     await openStudio(page)
     await page.getByTestId(`tab-${tab}`).click()
     await expect(page.getByTestId(marker)).toBeVisible()
+    // Переключение вкладки анимируется кросс-фейдом (~200ms); скриншот, снятый сразу
+    // после клика, ловит промежуточный кадр перехода.
+    await page.waitForTimeout(250)
 
     if (tab === 'view3d') {
       // R3F подгоняет канвас под контейнер через ResizeObserver уже после того, как
