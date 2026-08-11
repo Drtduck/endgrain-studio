@@ -1,5 +1,11 @@
 import { elementExtentMm, findPanel, isStrip, panelLengthMm, panelWidthMm, slicesOfPanel } from './panels'
-import { GEOM_EPS_MM, type BoardModel, type Cell, type Design, type PanelId, type Row, type SliceRef } from './types'
+import { GEOM_EPS_MM, MAX_CELLS, type BoardModel, type Cell, type Design, type PanelId, type Row, type SliceRef } from './types'
+
+/** Мутируемый бюджет ячеек, общий на весь compile: останавливает генерацию до OOM. */
+interface CellBudget {
+  remaining: number
+  truncated: boolean
+}
 
 function expandSliceRef(
   design: Design,
@@ -9,21 +15,26 @@ function expandSliceRef(
   elementIndex: number,
   xMm: number,
   rowTopMm: number,
-): Cell[] {
+  budget: CellBudget,
+  out: Cell[],
+): void {
   const inner = findPanel(design, ref.panelId)
-  if (!inner) return []
+  if (!inner) return
   const strips = inner.elements.map((el, index) => ({ el, index })).filter((e) => isStrip(e.el))
-  if (strips.length !== inner.elements.length || strips.length === 0) return [] // глубина 3 или пустая панель
+  if (strips.length !== inner.elements.length || strips.length === 0) return // глубина 3 или пустая панель
 
   const ordered = row.flip ? [...strips].reverse() : strips
   const cycleMm = ordered.reduce((sum, e) => sum + elementExtentMm(e.el), 0)
-  if (cycleMm <= GEOM_EPS_MM) return []
+  if (cycleMm <= GEOM_EPS_MM) return
 
   const rowBottomMm = rowTopMm + row.thicknessMm
   let cursorMm = rowTopMm - ((((-ref.offsetMm) % cycleMm) + cycleMm) % cycleMm)
-  const out: Cell[] = []
 
   for (let k = 0; cursorMm < rowBottomMm - GEOM_EPS_MM; k += 1) {
+    if (budget.remaining <= 0) {
+      budget.truncated = true
+      return
+    }
     const entry = ordered[k % ordered.length]
     if (!entry) break
     const h = elementExtentMm(entry.el)
@@ -47,19 +58,19 @@ function expandSliceRef(
           innerElementIndex: entry.index,
         },
       })
+      budget.remaining -= 1
     }
     cursorMm += h
   }
-
-  return out
 }
 
 export function compile(design: Design): BoardModel {
   const cells: Cell[] = []
+  const budget: CellBudget = { remaining: MAX_CELLS, truncated: false }
   let yMm = 0
   let widthMm = 0
 
-  for (const row of design.rows) {
+  rows: for (const row of design.rows) {
     const panel = findPanel(design, row.panelId)
     if (!panel) continue
 
@@ -71,6 +82,10 @@ export function compile(design: Design): BoardModel {
     let xMm = 0
     for (const { el, index } of ordered) {
       const extent = elementExtentMm(el)
+      if (budget.remaining <= 0) {
+        budget.truncated = true
+        break rows
+      }
       if (isStrip(el)) {
         cells.push({
           id: `${row.id}:${index}`,
@@ -82,8 +97,9 @@ export function compile(design: Design): BoardModel {
           grain: 'end',
           origin: { rowId: row.id, panelId: panel.id, elementIndex: index, depth: 0 },
         })
+        budget.remaining -= 1
       } else {
-        cells.push(...expandSliceRef(design, el, row, panel.id, index, xMm, yMm))
+        expandSliceRef(design, el, row, panel.id, index, xMm, yMm, budget, cells)
       }
       xMm += extent
     }
@@ -106,5 +122,6 @@ export function compile(design: Design): BoardModel {
     panelLengthsMm,
     glueUpCount: design.panels.length + 1,
     cutCount,
+    truncated: budget.truncated,
   }
 }

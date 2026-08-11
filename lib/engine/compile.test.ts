@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { compile } from './compile'
 import { baseDesign, stripsPanel } from './fixtures'
+import { MAX_CELLS } from './types'
 
 describe('compile: flat geometry', () => {
   it('lays strips along X and rows along Y', () => {
@@ -42,5 +43,27 @@ describe('compile: flat geometry', () => {
     // 2 первых склейки + 1 финальная
     expect(m.glueUpCount).toBe(3)
     expect(m.cutCount).toBe(2)
+  })
+
+  it('reports truncated: false for a normal design', () => {
+    expect(compile(baseDesign()).truncated).toBe(false)
+  })
+
+  it('caps cell generation at MAX_CELLS and marks the model truncated for a sub-mm sliceRef strip', () => {
+    const d = baseDesign({
+      panels: [
+        stripsPanel('Q', ['walnut', 'maple'], 0.001),
+        { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 20, angleDeg: 0, offsetMm: 0 }] },
+      ],
+      rows: [{ id: 'r1', panelId: 'P', thicknessMm: 40, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+    })
+
+    const start = performance.now()
+    const m = compile(d)
+    const elapsedMs = performance.now() - start
+
+    expect(elapsedMs).toBeLessThan(500)
+    expect(m.truncated).toBe(true)
+    expect(m.cells.length).toBeLessThanOrEqual(MAX_CELLS)
   })
 })

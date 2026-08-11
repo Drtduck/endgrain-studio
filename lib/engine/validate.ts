@@ -171,8 +171,9 @@ export function validate(design: Design, opts: ValidateOptions = {}): Diagnostic
     }
   }
 
-  const cellCount = compile(design).cells.length
-  if (cellCount > MAX_CELLS) {
+  const model = compile(design)
+  const cellCount = model.cells.length
+  if (model.truncated) {
     out.push(diag('CELL_BUDGET', 'error', { cells: cellCount, limit: MAX_CELLS }))
   } else if (cellCount > WARN_CELLS) {
     out.push(diag('CELL_BUDGET', 'warning', { cells: cellCount, limit: WARN_CELLS }))

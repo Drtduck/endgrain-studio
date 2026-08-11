@@ -87,6 +87,8 @@ export interface BoardModel {
   readonly panelLengthsMm: Readonly<Record<PanelId, number>>
   readonly glueUpCount: number
   readonly cutCount: number
+  /** true, если генерация ячеек была остановлена по бюджету MAX_CELLS: модель неполна. */
+  readonly truncated: boolean
 }
 
 export type DiagnosticLevel = 'error' | 'warning' | 'info'

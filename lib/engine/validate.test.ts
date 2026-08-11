@@ -69,6 +69,18 @@ describe('validate', () => {
     expect(codes(d)).not.toContain('SHRINKAGE_MISMATCH')
   })
 
+  it('reports CELL_BUDGET as an error when a sub-mm sliceRef strip would exceed MAX_CELLS', () => {
+    const d = baseDesign({
+      panels: [
+        stripsPanel('Q', ['walnut', 'maple'], 0.001),
+        { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 20, angleDeg: 0, offsetMm: 0 }] },
+      ],
+      rows: [{ id: 'r1', panelId: 'P', thicknessMm: 40, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+    })
+    const diag = validate(d).find((x) => x.code === 'CELL_BUDGET')
+    expect(diag?.level).toBe('error')
+  })
+
   it('sorts errors before warnings', () => {
     const d = baseDesign({ planingAllowanceMm: 1, panels: [stripsPanel('A', ['walnut'], 2)], rows: [
       { id: 'r1', panelId: 'A', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 },
