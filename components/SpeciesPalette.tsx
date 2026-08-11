@@ -23,20 +23,18 @@ export function SpeciesPalette() {
     return set
   }, [model])
 
+  const activeName = active ? nameOf(active.nameRu, active.nameEn) : activeSpeciesId
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t(locale, 'palette.title')}</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          {t(locale, 'palette.brush', { name: active ? nameOf(active.nameRu, active.nameEn) : activeSpeciesId })}
-        </p>
-        <p className="text-sm text-muted-foreground">
-          {t(locale, 'palette.inDesign', { count: usedSpeciesIds.size })}
-        </p>
-        <p className="text-xs text-muted-foreground">{t(locale, 'palette.hint')}</p>
+        <div className="flex items-baseline justify-between">
+          <CardTitle className="text-base">{t(locale, 'palette.title')}</CardTitle>
+          <span className="font-mono text-[11px] tabular-nums text-accent">{usedSpeciesIds.size}</span>
+        </div>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-8 gap-1.5" role="group" aria-label={t(locale, 'aria.palette')}>
+      <CardContent className="flex flex-col gap-3">
+        <div className="grid grid-cols-4 gap-1.5" role="group" aria-label={t(locale, 'aria.palette')}>
           {SPECIES.map((species) => {
             const isActive = species.id === activeSpeciesId
             const isUsed = usedSpeciesIds.has(species.id)
@@ -56,15 +54,18 @@ export function SpeciesPalette() {
                 aria-label={ariaLabel}
                 title={title}
                 onClick={() => setActiveSpecies(species.id)}
-                style={{ backgroundColor: species.hex }}
-                className={`relative h-8 w-full rounded-md border transition ${
-                  isActive ? 'border-foreground ring-2 ring-offset-1 ring-foreground' : 'border-black/20 hover:border-foreground/60'
-                }`}
+                style={{
+                  backgroundColor: species.hex,
+                  boxShadow: isActive
+                    ? 'inset 0 0 0 2px var(--surface), 0 0 0 2px var(--selection)'
+                    : 'inset 0 0 0 1px var(--cell-outline)',
+                }}
+                className="relative aspect-square w-full rounded-[5px] transition-transform duration-hover ease-out hover:scale-[1.06]"
               >
                 {isUsed ? (
                   <span
                     aria-hidden
-                    className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-background text-[8px] leading-none text-foreground shadow-sm"
+                    className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-surface text-[8px] leading-none text-ink shadow-sm"
                   >
                     &#10003;
                   </span>
@@ -72,6 +73,19 @@ export function SpeciesPalette() {
               </button>
             )
           })}
+        </div>
+
+        <div className="flex items-center gap-2 rounded-md border border-line-subtle bg-surface px-2.5 py-2">
+          <span aria-hidden className="size-5 rounded-xs" style={{ backgroundColor: active?.hex }} />
+          <div className="flex flex-col">
+            <span className="text-[13px] font-medium">{activeName}</span>
+            <span className="text-[11px] text-ink-muted">{t(locale, 'palette.brush', { name: activeName })}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <p className="text-[11px] text-ink-muted">{t(locale, 'palette.inDesign', { count: usedSpeciesIds.size })}</p>
+          <p className="text-[11px] text-ink-muted">{t(locale, 'palette.hint')}</p>
         </div>
       </CardContent>
     </Card>

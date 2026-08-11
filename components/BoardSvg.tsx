@@ -27,6 +27,12 @@ export function BoardSvg({
   const hasLabels = Boolean(rowLabels && rowLabels.length > 0)
   const layout = boardLayout(model, { maxPx, withRowLabels: hasLabels })
   const marginMm = layout.marginMm
+  // Клеевой зазор 2px переведён в мм-координаты доски: каждая ячейка ужимается на gapMm/2
+  // с каждой стороны, а подложка BoardCanvas (bg-surface) видна в получившейся линии.
+  const gapMm = layout.scale > 0 ? 2 / layout.scale : 0
+  const halfGapMm = gapMm / 2
+  const selectionStrokeMm = layout.scale > 0 ? 2 / layout.scale : 0
+  const rowLabelFontSizeMm = layout.scale > 0 ? 10 / layout.scale : 0
 
   return (
     <svg
@@ -35,22 +41,20 @@ export function BoardSvg({
       height={layout.heightPx}
       role="img"
       aria-label={t(locale, 'aria.boardPreview')}
-      className="max-w-full rounded-lg shadow-sm"
+      className="h-auto max-w-full rounded-lg shadow-sm"
     >
       {model.cells.map((cell) => {
-        const isSelected = cell.id === selectedCellId
-        const isHighlighted = cell.id === highlightCellId
+        const isActive = cell.id === selectedCellId || cell.id === highlightCellId
         return (
           <rect
             key={cell.id}
             data-cell={cell.id}
-            x={cell.xMm + marginMm}
-            y={cell.yMm}
-            width={cell.widthMm}
-            height={cell.heightMm}
+            x={cell.xMm + marginMm + halfGapMm}
+            y={cell.yMm + halfGapMm}
+            width={Math.max(0, cell.widthMm - gapMm)}
+            height={Math.max(0, cell.heightMm - gapMm)}
             fill={speciesHex(cell.speciesId)}
-            stroke={isSelected || isHighlighted ? '#111111' : 'rgba(0,0,0,0.18)'}
-            strokeWidth={isSelected ? 1.6 : isHighlighted ? 1 : 0.4}
+            {...(isActive ? { stroke: 'var(--selection)', strokeWidth: selectionStrokeMm } : {})}
           />
         )
       })}
@@ -60,13 +64,13 @@ export function BoardSvg({
             <text
               key={band.id}
               data-testid="row-label"
-              x={marginMm / 2}
+              x={marginMm - halfGapMm}
               y={band.topMm + band.heightMm / 2}
-              textAnchor="middle"
+              textAnchor="end"
               dominantBaseline="middle"
-              fontSize={Math.min(6, Math.max(3, band.heightMm * 0.4))}
-              fill="currentColor"
-              className="select-none"
+              fontSize={rowLabelFontSizeMm}
+              fill="var(--text-muted)"
+              className="font-mono select-none"
             >
               {index + 1}
             </text>

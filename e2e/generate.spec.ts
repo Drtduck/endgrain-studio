@@ -40,13 +40,13 @@ test('раунд эволюции сохраняет избранное и ме�
   await openGenerator(page)
   await page.getByTestId('gen-fav-2').click()
   await expect(page.getByTestId('gen-fav-2')).toHaveAttribute('aria-pressed', 'true')
-  const favourite = await page.getByTestId('gen-card-2').locator('svg').innerHTML()
-  const otherBefore = await page.getByTestId('gen-card-5').locator('svg').innerHTML()
+  const favourite = await page.getByTestId('gen-card-2').getByRole('img').first().innerHTML()
+  const otherBefore = await page.getByTestId('gen-card-5').getByRole('img').first().innerHTML()
 
   await page.getByTestId('gen-evolve').click()
   await expect(page.getByTestId('gen-generation')).toContainText('2')
-  expect(await page.getByTestId('gen-card-0').locator('svg').innerHTML()).toBe(favourite)
-  expect(await page.getByTestId('gen-card-5').locator('svg').innerHTML()).not.toBe(otherBefore)
+  expect(await page.getByTestId('gen-card-0').getByRole('img').first().innerHTML()).toBe(favourite)
+  expect(await page.getByTestId('gen-card-5').getByRole('img').first().innerHTML()).not.toBe(otherBefore)
 })
 
 test('семейство фильтрует девятку', async ({ page }) => {

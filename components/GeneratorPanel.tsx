@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { Star } from 'lucide-react'
 import { BoardSvg } from '@/components/BoardSvg'
 import { ConfirmReplace } from '@/components/ConfirmReplace'
 import { Button } from '@/components/ui/button'
@@ -18,6 +19,7 @@ import {
 } from '@/lib/generators'
 import { t } from '@/lib/i18n'
 import { selectIsDirty, useStudio } from '@/lib/store/studio'
+import { cn, rangeFillVar, RANGE_INPUT_CLASS } from '@/lib/utils'
 
 /** Сид первой девятки прибит гвоздями: сервер и клиент обязаны отрисовать одно и то же. */
 export const DEFAULT_GENERATOR_SEED = 20260812
@@ -81,28 +83,37 @@ export function GeneratorPanel() {
   return (
     <section data-testid="generator-panel" aria-label={t(locale, 'aria.generatorPanel')} className="flex flex-col gap-4">
       <div>
-        <h2 className="text-lg font-semibold">{t(locale, 'gen.title')}</h2>
-        <p className="text-sm text-muted-foreground">{t(locale, 'gen.subtitle')}</p>
+        <h2 className="font-display text-2xl font-semibold">{t(locale, 'gen.title')}</h2>
+        <p className="text-base text-ink-secondary">{t(locale, 'gen.subtitle')}</p>
       </div>
 
-      <div className="flex flex-wrap gap-1" role="group" aria-label={t(locale, 'gen.families')}>
-        {FAMILIES.map((family) => (
-          <Button
-            key={family.id}
-            data-testid={`gen-family-${family.id}`}
-            size="sm"
-            variant={population.familyIds.includes(family.id) ? 'default' : 'outline'}
-            aria-pressed={population.familyIds.includes(family.id)}
-            onClick={() => toggleFamily(family.id)}
-          >
-            {t(locale, family.nameKey)}
-          </Button>
-        ))}
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label={t(locale, 'gen.families')}>
+        {FAMILIES.map((family) => {
+          const active = population.familyIds.includes(family.id)
+          return (
+            <button
+              key={family.id}
+              type="button"
+              data-testid={`gen-family-${family.id}`}
+              aria-pressed={active}
+              onClick={() => toggleFamily(family.id)}
+              className={cn(
+                'rounded-full px-2.5 py-1 text-xs transition-colors duration-hover',
+                active ? 'bg-accent-soft font-semibold text-accent' : 'bg-surface-sunken font-medium text-ink-secondary',
+              )}
+            >
+              {t(locale, family.nameKey)}
+            </button>
+          )
+        })}
       </div>
 
       <div className="flex flex-wrap items-end gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          {t(locale, 'gen.cols')}
+        <label className="flex w-32 flex-col gap-1">
+          <span className="flex items-center justify-between text-[13px] text-ink-secondary">
+            <span>{t(locale, 'gen.cols')}</span>
+            <span className="font-mono text-xs tabular-nums">{first?.cols ?? 8}</span>
+          </span>
           <input
             data-testid="gen-cols"
             type="range"
@@ -111,10 +122,15 @@ export function GeneratorPanel() {
             step={1}
             value={first?.cols ?? 8}
             onChange={(event) => onSlider({ cols: Number(event.target.value) })}
+            style={rangeFillVar(first?.cols ?? 8, 5, 14)}
+            className={RANGE_INPUT_CLASS}
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
-          {t(locale, 'gen.rows')}
+        <label className="flex w-32 flex-col gap-1">
+          <span className="flex items-center justify-between text-[13px] text-ink-secondary">
+            <span>{t(locale, 'gen.rows')}</span>
+            <span className="font-mono text-xs tabular-nums">{first?.rows ?? 8}</span>
+          </span>
           <input
             data-testid="gen-rows"
             type="range"
@@ -123,10 +139,15 @@ export function GeneratorPanel() {
             step={1}
             value={first?.rows ?? 8}
             onChange={(event) => onSlider({ rows: Number(event.target.value) })}
+            style={rangeFillVar(first?.rows ?? 8, 5, 16)}
+            className={RANGE_INPUT_CLASS}
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
-          {t(locale, 'gen.density')}
+        <label className="flex w-32 flex-col gap-1">
+          <span className="flex items-center justify-between text-[13px] text-ink-secondary">
+            <span>{t(locale, 'gen.density')}</span>
+            <span className="font-mono text-xs tabular-nums">{Math.round((first?.density ?? 0.5) * 100)}</span>
+          </span>
           <input
             data-testid="gen-density"
             type="range"
@@ -135,22 +156,32 @@ export function GeneratorPanel() {
             step={5}
             value={Math.round((first?.density ?? 0.5) * 100)}
             onChange={(event) => onSlider({ density: Number(event.target.value) / 100 })}
+            style={rangeFillVar(Math.round((first?.density ?? 0.5) * 100), 0, 100)}
+            className={RANGE_INPUT_CLASS}
           />
         </label>
 
-        <Button data-testid="gen-shuffle" size="sm" variant="outline" onClick={() => commit(reshuffle(population))}>
-          {t(locale, 'gen.shuffle')}
-        </Button>
-        <Button data-testid="gen-evolve" size="sm" onClick={() => commit(nextGeneration(population, favouriteIds))}>
-          {t(locale, 'gen.evolve')}
-        </Button>
-        <span data-testid="gen-generation" className="text-sm text-muted-foreground">
+        <span data-testid="gen-generation" className="self-center font-mono text-xs tabular-nums text-ink-muted">
           {t(locale, 'gen.generation', { number: population.generation })}
         </span>
       </div>
 
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button data-testid="gen-shuffle" className="w-full sm:flex-1" onClick={() => commit(reshuffle(population))}>
+          {t(locale, 'gen.shuffle')}
+        </Button>
+        <Button
+          data-testid="gen-evolve"
+          variant="outline"
+          className="w-full sm:w-auto"
+          onClick={() => commit(nextGeneration(population, favouriteIds))}
+        >
+          {t(locale, 'gen.evolve')}
+        </Button>
+      </div>
+
       <ul
-        className="grid grid-cols-2 gap-3 sm:grid-cols-3"
+        className="grid grid-cols-2 gap-2 sm:grid-cols-3"
         role="group"
         aria-label={t(locale, 'aria.generatorGrid')}
       >
@@ -158,10 +189,19 @@ export function GeneratorPanel() {
           const model = previews[index]
           const starred = favouriteIds.includes(item.id)
           return (
-            <li key={item.id} data-testid={`gen-card-${index}`} className="flex flex-col items-center gap-2 rounded-lg border p-2">
-              {model ? <BoardSvg model={model} locale={locale} maxPx={150} /> : null}
+            <li
+              key={item.id}
+              data-testid={`gen-card-${index}`}
+              className={cn(
+                'relative flex aspect-square flex-col gap-2 overflow-hidden rounded-md border border-line-subtle p-1',
+                starred && 'border-accent',
+              )}
+            >
+              <div className="flex flex-1 items-center justify-center bg-surface-panel p-1">
+                {model ? <BoardSvg model={model} locale={locale} maxPx={150} /> : null}
+              </div>
               {model ? (
-                <span className="text-xs text-muted-foreground">
+                <span className="px-0.5 pb-0.5 font-mono text-[10px] text-ink-muted tabular-nums">
                   {t(locale, 'gen.cardStats', {
                     glueUps: model.glueUpCount,
                     widthMm: Math.round(model.widthMm),
@@ -169,20 +209,23 @@ export function GeneratorPanel() {
                   })}
                 </span>
               ) : null}
-              <div className="flex gap-1">
-                <Button
-                  data-testid={`gen-fav-${index}`}
-                  size="sm"
-                  variant={starred ? 'default' : 'outline'}
-                  aria-pressed={starred}
-                  onClick={() => toggleFavourite(item.id)}
-                >
-                  {t(locale, 'gen.favourite')}
-                </Button>
-                <Button data-testid={`gen-apply-${index}`} size="sm" variant="outline" onClick={() => onPick(index)}>
-                  {t(locale, 'gen.apply')}
-                </Button>
-              </div>
+              <Button data-testid={`gen-apply-${index}`} size="sm" variant="outline" className="w-full" onClick={() => onPick(index)}>
+                {t(locale, 'gen.apply')}
+              </Button>
+              <button
+                type="button"
+                data-testid={`gen-fav-${index}`}
+                aria-pressed={starred}
+                aria-label={t(locale, 'gen.favourite')}
+                onClick={() => toggleFavourite(item.id)}
+                className="absolute top-1 right-1 z-10 flex size-5 items-center justify-center rounded-full bg-[rgba(251,249,245,0.92)]"
+              >
+                <Star
+                  size={12}
+                  className={starred ? 'fill-[#D9B31A] text-warning' : 'fill-none text-ink-muted'}
+                  strokeWidth={1.6}
+                />
+              </button>
             </li>
           )
         })}

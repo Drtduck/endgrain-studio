@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { BoardSvg } from '@/components/BoardSvg'
 import { ConfirmReplace } from '@/components/ConfirmReplace'
+import { Badge } from '@/components/ui/badge'
 import { compile, type BoardModel } from '@/lib/engine'
 import { TEMPLATES, TEMPLATE_GROUPS, groupNameKey, type BoardTemplate } from '@/lib/designs/templates'
 import { t } from '@/lib/i18n'
@@ -45,8 +46,8 @@ export function TemplateGallery() {
       className="flex flex-col gap-4"
     >
       <div>
-        <h2 className="text-lg font-semibold">{t(locale, 'templates.title')}</h2>
-        <p className="text-sm text-muted-foreground">{t(locale, 'templates.subtitle')}</p>
+        <h2 className="font-display text-2xl font-semibold">{t(locale, 'templates.title')}</h2>
+        <p className="text-base text-ink-secondary">{t(locale, 'templates.subtitle')}</p>
       </div>
 
       {TEMPLATE_GROUPS.map((group) => {
@@ -54,8 +55,10 @@ export function TemplateGallery() {
         if (items.length === 0) return null
         return (
           <div key={group} className="flex flex-col gap-2">
-            <h3 className="text-sm font-medium text-muted-foreground">{t(locale, groupNameKey(group))}</h3>
-            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <h3 className="text-[11px] font-medium tracking-[0.12em] text-ink-muted uppercase">
+              {t(locale, groupNameKey(group))}
+            </h3>
+            <ul className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(180px,1fr))]">
               {items.map((tpl) => {
                 const model = PREVIEWS.get(tpl.id)
                 return (
@@ -64,20 +67,25 @@ export function TemplateGallery() {
                       type="button"
                       data-testid={`template-${tpl.id}`}
                       onClick={() => onPick(tpl)}
-                      className="flex w-full cursor-pointer flex-col items-center gap-2 rounded-lg border p-2 text-center transition-colors hover:bg-muted"
+                      className="flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-lg border border-line-subtle bg-surface-raised text-left shadow-sm transition-[box-shadow,border-color] duration-hover ease-out hover:border-accent-border hover:shadow-md"
                     >
-                      {model ? <BoardSvg model={model} locale={locale} maxPx={140} /> : null}
-                      <span className="text-sm font-medium">{t(locale, tpl.nameKey)}</span>
-                      {model ? (
-                        <span className="text-xs text-muted-foreground">
-                          {t(locale, 'templates.size', {
-                            widthMm: Math.round(model.widthMm),
-                            lengthMm: Math.round(model.lengthMm),
-                          })}
-                          {', '}
-                          {t(locale, 'templates.glueUps', { count: model.glueUpCount })}
-                        </span>
-                      ) : null}
+                      <div className="flex items-center justify-center bg-surface-panel p-2.5">
+                        {model ? <BoardSvg model={model} locale={locale} maxPx={140} /> : null}
+                      </div>
+                      <div className="flex flex-col gap-1 border-t border-line-subtle px-3 py-2.5">
+                        <span className="text-sm font-semibold">{t(locale, tpl.nameKey)}</span>
+                        {model ? (
+                          <div className="flex items-center gap-1.5">
+                            <Badge>{t(locale, 'templates.glueUps', { count: model.glueUpCount })}</Badge>
+                            <span className="font-mono text-[10px] text-ink-muted tabular-nums">
+                              {t(locale, 'templates.size', {
+                                widthMm: Math.round(model.widthMm),
+                                lengthMm: Math.round(model.lengthMm),
+                              })}
+                            </span>
+                          </div>
+                        ) : null}
+                      </div>
                     </button>
                   </li>
                 )

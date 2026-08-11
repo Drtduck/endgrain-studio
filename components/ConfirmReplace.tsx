@@ -25,22 +25,24 @@ export function ConfirmReplace({
   onCancel: () => void
 }) {
   return (
-    <div
-      data-testid={`${testId}-confirm-dialog`}
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-lg border bg-background p-4 shadow-lg"
-    >
-      <h3 className="font-semibold">{title}</h3>
-      <p className="mt-1 text-sm text-muted-foreground">{body}</p>
-      <div className="mt-3 flex justify-end gap-2">
-        <Button data-testid={`${testId}-cancel`} size="sm" variant="outline" onClick={onCancel}>
-          {cancelLabel}
-        </Button>
-        <Button data-testid={`${testId}-confirm`} size="sm" onClick={onConfirm}>
-          {confirmLabel}
-        </Button>
+    <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay)] p-4">
+      <div
+        data-testid={`${testId}-confirm-dialog`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="pointer-events-auto flex w-full max-w-[380px] flex-col gap-3 rounded-lg bg-surface p-5 shadow-dialog"
+      >
+        <h3 className="font-display text-lg font-semibold">{title}</h3>
+        <p className="text-sm leading-normal text-ink-secondary">{body}</p>
+        <div className="flex justify-end gap-2">
+          <Button data-testid={`${testId}-cancel`} size="sm" variant="ghost" onClick={onCancel}>
+            {cancelLabel}
+          </Button>
+          <Button data-testid={`${testId}-confirm`} size="sm" onClick={onConfirm}>
+            {confirmLabel}
+          </Button>
+        </div>
       </div>
     </div>
   )

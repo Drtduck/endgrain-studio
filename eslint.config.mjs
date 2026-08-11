@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "test-results/**",
     "playwright-report/**",
+    // Референс дизайн-хендоффа, не код проекта.
+    "docs/design/handoff/**",
   ]),
 ]);
 

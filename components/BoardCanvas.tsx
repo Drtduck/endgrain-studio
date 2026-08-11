@@ -25,6 +25,16 @@ export function BoardCanvas() {
   const { model } = useDerived()
   // Колонка номеров рядов рядом с доской: помогает сверить ряд на холсте с инспектором рядов.
   const rowLabels = useMemo(() => rowBandsMm(design), [design])
+  // Подпись под доской: «N полос × M рядов · ширина × длина мм». N полос - максимум ячеек
+  // в одном ряду (id ячейки имеет вид `${rowId}:${index}`), M рядов - число физических рядов.
+  const captionStripCount = useMemo(() => {
+    const perRow = new Map<string, number>()
+    for (const cell of model.cells) {
+      const rowId = cell.id.slice(0, cell.id.lastIndexOf(':'))
+      perRow.set(rowId, (perRow.get(rowId) ?? 0) + 1)
+    }
+    return Math.max(0, ...perRow.values())
+  }, [model])
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
     const id = cellIdOf(event)
@@ -35,22 +45,27 @@ export function BoardCanvas() {
   }
 
   return (
-    <div
-      data-testid="board-canvas"
-      role="application"
-      aria-label={t(locale, 'aria.boardCanvas')}
-      className="inline-block cursor-crosshair touch-manipulation select-none"
-      onPointerDown={onPointerDown}
-      onPointerOver={(event) => hoverCell(cellIdOf(event))}
-      onPointerLeave={() => hoverCell(null)}
-    >
-      <BoardSvg
-        model={model}
-        locale={locale}
-        highlightCellId={hoveredCellId}
-        selectedCellId={selectedCellId}
-        rowLabels={rowLabels}
-      />
+    <div className="flex flex-col items-center gap-2">
+      <div
+        data-testid="board-canvas"
+        role="application"
+        aria-label={t(locale, 'aria.boardCanvas')}
+        className="inline-block cursor-crosshair touch-manipulation select-none rounded-xs bg-surface p-1.5 shadow-md"
+        onPointerDown={onPointerDown}
+        onPointerOver={(event) => hoverCell(cellIdOf(event))}
+        onPointerLeave={() => hoverCell(null)}
+      >
+        <BoardSvg
+          model={model}
+          locale={locale}
+          highlightCellId={hoveredCellId}
+          selectedCellId={selectedCellId}
+          rowLabels={rowLabels}
+        />
+      </div>
+      <p data-testid="board-caption" className="font-mono text-[11px] tabular-nums text-ink-muted">
+        {captionStripCount} × {rowLabels.length} · {t(locale, 'templates.size', { widthMm: model.widthMm, lengthMm: model.lengthMm })}
+      </p>
     </div>
   )
 }

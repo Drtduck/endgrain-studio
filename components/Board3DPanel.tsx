@@ -12,7 +12,7 @@ export function Board3DSkeleton() {
   return (
     <div
       data-testid="view3d-loading"
-      className="flex h-full w-full items-center justify-center rounded-lg bg-muted text-sm text-muted-foreground"
+      className="flex h-full w-full items-center justify-center bg-surface-panel text-[13px] text-ink-muted"
     >
       {t(locale, 'view3d.loading')}
     </div>
@@ -45,12 +45,12 @@ export function Board3DPanel() {
 
   return (
     <section data-testid="view3d" aria-label={t(locale, 'view3d.title')} className="flex flex-col gap-2">
-      <div className="h-[26rem] w-full overflow-hidden rounded-lg border sm:h-[32rem]">
+      <div className="h-[26rem] w-full overflow-hidden rounded-lg border border-line-subtle bg-surface-panel sm:h-[32rem]">
         <WebglBoundary
           fallback={
             <div
               data-testid="view3d-unsupported"
-              className="flex h-full w-full items-center justify-center p-6 text-center text-sm text-muted-foreground"
+              className="flex h-full w-full items-center justify-center p-6 text-center text-[13px] text-ink-muted"
             >
               {t(locale, 'view3d.unsupported')}
             </div>
@@ -59,9 +59,9 @@ export function Board3DPanel() {
           <Board3D model={model} label={t(locale, 'aria.board3d')} />
         </WebglBoundary>
       </div>
-      <p className="text-xs text-muted-foreground">{t(locale, 'view3d.hint')}</p>
+      <p className="text-xs text-ink-muted">{t(locale, 'view3d.hint')}</p>
       {model.truncated ? (
-        <p className="text-xs text-amber-700">
+        <p className="rounded-md border border-warning-border bg-warning-soft px-3 py-[11px] text-[13px] font-semibold text-warning-text">
           {t(locale, 'view3d.truncated', { shown, total: model.cells.length })}
         </p>
       ) : null}

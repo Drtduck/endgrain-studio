@@ -28,7 +28,7 @@ describe('BoardSvg', () => {
     expect(en.container.querySelector('svg')?.getAttribute('aria-label')).toBe('board preview')
   })
 
-  it('обводит наведённую и выбранную ячейку, не меняя заливку', () => {
+  it('обводит наведённую и выбранную ячейку токеном выделения, не меняя заливку', () => {
     const model = compile(makeCheckerboard({ cols: 2, rows: 2 }))
     const { container } = render(
       <BoardSvg model={model} locale="ru" highlightCellId="r0:1" selectedCellId="r1:0" />,
@@ -36,12 +36,25 @@ describe('BoardSvg', () => {
     const hovered = container.querySelector('rect[data-cell="r0:1"]')
     const selected = container.querySelector('rect[data-cell="r1:0"]')
     const plain = container.querySelector('rect[data-cell="r0:0"]')
-    expect(hovered?.getAttribute('stroke')).toBe('#111111')
-    expect(selected?.getAttribute('stroke')).toBe('#111111')
-    expect(selected?.getAttribute('stroke-width')).toBe('1.6')
-    expect(hovered?.getAttribute('stroke-width')).toBe('1')
-    expect(plain?.getAttribute('stroke-width')).toBe('0.4')
+    expect(hovered?.getAttribute('stroke')).toBe('var(--selection)')
+    expect(selected?.getAttribute('stroke')).toBe('var(--selection)')
+    expect(selected?.hasAttribute('stroke-width')).toBe(true)
+    expect(hovered?.hasAttribute('stroke-width')).toBe(true)
+    expect(plain?.hasAttribute('stroke')).toBe(false)
     expect(hovered?.getAttribute('fill')).toBe('#e3caa1')
+  })
+
+  it('ужимает ячейку на клеевой зазор 2px, переведённый в мм координаты доски', () => {
+    const model = compile(makeCheckerboard({ cols: 2, rows: 2 }))
+    const { container } = render(<BoardSvg model={model} locale="ru" />)
+    const rect = container.querySelector('rect[data-cell="r0:0"]')
+    const cell = model.cells.find((c) => c.id === 'r0:0')
+    expect(cell).toBeDefined()
+    const gapMm = 2 / (640 / 60)
+    expect(Number(rect?.getAttribute('width'))).toBeCloseTo((cell?.widthMm ?? 0) - gapMm, 5)
+    expect(Number(rect?.getAttribute('height'))).toBeCloseTo((cell?.heightMm ?? 0) - gapMm, 5)
+    expect(Number(rect?.getAttribute('x'))).toBeCloseTo((cell?.xMm ?? 0) + gapMm / 2, 5)
+    expect(Number(rect?.getAttribute('y'))).toBeCloseTo((cell?.yMm ?? 0) + gapMm / 2, 5)
   })
 
   it('без rowLabels подписей рядов нет', () => {
@@ -60,5 +73,8 @@ describe('BoardSvg', () => {
     expect(Array.from(labels).map((el) => el.textContent)).toEqual(
       bands.map((_, i) => String(i + 1)),
     )
+    expect(labels[0]?.getAttribute('text-anchor')).toBe('end')
+    expect(labels[0]?.getAttribute('fill')).toBe('var(--text-muted)')
+    expect(labels[0]?.classList.contains('font-mono')).toBe(true)
   })
 })

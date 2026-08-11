@@ -173,6 +173,7 @@ const en: Record<keyof typeof ru, string> = {
   'photo.subtitle': 'Upload an image: the studio sorts it into real species and turns it into a buildable board',
   'photo.pick': 'Choose file',
   'photo.drop': 'Drop an image here or choose a file',
+  'photo.dropHint': 'Drag a file here or pick one from disk',
   'photo.colors': 'Species in the pattern',
   'photo.panels': 'Likeness versus glue-ups',
   'photo.panelsHint': 'Left: fewer glue-ups and more stylisation, right: closer to the original',

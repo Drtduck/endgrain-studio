@@ -16,7 +16,7 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
           <button
             type="button"
             onClick={() => reset()}
-            className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent"
+            className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-app"
           >
             Повторить / Retry
           </button>

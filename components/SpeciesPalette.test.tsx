@@ -60,4 +60,16 @@ describe('SpeciesPalette', () => {
     render(<SpeciesPalette />)
     expect(screen.getByText(/Выберите породу/)).toBeDefined()
   })
+
+  it('сетка свотчей выстроена в 4 колонки', () => {
+    const { container } = render(<SpeciesPalette />)
+    expect(container.querySelector('[role="group"]')?.className).toContain('grid-cols-4')
+  })
+
+  it('счётчик пород в заголовке равен числу уникальных пород в модели', () => {
+    useStudio.getState().resetStudio(twoSpeciesDesign())
+    const { container } = render(<SpeciesPalette />)
+    const header = container.querySelector('.text-accent')
+    expect(header?.textContent).toBe('2')
+  })
 })
