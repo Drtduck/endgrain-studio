@@ -27,15 +27,15 @@ export const SPECIES: readonly Species[] = [
   { id: 'red-oak',    nameRu: 'Дуб красный', nameEn: 'Red oak',     hex: '#c99a6e', lab: { L: 68.4, a: 13.1, b: 29.8 }, densityKgM3: 700, pricePerBoardFootUsd: 5.0,  shrinkageTangentialPct: 8.6,  shrinkageRadialPct: 4.0, foodSafe: true },
   { id: 'white-oak',  nameRu: 'Дуб белый',   nameEn: 'White oak',   hex: '#bf9a68', lab: { L: 66.9, a: 10.4, b: 30.6 }, densityKgM3: 755, pricePerBoardFootUsd: 6.8,  shrinkageTangentialPct: 10.5, shrinkageRadialPct: 5.6, foodSafe: true },
   { id: 'hickory',    nameRu: 'Гикори',      nameEn: 'Hickory',     hex: '#c08d5c', lab: { L: 62.8, a: 13.0, b: 33.2 }, densityKgM3: 815, pricePerBoardFootUsd: 5.6,  shrinkageTangentialPct: 11.0, shrinkageRadialPct: 7.0, foodSafe: true },
-  { id: 'cherry',     nameRu: 'Вишня',       nameEn: 'Cherry',      hex: '#a5613b', lab: { L: 50.8, a: 22.1, b: 30.2 }, densityKgM3: 560, pricePerBoardFootUsd: 8.5,  shrinkageTangentialPct: 7.1,  shrinkageRadialPct: 3.7, foodSafe: true },
+  { id: 'cherry',     nameRu: 'Вишня',       nameEn: 'Cherry',      hex: '#a5613b', lab: { L: 48.1, a: 24.0, b: 33.1 }, densityKgM3: 560, pricePerBoardFootUsd: 8.5,  shrinkageTangentialPct: 7.1,  shrinkageRadialPct: 3.7, foodSafe: true },
   { id: 'mahogany',   nameRu: 'Махагони',    nameEn: 'Mahogany',    hex: '#8f4b2e', lab: { L: 41.9, a: 25.6, b: 28.4 }, densityKgM3: 590, pricePerBoardFootUsd: 12.0, shrinkageTangentialPct: 5.1,  shrinkageRadialPct: 3.0, foodSafe: true },
   { id: 'sapele',     nameRu: 'Сапеле',      nameEn: 'Sapele',      hex: '#7f4429', lab: { L: 37.8, a: 23.9, b: 26.7 }, densityKgM3: 670, pricePerBoardFootUsd: 9.5,  shrinkageTangentialPct: 7.4,  shrinkageRadialPct: 4.6, foodSafe: true },
   { id: 'jatoba',     nameRu: 'Ятоба',       nameEn: 'Jatoba',      hex: '#7d3b22', lab: { L: 34.6, a: 25.1, b: 27.5 }, densityKgM3: 910, pricePerBoardFootUsd: 9.0,  shrinkageTangentialPct: 7.3,  shrinkageRadialPct: 4.2, foodSafe: true },
   { id: 'walnut',     nameRu: 'Орех',        nameEn: 'Black walnut',hex: '#5b3a24', lab: { L: 28.4, a: 13.8, b: 18.9 }, densityKgM3: 610, pricePerBoardFootUsd: 13.5, shrinkageTangentialPct: 7.8,  shrinkageRadialPct: 5.5, foodSafe: true },
   { id: 'wenge',      nameRu: 'Венге',       nameEn: 'Wenge',       hex: '#3a2a20', lab: { L: 18.2, a: 6.9,  b: 9.4  }, densityKgM3: 870, pricePerBoardFootUsd: 20.0, shrinkageTangentialPct: 8.1,  shrinkageRadialPct: 4.8, foodSafe: true },
   { id: 'padauk',     nameRu: 'Падук',       nameEn: 'Padauk',      hex: '#a8422a', lab: { L: 40.1, a: 42.3, b: 32.6 }, densityKgM3: 745, pricePerBoardFootUsd: 15.0, shrinkageTangentialPct: 5.2,  shrinkageRadialPct: 3.3, foodSafe: true },
-  { id: 'purpleheart',nameRu: 'Амарант',     nameEn: 'Purpleheart', hex: '#5e3a6b', lab: { L: 30.6, a: 24.8, b: -17.9 }, densityKgM3: 880, pricePerBoardFootUsd: 16.0, shrinkageTangentialPct: 6.1,  shrinkageRadialPct: 3.2, foodSafe: true },
-  { id: 'yellowheart',nameRu: 'Йеллоухарт',  nameEn: 'Yellowheart', hex: '#d9be3f', lab: { L: 76.4, a: -2.1, b: 60.8 }, densityKgM3: 830, pricePerBoardFootUsd: 12.5, shrinkageTangentialPct: 7.0,  shrinkageRadialPct: 3.6, foodSafe: true },
+  { id: 'purpleheart',nameRu: 'Амарант',     nameEn: 'Purpleheart', hex: '#5e3a6b', lab: { L: 30.6, a: 25.3, b: -22.3 }, densityKgM3: 880, pricePerBoardFootUsd: 16.0, shrinkageTangentialPct: 6.1,  shrinkageRadialPct: 3.2, foodSafe: true },
+  { id: 'yellowheart',nameRu: 'Йеллоухарт',  nameEn: 'Yellowheart', hex: '#d9be3f', lab: { L: 77.2, a: -3.9, b: 64.3 }, densityKgM3: 830, pricePerBoardFootUsd: 12.5, shrinkageTangentialPct: 7.0,  shrinkageRadialPct: 3.6, foodSafe: true },
 ]
 
 export const SPECIES_BY_ID: ReadonlyMap<SpeciesId, Species> = new Map(SPECIES.map((s) => [s.id, s]))
