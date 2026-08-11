@@ -51,4 +51,12 @@ describe('BoardCanvas', () => {
       Array.from({ length: rowCount }, (_, i) => String(i + 1)),
     )
   })
+
+  it('рисует подпись под доской с числом рядов и габаритом', () => {
+    useStudio.getState().resetStudio(makeCheckerboard({ cols: 2, rows: 4 }))
+    const { getByTestId } = render(<BoardCanvas />)
+    const rowCount = useStudio.getState().history.present.rows.length
+    const caption = getByTestId('board-caption')
+    expect(caption.textContent).toContain(`× ${rowCount} ·`)
+  })
 })

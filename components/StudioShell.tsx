@@ -88,7 +88,10 @@ export function StudioShell() {
                 <Board3DPanel />
               ) : (
                 <>
-                  <section aria-label={t(locale, 'board.title')} className="overflow-x-auto">
+                  <section
+                    aria-label={t(locale, 'board.title')}
+                    className="flex min-w-0 items-center justify-center overflow-auto rounded-lg bg-canvas p-[22px]"
+                  >
                     <BoardCanvas />
                   </section>
                   <PanelInspector />
