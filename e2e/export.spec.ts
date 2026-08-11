@@ -83,3 +83,16 @@ test('экспорт следует локали интерфейса', async ({
   const file = await download(page, 'export-csv')
   expect((await bytesOf(file)).toString('utf8')).toContain('Black walnut')
 })
+
+test('PDF на русской локали содержит встроенный кириллический шрифт', async ({ page }) => {
+  // Гейт против регресса: без зарегистрированного PTSans jsPDF молча откатывается
+  // на helvetica и печатает кириллицу пустыми глифами (см. registerCyrillicFont в pdf.ts).
+  // Маркер шрифта в байтах PDF плюс минимальный размер отличают настоящий кириллический
+  // документ от пустышки, где шрифт не подключился.
+  await openStudio(page)
+  const file = await download(page, 'export-pdf')
+  const bytes = await bytesOf(file)
+  expect(bytes.subarray(0, 5).toString('latin1')).toBe('%PDF-')
+  expect(bytes.length).toBeGreaterThan(20000)
+  expect(bytes.toString('latin1')).toContain('PTSans')
+})
