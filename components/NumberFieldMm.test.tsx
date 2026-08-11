@@ -62,4 +62,17 @@ describe('NumberFieldMm', () => {
     render(<NumberFieldMm {...base} locale="en" valueMm={30} onCommitMm={() => {}} />)
     expect(screen.getByLabelText('Kerf')).toBeDefined()
   })
+
+  it('суффикс рендерится и не попадает в значение поля', () => {
+    render(<NumberFieldMm {...base} valueMm={30} onCommitMm={() => {}} suffix="мм" />)
+    const input = screen.getByLabelText('Толщина пропила') as HTMLInputElement
+    expect(input.value).toBe('30')
+    expect(screen.getByText('мм')).toBeDefined()
+  })
+
+  it('size="dense" даёт высоту-класс на контейнере поля', () => {
+    render(<NumberFieldMm {...base} valueMm={30} onCommitMm={() => {}} size="dense" />)
+    const input = screen.getByTestId('kerf')
+    expect(input.parentElement?.className).toContain('h-[30px]')
+  })
 })

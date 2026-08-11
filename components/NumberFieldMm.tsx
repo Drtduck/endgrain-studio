@@ -3,6 +3,13 @@
 import { useState } from 'react'
 import { t, type Locale, type MessageKey } from '@/lib/i18n'
 import { displayToMm, mmToDisplay, unitStepMm, type UnitSystem } from '@/lib/units'
+import { cn } from '@/lib/utils'
+
+const FIELD_HEIGHT: Record<'default' | 'compact' | 'dense', string> = {
+  default: 'h-9',
+  compact: 'h-[34px]',
+  dense: 'h-[30px]',
+}
 
 export function NumberFieldMm({
   id,
@@ -14,6 +21,8 @@ export function NumberFieldMm({
   minMm,
   maxMm,
   testId,
+  size = 'default',
+  suffix,
 }: {
   id: string
   labelKey: MessageKey
@@ -24,6 +33,8 @@ export function NumberFieldMm({
   minMm?: number
   maxMm?: number
   testId?: string
+  size?: 'default' | 'compact' | 'dense'
+  suffix?: string
 }) {
   const external = mmToDisplay(valueMm, unit)
   const [draft, setDraft] = useState(external)
@@ -51,27 +62,39 @@ export function NumberFieldMm({
 
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-xs text-muted-foreground">
+      <label htmlFor={id} className="text-[11px] text-ink-muted">
         {t(locale, labelKey)}
       </label>
-      <input
-        id={id}
-        data-testid={testId ?? id}
-        type="number"
-        inputMode="decimal"
-        step={unit === 'mm' ? unitStepMm(unit) : 0.0625}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault()
-            commit()
-          }
-          if (e.key === 'Escape') setDraft(external)
-        }}
-        className="h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm tabular-nums shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      />
+      <div
+        className={cn(
+          'flex items-center gap-1 rounded-sm border border-line bg-surface-raised px-2 transition-[border-color,box-shadow] duration-hover ease-out hover:border-line-strong focus-within:border-[1.5px] focus-within:border-accent focus-within:shadow-focus has-[:disabled]:border-line-subtle has-[:disabled]:bg-surface-sunken',
+          FIELD_HEIGHT[size]
+        )}
+      >
+        <input
+          id={id}
+          data-testid={testId ?? id}
+          type="number"
+          inputMode="decimal"
+          step={unit === 'mm' ? unitStepMm(unit) : 0.0625}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              commit()
+            }
+            if (e.key === 'Escape') setDraft(external)
+          }}
+          className="w-full appearance-none border-0 bg-transparent font-mono text-sm tabular-nums text-ink outline-none disabled:text-line-strong [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        />
+        {suffix ? (
+          <span aria-hidden className="shrink-0 font-mono text-[11px] text-ink-muted">
+            {suffix}
+          </span>
+        ) : null}
+      </div>
     </div>
   )
 }
