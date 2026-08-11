@@ -28,3 +28,9 @@
 ## Статус
 
 Инфраструктура заведена: приватный репозиторий и проект в Orca. Стек и архитектура пока не выбраны.
+
+## Прод
+
+https://endgrain-studio.vercel.app
+
+Автодеплой при пуше в `main` подключён через Vercel Git Integration (репозиторий `Drtduck/endgrain-studio`).
