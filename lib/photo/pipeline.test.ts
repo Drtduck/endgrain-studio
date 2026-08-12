@@ -99,3 +99,111 @@ describe('photoToDesign', () => {
     expect(photoToDesign(bandsGrid(), { colors: 3, panels: 3, name: 'Кот' }).design.name).toBe('Кот')
   })
 })
+
+/** Полностью прозрачная сетка: alpha=0 везде, RGB - произвольный мусор (как у пустого канваса). */
+function transparentGrid(cols = 6, rows = 4): PixelGrid {
+  const rgba = new Uint8ClampedArray(cols * rows * 4)
+  for (let i = 0; i < cols * rows; i += 1) {
+    rgba[i * 4] = 10
+    rgba[i * 4 + 1] = 10
+    rgba[i * 4 + 2] = 10
+    rgba[i * 4 + 3] = 0
+  }
+  return { cols, rows, rgba }
+}
+
+describe('прозрачность', () => {
+  it('полностью прозрачная картинка не роняет пайплайн и не красится в чёрный', () => {
+    const result = photoToDesign(transparentGrid(), { colors: 3, panels: 2 })
+    const diagnostics = validate(result.design, { shrinkageByPct: SHRINK, knownSpeciesIds: KNOWN })
+    expect(hasErrors(diagnostics), JSON.stringify(diagnostics.filter((d) => d.level === 'error'))).toBe(false)
+    // Все центроиды получены из белого фона, поэтому пород должно быть не больше одной.
+    expect(result.species.length).toBeLessThanOrEqual(1)
+  })
+
+  /** Порода в клетке (col,row) прямо из документа, без компиляции геометрии. */
+  function speciesAt(design: ReturnType<typeof photoToDesign>['design'], col: number, row: number): string | undefined {
+    const rowSpec = design.rows[row]
+    if (!rowSpec) return undefined
+    const panel = design.panels.find((p) => p.id === rowSpec.panelId)
+    const strip = panel?.elements[col]
+    return strip?.kind === 'strip' ? strip.speciesId : undefined
+  }
+
+  it('прозрачная рамка вокруг цветного пятна не превращается в отдельный тёмный кластер', () => {
+    const cols = 6
+    const rows = 6
+    const rgba = new Uint8ClampedArray(cols * rows * 4)
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        const offset = (row * cols + col) * 4
+        const inner = row >= 1 && row < rows - 1 && col >= 1 && col < cols - 1
+        if (!inner) {
+          // Прозрачная рамка: RGB нарочно чёрный, как отдаёт canvas для пустых пикселей.
+          rgba[offset] = 0
+          rgba[offset + 1] = 0
+          rgba[offset + 2] = 0
+          rgba[offset + 3] = 0
+          continue
+        }
+        // Внутри - два непохожих пятна: светлое сверху, тёмное снизу, чтобы было с чем сравнивать.
+        const dark = row >= rows / 2
+        const color = dark ? [35, 25, 20] : [230, 210, 175]
+        rgba[offset] = color[0] ?? 0
+        rgba[offset + 1] = color[1] ?? 0
+        rgba[offset + 2] = color[2] ?? 0
+        rgba[offset + 3] = 255
+      }
+    }
+    const result = photoToDesign({ cols, rows, rgba }, { colors: 2, panels: 3 })
+    const cornerSpecies = speciesAt(result.design, 0, 0)
+    const lightSpecies = speciesAt(result.design, 2, 1)
+    const darkSpecies = speciesAt(result.design, 2, 4)
+    expect(cornerSpecies).toBeDefined()
+    expect(lightSpecies).toBeDefined()
+    expect(darkSpecies).toBeDefined()
+    // Прозрачная рамка должна была примкнуть к самому светлому кластеру, а не к тёмному пятну.
+    expect(cornerSpecies).toBe(lightSpecies)
+    expect(cornerSpecies).not.toBe(darkSpecies)
+  })
+
+  it('полупрозрачный пиксель компонуется на белый фон, а не остаётся тёмным', () => {
+    const cols = 2
+    const rows = 1
+    const rgba = new Uint8ClampedArray(cols * rows * 4)
+    // 50% прозрачности тёмного пикселя: должен посветлеть к белому, а не остаться тёмным как есть.
+    rgba[0] = 20
+    rgba[1] = 20
+    rgba[2] = 20
+    rgba[3] = 128
+    rgba[4] = 20
+    rgba[5] = 20
+    rgba[6] = 20
+    rgba[7] = 255
+    const labs = gridToLab({ cols, rows, rgba })
+    expect(labs[0]?.L ?? 0).toBeGreaterThan(labs[1]?.L ?? 100)
+  })
+})
+
+describe('эвристика пригодности', () => {
+  it('контрастные полосы не помечаются как рискованные', () => {
+    const result = photoToDesign(bandsGrid(), { colors: 3, panels: 3 })
+    expect(result.lowQuality).toBe(false)
+  })
+
+  it('мелкий шум помечается как рискованный', () => {
+    const cols = 20
+    const rows = 14
+    const rgba = new Uint8ClampedArray(cols * rows * 4)
+    for (let i = 0; i < cols * rows; i += 1) {
+      // Псевдослучайный, но детерминированный шум без крупных пятен.
+      const noise = (i * 2654435761) % 256
+      rgba[i * 4] = noise
+      rgba[i * 4 + 1] = (noise * 3) % 256
+      rgba[i * 4 + 2] = (noise * 7) % 256
+      rgba[i * 4 + 3] = 255
+    }
+    const result = photoToDesign({ cols, rows, rgba }, { colors: 3, panels: 4 })
+    expect(result.lowQuality).toBe(true)
+  })
+})

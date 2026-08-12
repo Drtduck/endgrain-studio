@@ -12,9 +12,9 @@ import { PHOTO_MAX_COLORS, PHOTO_MIN_COLORS, photoToDesign } from '@/lib/photo'
 import { seedFromString } from '@/lib/generators'
 import { selectIsDirty, useStudio } from '@/lib/store/studio'
 import { cn, rangeFillVar, RANGE_INPUT_CLASS } from '@/lib/utils'
-import { ACCEPTED_TYPES, decodeToGrid, isImageFile } from './photoDecode'
+import { ACCEPTED_TYPES, decodeToGrid, isFileTooLarge, isImageFile, PhotoTooLargeError } from './photoDecode'
 
-type Status = 'idle' | 'loading' | 'badType' | 'failed'
+type Status = 'idle' | 'loading' | 'badType' | 'tooLarge' | 'failed'
 
 export function PhotoImport() {
   const locale = useStudio((s) => s.locale)
@@ -45,6 +45,10 @@ export function PhotoImport() {
       setStatus('badType')
       return
     }
+    if (isFileTooLarge(file)) {
+      setStatus('tooLarge')
+      return
+    }
     setStatus('loading')
     // Асинхронный обработчик события, а не эффект: правило set-state-in-effect не нарушается.
     decodeToGrid(file)
@@ -52,7 +56,7 @@ export function PhotoImport() {
         setPhoto({ grid, fileName: file.name, colors: 3, panels: Math.max(2, Math.min(6, grid.rows)) })
         setStatus('idle')
       })
-      .catch(() => setStatus('failed'))
+      .catch((error) => setStatus(error instanceof PhotoTooLargeError ? 'tooLarge' : 'failed'))
   }
 
   const apply = (): void => {
@@ -107,13 +111,16 @@ export function PhotoImport() {
           {t(locale, 'photo.pick')}
         </Button>
         {status === 'loading' ? <p className="text-xs text-ink-muted">{t(locale, 'photo.loading')}</p> : null}
-        {status === 'badType' || status === 'failed' ? (
+        {status === 'badType' || status === 'failed' || status === 'tooLarge' ? (
           <p
             data-testid="photo-error"
             role="alert"
             className="rounded-md border border-error-border bg-error-soft px-3 py-[11px] text-[13px] font-semibold text-error-text"
           >
-            {t(locale, status === 'badType' ? 'photo.errorType' : 'photo.error')}
+            {t(
+              locale,
+              status === 'badType' ? 'photo.errorType' : status === 'tooLarge' ? 'photo.errorTooLarge' : 'photo.error',
+            )}
           </p>
         ) : null}
       </div>
@@ -164,6 +171,11 @@ export function PhotoImport() {
           <div data-testid="photo-preview" aria-label={t(locale, 'aria.photoPreview')}>
             <BoardSvg model={result.model} locale={locale} maxPx={420} />
           </div>
+          {result.lowQuality ? (
+            <p data-testid="photo-quality-hint" className="text-xs text-ink-muted">
+              {t(locale, 'photo.qualityHint')}
+            </p>
+          ) : null}
           <span data-testid="photo-stats" className="font-mono text-sm text-ink-muted tabular-nums">
             {t(locale, 'photo.stats', {
               glueUps: result.model.glueUpCount,

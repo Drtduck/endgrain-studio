@@ -187,6 +187,9 @@ const en: Record<keyof typeof ru, string> = {
   'photo.designName': 'Photo: {file}',
   'photo.error': 'Could not read the image. Try another file',
   'photo.errorType': 'An image file is required: png, jpeg or webp',
+  'photo.errorTooLarge': 'The image is too large: up to 25 MB and 40 megapixels. Shrink the file or compress the image',
+  'photo.qualityHint':
+    'This image may not read clearly as a pattern. Try more species or a picture with larger, higher-contrast areas',
   'photo.loading': 'Sorting out the picture',
   'photo.confirmTitle': 'Replace the current project?',
   'photo.confirmBody': 'The photo pattern replaces the whole board and clears the edit history.',

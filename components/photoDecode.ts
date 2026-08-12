@@ -4,8 +4,25 @@ import { PHOTO_MAX_COLS, PHOTO_MAX_ROWS, type PixelGrid } from '@/lib/photo'
 
 export const ACCEPTED_TYPES: readonly string[] = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/bmp']
 
+/**
+ * 25 МБ - с запасом выше типичного JPEG прямо с камеры (обычно 10-20 МБ), но давит файлы
+ * в сотни МБ, которые на слабом устройстве подвешивают вкладку ещё до всякого декода.
+ */
+export const PHOTO_MAX_FILE_BYTES = 25 * 1024 * 1024
+/**
+ * 40 мегапикселей - с запасом выше типичного кадра (12-24 Мп у большинства камер и телефонов),
+ * но отсекает «декомпрессионные бомбы»: небольшой по весу файл с огромным разрешением.
+ */
+export const PHOTO_MAX_PIXELS = 40_000_000
+
+export class PhotoTooLargeError extends Error {}
+
 export function isImageFile(file: File): boolean {
   return ACCEPTED_TYPES.includes(file.type) || file.type.startsWith('image/')
+}
+
+export function isFileTooLarge(file: File): boolean {
+  return file.size > PHOTO_MAX_FILE_BYTES
 }
 
 /** Сетка под пропорции картинки: портрет не должен превращаться в квадрат. */
@@ -52,7 +69,12 @@ export async function decodeToGrid(
   maxCols = PHOTO_MAX_COLS,
   maxRows = PHOTO_MAX_ROWS,
 ): Promise<PixelGrid> {
+  // Проверка веса файла - до попытки декода: декод огромного файла сам по себе может
+  // подвесить вкладку на слабом устройстве, поэтому дальше идти нет смысла.
+  if (isFileTooLarge(file)) throw new PhotoTooLargeError('файл слишком большой')
+
   const { source, width, height } = await toBitmapSize(file)
+  if (width * height > PHOTO_MAX_PIXELS) throw new PhotoTooLargeError('слишком высокое разрешение')
   const { cols, rows } = fitGrid(width, height, maxCols, maxRows)
 
   const canvas = document.createElement('canvas')
