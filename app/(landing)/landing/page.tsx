@@ -10,9 +10,28 @@ import { BooksTeaser } from '@/components/landing/BooksTeaser'
 import { SubscribeSection } from '@/components/landing/SubscribeSection'
 import { getLandingLocale } from '@/lib/landing/locale'
 import { t } from '@/lib/i18n'
-import { APP_ORIGIN } from '@/lib/routing/host'
+import { APP_ORIGIN, SITE_ORIGIN } from '@/lib/routing/host'
 
-export const metadata: Metadata = { title: 'Endgrain Studio' } // расширяется в задаче 5
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLandingLocale()
+  const title = `${t(locale, 'app.title')}: ${t(locale, 'app.slogan')}`
+  const description = t(locale, 'landing.hero.subtitle')
+  return {
+    metadataBase: new URL(SITE_ORIGIN),
+    title,
+    description,
+    alternates: { canonical: SITE_ORIGIN },
+    openGraph: {
+      type: 'website',
+      url: SITE_ORIGIN,
+      siteName: 'Endgrain Studio',
+      title,
+      description,
+      locale: locale === 'ru' ? 'ru_RU' : 'en_US',
+    },
+    twitter: { card: 'summary_large_image', title, description },
+  }
+}
 
 export default async function LandingPage() {
   const locale = await getLandingLocale()

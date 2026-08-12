@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Endgrain Studio favicon: beaver head in a flat cap">
+  <title>Endgrain Studio - Beaver Mark (simple)</title>
+
+  <!-- Favicon variant: head + cap + incisors only. Same palette and line
+       language as beaver-logo.svg, but detail stripped for 32px legibility.
+       The whole mark is scaled up so the head fills the canvas. -->
+
+  <defs>
+    <path id="s-earL" d="M 244 306 C 210 288 176 302 172 338
+      C 168 374 194 398 228 392 C 238 366 238 330 244 306 Z"/>
+    <path id="s-earR" d="M 616 306 C 650 288 684 302 688 338
+      C 692 374 666 398 632 392 C 622 366 622 330 616 306 Z"/>
+    <path id="s-head" d="M 430 232
+      C 300 232 218 300 208 400 C 200 470 205 522 232 566
+      C 268 626 340 660 430 660 C 520 660 592 626 628 566
+      C 655 522 660 470 652 400 C 642 300 560 232 430 232 Z"/>
+    <path id="s-teeth" d="M 350 540 L 426 540 L 426 604
+      C 426 628 410 642 388 642 C 366 642 350 628 350 604 Z
+      M 434 540 L 510 540 L 510 604
+      C 510 628 494 642 472 642 C 450 642 434 628 434 604 Z"/>
+    <path id="s-cap" d="M 200 312
+      C 178 236 234 158 350 136 C 452 116 566 136 626 184
+      C 674 222 692 274 678 316 C 606 276 520 262 440 262
+      C 348 262 262 282 200 312 Z"/>
+    <path id="s-brim" d="M 232 288
+      C 156 292 96 314 76 340 C 62 358 74 376 106 378
+      C 164 380 216 358 246 330 C 262 314 256 288 232 288 Z"/>
+    <clipPath id="s-clipHead"><use href="#s-head"/></clipPath>
+    <clipPath id="s-clipCap"><use href="#s-cap"/></clipPath>
+  </defs>
+
+  <g transform="translate(-51.5,-57) scale(1.467)">
+
+    <!-- white die-cut border -->
+    <g fill="#ffffff" stroke="#ffffff" stroke-width="34" stroke-linejoin="round">
+      <use href="#s-earL"/><use href="#s-earR"/><use href="#s-head"/>
+      <use href="#s-teeth"/><use href="#s-cap"/><use href="#s-brim"/>
+    </g>
+
+    <!-- ears -->
+    <use href="#s-earL" fill="#8a5a33" stroke="#4a2b16" stroke-width="20" stroke-linejoin="round"/>
+    <use href="#s-earR" fill="#7a4d2b" stroke="#4a2b16" stroke-width="20" stroke-linejoin="round"/>
+
+    <!-- head -->
+    <use href="#s-head" fill="#8a5a33" stroke="#4a2b16" stroke-width="20" stroke-linejoin="round"/>
+    <g clip-path="url(#s-clipHead)">
+      <path d="M 568 200 C 622 300 646 420 622 534 C 604 618 556 668 502 692
+               L 760 692 L 760 200 Z" fill="#6d4426"/>
+    </g>
+
+    <!-- muzzle -->
+    <path d="M 430 452 C 378 438 316 448 292 488
+             C 264 532 278 594 330 618 C 372 638 412 630 430 612
+             C 448 630 488 638 530 618 C 582 594 596 532 568 488
+             C 544 448 482 438 430 452 Z"
+          fill="#f0dab4" stroke="#9d7742" stroke-width="18" stroke-linejoin="round"/>
+
+    <!-- nose -->
+    <path d="M 430 424 C 396 424 372 442 372 468
+             C 372 496 402 514 430 514 C 458 514 488 496 488 468
+             C 488 442 464 424 430 424 Z" fill="#33231a"/>
+
+    <!-- mouth + incisors -->
+    <path d="M 352 512 C 402 536 464 532 508 506 L 508 558 C 460 574 400 574 352 558 Z" fill="#4a2b16"/>
+    <use href="#s-teeth" fill="#fff8e8" stroke="#a8823f" stroke-width="16" stroke-linejoin="round"/>
+
+    <!-- eyes: solid, high-contrast for small sizes -->
+    <ellipse cx="348" cy="392" rx="56" ry="60" fill="#ffffff" stroke="#4a2b16" stroke-width="18"/>
+    <ellipse cx="520" cy="388" rx="56" ry="60" fill="#ffffff" stroke="#4a2b16" stroke-width="18"/>
+    <ellipse cx="358" cy="398" rx="30" ry="34" fill="#241610"/>
+    <ellipse cx="528" cy="394" rx="30" ry="34" fill="#241610"/>
+    <circle cx="344" cy="384" r="13" fill="#ffffff"/>
+    <circle cx="514" cy="380" r="13" fill="#ffffff"/>
+
+    <!-- brows -->
+    <path d="M 288 336 C 316 302 366 296 402 316 L 394 344 C 364 330 322 334 300 358 Z" fill="#4a2b16"/>
+    <path d="M 462 318 C 494 288 552 286 580 312 L 566 338 C 542 320 502 320 476 342 Z" fill="#4a2b16"/>
+
+    <!-- flat cap -->
+    <use href="#s-brim" fill="#635c51" stroke="#3c3830" stroke-width="20" stroke-linejoin="round"/>
+    <use href="#s-cap" fill="#7d7568" stroke="#3c3830" stroke-width="20" stroke-linejoin="round"/>
+    <g clip-path="url(#s-clipCap)">
+      <path d="M 560 100 C 616 150 660 210 670 300 L 720 300 L 720 100 Z" fill="#635c51"/>
+      <path d="M 208 300 C 300 246 520 240 664 300" stroke="#3c3830" stroke-width="14" fill="none" opacity="0.5"/>
+    </g>
+  </g>
+</svg>

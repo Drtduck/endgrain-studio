@@ -48,9 +48,7 @@ export function StudioShell() {
         className="flex min-h-14 flex-wrap items-center gap-4 border-b border-line bg-surface px-4 py-2"
       >
         <div className="flex items-center gap-2">
-          <span className="flex size-[22px] items-center justify-center rounded-xs bg-accent font-display text-[13px] text-ink-inverse">
-            E
-          </span>
+          <img src="/brand/beaver-simple.svg" alt="" width={24} height={24} className="size-6 shrink-0" />
           <span className="font-display text-[17px] font-semibold">{t(locale, 'app.title')}</span>
         </div>
 

@@ -3,6 +3,7 @@ import type ru from './ru'
 const en: Record<keyof typeof ru, string> = {
   'app.title': 'Endgrain Studio',
   'app.tagline': 'End-grain cutting board project: pattern, cuts, lumber, cost',
+  'app.slogan': 'Rip it right',
   'board.title': 'Board',
   'board.size': 'Size: {widthMm} × {lengthMm}, thickness {thicknessMm}',
   'meter.title': 'Project complexity',

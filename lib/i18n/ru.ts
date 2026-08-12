@@ -1,6 +1,7 @@
 const ru = {
   'app.title': 'Endgrain Studio',
   'app.tagline': 'Проект торцевой разделочной доски: узор, распил, материал, себестоимость',
+  'app.slogan': 'Пилим как надо',
   'board.title': 'Доска',
   'board.size': 'Габарит: {widthMm} × {lengthMm}, толщина {thicknessMm}',
   'meter.title': 'Сложность проекта',

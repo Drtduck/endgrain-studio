@@ -4,10 +4,12 @@ import { SessionProvider } from "@/components/SessionProvider";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getCurrentUser } from "@/lib/supabase/session";
 import { getLandingLocale } from "@/lib/landing/locale";
+import { APP_ORIGIN } from "@/lib/routing/host";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Endgrain Studio",
+  metadataBase: new URL(APP_ORIGIN),
+  title: { default: "Endgrain Studio", template: "%s · Endgrain Studio" },
   description: "Проект торцевой разделочной доски: узор, распил, материал, себестоимость",
 };
 

@@ -47,5 +47,23 @@ https://endgrain-studio.vercel.app
 | `E2E_AUTH` | Флаг `1` включает `e2e/auth.spec.ts` локально. По умолчанию (без флага) и в CI спека пропускается. |
 | `E2E_AUTH_EMAIL` | Email существующего тестового пользователя для второго сценария `e2e/auth.spec.ts` (только с `E2E_AUTH=1`). |
 | `E2E_AUTH_PASSWORD` | Пароль того же тестового пользователя. |
+| `RESEND_API_KEY` | Ключ Resend для подписки. Серверная, в клиентский бандл не попадает. Без неё форма подписки работает, но честно отвечает, что почта не подключена. |
+| `RESEND_AUDIENCE_ID` | Идентификатор аудитории Resend, куда добавляются контакты. Нужен вместе с ключом. |
+| `NEXT_PUBLIC_AMAZON_TAG` | Партнёрский тег Amazon Associates. Без неё блоки рендерятся, ссылки идут без тега. |
+| `NEXT_PUBLIC_SITE_ORIGIN` | Корневой домен лендинга, по умолчанию `https://endgrain.app`. |
+| `NEXT_PUBLIC_APP_ORIGIN` | Домен студии, по умолчанию `https://app.endgrain.app`. |
 
 Значения переменных нигде не коммитятся, `.env.local` в `.gitignore`.
+
+## Домены
+
+Один проект Next обслуживает два хоста, разведённых по заголовку Host в `proxy.ts`:
+
+| Хост | Путь | Поведение |
+| --- | --- | --- |
+| `endgrain.app`, `www.endgrain.app` | `/` | рендерит лендинг (rewrite на `/landing`), без обращения к Supabase |
+| `endgrain.app`, `www.endgrain.app` | `/landing` | canonical-путь лендинга, пропускается как есть |
+| `endgrain.app`, `www.endgrain.app` | любой другой | редирект 307 на `app.endgrain.app` с тем же путём |
+| `app.endgrain.app` | `/landing` | редирект 308 на `endgrain.app/landing`, чтобы не было двух индексируемых копий |
+| `app.endgrain.app` | всё остальное | студия, как раньше |
+| незнакомый хост (`localhost`, `127.0.0.1`, превью `*.vercel.app`) | всё | студия, лендинг доступен по `/landing` |
