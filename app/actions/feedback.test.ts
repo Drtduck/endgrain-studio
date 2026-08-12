@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { FEEDBACK_MAX_LENGTH } from '@/lib/feedback'
 
 const getUser = vi.fn()
@@ -22,6 +22,9 @@ vi.mock('next/headers', () => ({
 }))
 
 describe('app/actions/feedback', () => {
+  const originalToken = process.env['GITHUB_REPORT_TOKEN']
+  const fetchMock = vi.fn()
+
   beforeEach(() => {
     configured = true
     getUser.mockReset()
@@ -29,6 +32,15 @@ describe('app/actions/feedback', () => {
     getHeader.mockReset()
     getHeader.mockReturnValue('vitest-agent')
     getUser.mockResolvedValue({ data: { user: null } })
+    delete process.env['GITHUB_REPORT_TOKEN']
+    fetchMock.mockReset()
+    vi.stubGlobal('fetch', fetchMock)
+  })
+
+  afterEach(() => {
+    if (originalToken === undefined) delete process.env['GITHUB_REPORT_TOKEN']
+    else process.env['GITHUB_REPORT_TOKEN'] = originalToken
+    vi.unstubAllGlobals()
   })
 
   it('пустой текст даёт error: empty и не зовёт insert', async () => {
@@ -81,5 +93,88 @@ describe('app/actions/feedback', () => {
     expect(res).toEqual({ ok: true })
     const arg = insert.mock.calls[0]?.[0] as Record<string, unknown>
     expect(arg['user_id']).toBe('server-user-id')
+  })
+
+  it('с GITHUB_REPORT_TOKEN создаёт issue и не пишет в БД', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ html_url: 'https://github.com/Drtduck/endgrain-studio/issues/1' }),
+    })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({ body: 'текст фидбека', route: '/board' })
+
+    expect(res).toEqual({ ok: true, issueUrl: 'https://github.com/Drtduck/endgrain-studio/issues/1' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('https://api.github.com/repos/Drtduck/endgrain-studio/issues')
+    const body = JSON.parse(init.body as string) as { title: string; body: string; labels: string[] }
+    expect(body.labels).toEqual(['feedback'])
+    expect(body.title).toContain('текст фидбека')
+    expect(body.body).toContain('Route: /board')
+    expect(from).not.toHaveBeenCalled()
+  })
+
+  it('без GITHUB_REPORT_TOKEN идёт по старому пути - insert в БД', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null })
+    from.mockReturnValue({ insert })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({ body: 'текст' })
+
+    expect(res).toEqual({ ok: true })
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(from).toHaveBeenCalledWith('feedback')
+  })
+
+  it('ошибка GitHub API падает в fallback на insert в БД', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    fetchMock.mockResolvedValue({ ok: false, json: async () => ({}) })
+    const insert = vi.fn().mockResolvedValue({ error: null })
+    from.mockReturnValue({ insert })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({ body: 'текст' })
+
+    expect(res).toEqual({ ok: true })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(from).toHaveBeenCalledWith('feedback')
+  })
+
+  it('сбой сети до GitHub падает в fallback на insert в БД', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    fetchMock.mockRejectedValue(new Error('network down'))
+    const insert = vi.fn().mockResolvedValue({ error: null })
+    from.mockReturnValue({ insert })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({ body: 'текст' })
+
+    expect(res).toEqual({ ok: true })
+    expect(from).toHaveBeenCalledWith('feedback')
+  })
+
+  it('GitHub и БД оба недоступны - error: failed', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    fetchMock.mockResolvedValue({ ok: false, json: async () => ({}) })
+    const insert = vi.fn().mockResolvedValue({ error: { message: 'db down' } })
+    from.mockReturnValue({ insert })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({ body: 'текст' })
+
+    expect(res).toEqual({ ok: false, error: 'failed' })
+  })
+
+  it('GITHUB_REPORT_TOKEN задан, Supabase не настроен, GitHub ответил ошибкой - disabled', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    configured = false
+    fetchMock.mockResolvedValue({ ok: false, json: async () => ({}) })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({ body: 'текст' })
+
+    expect(res).toEqual({ ok: false, error: 'disabled' })
   })
 })
