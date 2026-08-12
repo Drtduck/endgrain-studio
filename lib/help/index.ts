@@ -19,6 +19,7 @@ export type HelpId =
   | 'evolution'
   | 'photo'
   | 'view3d'
+  | 'promo'
   | 'feedback'
 
 export const HELP_ENTRIES: readonly HelpEntry[] = [
@@ -34,6 +35,7 @@ export const HELP_ENTRIES: readonly HelpEntry[] = [
   { id: 'evolution', titleKey: 'help.evolution.title', bodyKey: 'help.evolution.body' },
   { id: 'photo', titleKey: 'help.photo.title', bodyKey: 'help.photo.body' },
   { id: 'view3d', titleKey: 'help.view3d.title', bodyKey: 'help.view3d.body' },
+  { id: 'promo', titleKey: 'help.promo.title', bodyKey: 'help.promo.body' },
   { id: 'feedback', titleKey: 'help.feedback.title', bodyKey: 'help.feedback.body' },
 ]
 

@@ -458,6 +458,56 @@ const en: Record<keyof typeof ru, string> = {
   'landing.pricing.title': 'What it costs',
   'landing.pricing.body':
     'The tool is open in full. Pro lifts the cloud project limit, drops the credit line from the PDF and unlocks print-ready PNG.',
+
+  'tabs.promo': 'Promo',
+  'aria.promoPanel': 'promo material for this board',
+
+  'promo.title': 'Photo series for your shop',
+  'promo.subtitle':
+    'Four listing shots from the finished board: studio hero, kitchen scene, macro texture and packaging. The render goes to the server, the key stays there.',
+  'promo.generate': 'Build the series',
+  'promo.busy': 'Rendering the series',
+  'promo.error': 'Could not build the series. Try again in a minute.',
+  'promo.mockNote': 'Appears once Gemini is connected',
+  'promo.mockBadge': 'placeholder',
+  'promo.needKey': 'Real photos arrive once GEMINI_API_KEY is added to the environment. For now this is the shot layout.',
+  'promo.ready': 'Series is ready: save the shots and upload them to your listing.',
+  'promo.download': 'Save shot',
+  'promo.shot.hero': 'Hero',
+  'promo.shot.heroNote': 'Board on a light backdrop, soft light, room for copy',
+  'promo.shot.lifestyle': 'Kitchen',
+  'promo.shot.lifestyleNote': 'Bread, herbs and a knife on the board, morning window light',
+  'promo.shot.macro': 'Macro',
+  'promo.shot.macroNote': 'End grain up close: pores and glue lines under raking light',
+  'promo.shot.package': 'Packaging',
+  'promo.shot.packageNote': 'Kraft sleeve and a card beside the board, grey backdrop',
+
+  'merch.title': 'Merch with this pattern',
+  'merch.subtitle': 'The board pattern as a print: tee, mug, poster, apron. Mockups are drawn locally, without a single outbound request.',
+  'merch.generate': 'Build the merch',
+  'merch.busy': 'Preparing mockups',
+  'merch.error': 'Could not build the mockups. Try again in a minute.',
+  'merch.localNote': 'Mockups are composed from your own pattern right in the browser.',
+  'merch.needKey': 'Sending the artwork to Printful switches on once PRINTFUL_API_KEY is added to the environment.',
+  'merch.openPrintful': 'Open in Printful',
+  'merch.tshirt': 'T-shirt',
+  'merch.mug': 'Mug',
+  'merch.poster': 'Poster',
+  'merch.apron': 'Apron',
+
+  'recommend.title': 'Handy for this board',
+  'recommend.subtitle': 'The list is built from your project: panel width, crosscut count and species.',
+  'recommend.reason.glueup': 'End-grain glue-up',
+  'recommend.reason.wide': 'Panel wider than the planer',
+  'recommend.reason.wideGlue': 'Wide glue-up',
+  'recommend.reason.crosscuts': 'Many crosscuts',
+  'recommend.reason.precision': 'Precise layout',
+  'recommend.reason.finish': 'Finish',
+  'recommend.reason.ready': 'Finished board',
+
+  'help.promo.title': 'Promo material',
+  'help.promo.body':
+    'The photo series is built from a render of your board: it travels to the server together with a description of the pattern and species. Merch is computed locally, the pattern simply lands on a product silhouette. Without keys both panels show the layout so you can see what you would get.',
 }
 
 export default en

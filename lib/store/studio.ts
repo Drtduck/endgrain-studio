@@ -24,7 +24,7 @@ import { nextRowId } from './ids'
 
 export const DEFAULT_SPECIES_ID: SpeciesId = 'walnut'
 
-export type StudioView = 'editor' | 'templates' | 'generate' | 'photo' | 'view3d' | 'projects' | 'books'
+export type StudioView = 'editor' | 'templates' | 'generate' | 'photo' | 'view3d' | 'projects' | 'books' | 'promo'
 
 export interface GeneratorUiState {
   readonly population: Population

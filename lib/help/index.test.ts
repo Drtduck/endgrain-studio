@@ -21,7 +21,7 @@ describe('help registry', () => {
   it('все значения HelpId присутствуют в реестре', () => {
     const allIds: readonly HelpId[] = [
       'editor', 'palette', 'panels', 'rows', 'meter', 'diagnostics',
-      'export', 'templates', 'generator', 'evolution', 'photo', 'view3d', 'feedback',
+      'export', 'templates', 'generator', 'evolution', 'photo', 'view3d', 'promo', 'feedback',
     ]
     const registered = new Set(HELP_ENTRIES.map((entry) => entry.id))
     expect(registered.size).toBe(allIds.length)

@@ -12,6 +12,7 @@ const TABS: readonly { readonly view: StudioView; readonly labelKey: MessageKey 
   { view: 'photo', labelKey: 'tabs.photo' },
   { view: 'view3d', labelKey: 'tabs.view3d' },
   { view: 'books', labelKey: 'tabs.books' },
+  { view: 'promo', labelKey: 'tabs.promo' },
 ]
 
 export function StudioTabs() {

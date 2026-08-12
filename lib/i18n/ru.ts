@@ -48,7 +48,7 @@ const ru = {
   'diag.DEPTH_LIMIT': 'Панель {panelId} ссылается на {innerPanelId}, которая сама составная: глубина больше {maxDepth} не поддерживается',
   'diag.PANEL_NOT_FOUND': 'Панель {panelId} не найдена',
   'diag.EMPTY_PANEL': 'Панель {panelId} пустая',
-  'diag.DIMENSION_SANITY': 'Габариты вне диапазона: ширина {widthMm}, длина {lengthMm}, толщина {thicknessMm}, kerf {kerfMm}',
+  'diag.DIMENSION_SANITY': 'Габариты вне диапазона: ширина {widthMm}, длина {lengthMm}, толщина {thicknessMm}, пропил {kerfMm}',
   'diag.RAGGED_BOARD': 'Ряды разной ширины ({minMm} и {maxMm} мм): доска получится неровной',
   'diag.ANGLE_UNSUPPORTED': 'Угол реза {angleDeg} не поддерживается в этой версии, допустим только 0',
   'diag.SHRINKAGE_MISMATCH': 'Соседние породы {a} и {b} различаются по усушке на {deltaPp} п.п. при допуске {limitPp} (таких стыков в проекте: {count})',
@@ -457,6 +457,56 @@ const ru = {
   'landing.pricing.title': 'Сколько это стоит',
   'landing.pricing.body':
     'Инструмент открыт целиком. Pro снимает лимит облачных проектов, убирает подпись с PDF и даёт PNG для печати.',
+
+  'tabs.promo': 'Промо',
+  'aria.promoPanel': 'промо-материалы по доске',
+
+  'promo.title': 'Серия фото для магазина',
+  'promo.subtitle':
+    'Четыре кадра карточки товара из готовой доски: витрина, кухня, макро текстуры и упаковка. Рендер уходит на сервер, ключ остаётся там же.',
+  'promo.generate': 'Собрать серию',
+  'promo.busy': 'Рисуем серию',
+  'promo.error': 'Не получилось собрать серию. Попробуйте ещё раз через минуту.',
+  'promo.mockNote': 'Появится после подключения Gemini',
+  'promo.mockBadge': 'заглушка',
+  'promo.needKey': 'Настоящие фото появятся после того, как в окружение добавят GEMINI_API_KEY. Пока показываем компоновку кадров.',
+  'promo.ready': 'Серия готова: сохраните кадры и залейте в карточку товара.',
+  'promo.download': 'Скачать кадр',
+  'promo.shot.hero': 'Витрина',
+  'promo.shot.heroNote': 'Доска на светлом фоне, мягкий свет, место под текст',
+  'promo.shot.lifestyle': 'Кухня',
+  'promo.shot.lifestyleNote': 'Хлеб, зелень и нож на доске, утренний свет из окна',
+  'promo.shot.macro': 'Макро',
+  'promo.shot.macroNote': 'Торец крупно: поры и клеевые швы под косым светом',
+  'promo.shot.package': 'Упаковка',
+  'promo.shot.packageNote': 'Крафт-конверт и карточка рядом с доской, серый фон',
+
+  'merch.title': 'Мерч с этим узором',
+  'merch.subtitle': 'Узор доски как принт: футболка, кружка, постер, фартук. Мокапы рисуются локально, без единого запроса наружу.',
+  'merch.generate': 'Собрать мерч',
+  'merch.busy': 'Готовим мокапы',
+  'merch.error': 'Не получилось собрать мокапы. Попробуйте ещё раз через минуту.',
+  'merch.localNote': 'Мокапы собраны из вашего узора прямо в браузере.',
+  'merch.needKey': 'Отправка макета в Printful включится после того, как в окружение добавят PRINTFUL_API_KEY.',
+  'merch.openPrintful': 'Открыть в Printful',
+  'merch.tshirt': 'Футболка',
+  'merch.mug': 'Кружка',
+  'merch.poster': 'Постер',
+  'merch.apron': 'Фартук',
+
+  'recommend.title': 'Для этой доски пригодится',
+  'recommend.subtitle': 'Подборка собрана по параметрам проекта: ширине щита, числу резов и породам.',
+  'recommend.reason.glueup': 'Торцевая склейка',
+  'recommend.reason.wide': 'Щит шире рейсмуса',
+  'recommend.reason.wideGlue': 'Широкая склейка',
+  'recommend.reason.crosscuts': 'Много поперечных резов',
+  'recommend.reason.precision': 'Точная разметка',
+  'recommend.reason.finish': 'Финиш',
+  'recommend.reason.ready': 'Готовая доска',
+
+  'help.promo.title': 'Промо-материалы',
+  'help.promo.body':
+    'Серия фото собирается из рендера вашей доски: он уходит на сервер вместе с описанием узора и пород. Мерч считается локально, узор просто ложится на силуэт товара. Без ключей обе панели показывают компоновку, чтобы было видно, что получится.',
 } as const
 
 export default ru
