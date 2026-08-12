@@ -310,6 +310,54 @@ const en: Record<keyof typeof ru, string> = {
   'help.feedback.title': 'How to write feedback',
   'help.feedback.body': 'Write what exactly got in the way and at which step: «the walnut strip disappeared after flipping a row» helps far more than «inconvenient». The page address and the browser version go along with the text, no files or images are attached. There is no reply inside the app, the author reads the messages.',
   'landing.hero.title': 'Rip it right',
+  'landing.hero.accent': 'right',
+  'landing.hero.subtitle':
+    'A studio for end-grain cutting boards: you design the pattern, you get the cutting plan, the part list, the lumber you need and an honest cost. Not a drawing toy, a shop tool.',
+  'landing.hero.ctaPrimary': 'Open the studio, it is free',
+  'landing.hero.ctaSecondary': 'See the patterns',
+  'landing.hero.trust': 'No signup. Runs in the browser. The project stays yours.',
+  'landing.hero.mascotAlt': 'Beaver in a flat cap, the Endgrain Studio mascot',
+
+  'landing.patterns.title': 'Sixteen patterns already inside',
+  'landing.patterns.body':
+    'Checkerboard, brick, stripes, diagonals, frame, inlay. Every board here is drawn by the same engine that will later work out your cuts.',
+
+  'landing.features.title': 'What the studio does for you',
+  'landing.features.f3d.title': '3D preview',
+  'landing.features.f3d.body':
+    'The board in volume before you buy the first walnut plank. You see how rows stack into thickness and how the end grain reads at an angle.',
+  'landing.features.fphoto.title': 'Photo to pattern',
+  'landing.features.fphoto.body':
+    'Drop an image: it is reduced to a few colours and each one becomes a real species. The photo never leaves your browser.',
+  'landing.features.fpdf.title': 'Cutting plan PDF',
+  'landing.features.fpdf.body':
+    'A step by step shop instruction: panel glue-up, crosscuts, row layout, final glue-up. In your units, ready to print.',
+  'landing.features.fgen.title': 'Generator and evolution',
+  'landing.features.fgen.body':
+    'Nine variants per click, built from rule families rather than random pixels. Star the good ones and the next generation grows out of them.',
+  'landing.features.fcost.title': 'Lumber and cost',
+  'landing.features.fcost.body':
+    'Kerf, planing allowance, waste, weight and price per species. The number is closer to shop reality than to pure geometry.',
+  'landing.features.funits.title': 'Millimetres and inches',
+  'landing.features.funits.body':
+    'One switch changes both the interface and the exports. Internally everything stays in millimetres, inches are just a view.',
+
+  'landing.how.title': 'Four steps to a board',
+  'landing.how.s1.title': 'Pick a start',
+  'landing.how.s1.body': 'A template, the generator or a photo. Or a blank canvas if the pattern is already in your head.',
+  'landing.how.s2.title': 'Edit by hand',
+  'landing.how.s2.body': 'Click a cell to paint it with a species. The studio speaks up as soon as the pattern stops being buildable.',
+  'landing.how.s3.title': 'Check the numbers',
+  'landing.how.s3.body': 'Glue-ups, cuts, waste, weight, cost. Everything recalculates on every brush stroke.',
+  'landing.how.s4.title': 'Take it to the shop',
+  'landing.how.s4.body': 'PNG and SVG for the client, CSV and PDF for the bench. The clamps take it from there.',
+
+  'landing.shots.title': 'What it looks like inside',
+
+  'landing.finalCta.title': 'The board will not glue itself',
+  'landing.finalCta.body':
+    'Open the studio and put together your first pattern in five minutes. An account is only needed to sync projects between devices.',
+
   'landing.nav.openApp': 'Open the studio',
   'landing.locale.aria': 'Landing language',
   'landing.footer.product.title': 'Product',
