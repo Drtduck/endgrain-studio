@@ -1,3 +1,4 @@
+import type { AiDenyReason } from '@/lib/ai/quota'
 import type { MessageKey } from '@/lib/i18n'
 
 /** Четыре кадра продуктовой серии для карточки товара в магазине. */
@@ -30,7 +31,7 @@ export interface PromoImage {
  * другим узором, а не повтором, поэтому от сетевого failed отделён намеренно.
  * tooLarge ловится ещё на клиенте, до отправки тела.
  */
-export type PromoError = 'invalid' | 'failed' | 'blocked' | 'rateLimited' | 'tooLarge'
+export type PromoError = 'invalid' | 'failed' | 'blocked' | 'rateLimited' | 'tooLarge' | AiDenyReason
 
 /**
  * mock: true означает «ключа нет, рисуем локальные заглушки на клиенте».
@@ -39,7 +40,13 @@ export type PromoError = 'invalid' | 'failed' | 'blocked' | 'rateLimited' | 'too
  */
 export type PromoResult =
   | { readonly ok: true; readonly mock: true; readonly kinds: readonly PromoShotKind[] }
-  | { readonly ok: true; readonly mock: false; readonly images: readonly PromoImage[] }
+  | {
+      readonly ok: true
+      readonly mock: false
+      readonly images: readonly PromoImage[]
+      /** Остаток месячной квоты после этой серии: счётчик на вкладке обновляется без второго запроса. */
+      readonly remaining?: number
+    }
   | { readonly ok: false; readonly error: PromoError }
 
 /** Товар мерча: силуэт рисуем сами, id продукта пригодится будущему флоу Printful. */
@@ -74,4 +81,6 @@ export const MERCH_PRODUCTS: readonly MerchProduct[] = [
  */
 export interface MerchResult {
   readonly printful: boolean
+  /** Заполнено, когда сервер отказал: мокапы входят в Pro, и причина отказа нужна тексту в панели. */
+  readonly denied?: AiDenyReason
 }

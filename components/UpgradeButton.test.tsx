@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
 import { ProProvider, type ProValue } from '@/components/ProProvider'
 import { UpgradeButton } from './UpgradeButton'
+import { aiAccess } from '@/lib/ai/quota'
 import type { ProStatus } from '@/lib/stripe/pro'
 
 const FREE: ProStatus = { pro: false, reason: 'free', plan: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }
@@ -13,9 +14,10 @@ const PRO: ProStatus = {
   cancelAtPeriodEnd: false,
 }
 
-function renderWith(value: ProValue) {
+// Кнопка апгрейда про AI ничего не знает, поэтому состояние доступа тут любое.
+function renderWith(value: Omit<ProValue, 'ai'>) {
   return render(
-    <ProProvider value={value}>
+    <ProProvider value={{ ...value, ai: aiAccess('mock') }}>
       <UpgradeButton />
     </ProProvider>,
   )

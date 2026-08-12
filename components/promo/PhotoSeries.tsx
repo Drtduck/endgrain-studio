@@ -6,6 +6,7 @@ import { generatePromoShotsAction } from '@/app/actions/promo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { HelpHint } from '@/components/ui/help-hint'
+import { AiGateNote, useAiGate } from '@/components/promo/AiGate'
 import { PromoMockShot } from '@/components/promo/PromoMockShot'
 import { renderBoardSvg, safeFileName } from '@/lib/export'
 import { t } from '@/lib/i18n'
@@ -33,6 +34,9 @@ export function PhotoSeries() {
   const { model } = useDerived()
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<PromoResult | null>(null)
+  // Остаток квоты после последней генерации: сервер возвращает его в ответе.
+  const [remaining, setRemaining] = useState<number | null>(null)
+  const gate = useAiGate(remaining)
 
   const imageByKind = new Map<PromoShotKind, string>(
     result !== null && result.ok && !result.mock ? result.images.map((image) => [image.kind, image.dataUrl]) : [],
@@ -56,7 +60,10 @@ export function PhotoSeries() {
         setResult({ ok: false, error: 'tooLarge' })
         return
       }
-      setResult(await generatePromoShotsAction({ boardPng, description: describeBoard(design, model).text }))
+      const res = await generatePromoShotsAction({ boardPng, description: describeBoard(design, model).text })
+      setResult(res)
+      if (res.ok && !res.mock && res.remaining !== undefined) setRemaining(res.remaining)
+      if (!res.ok && res.error === 'quota') setRemaining(0)
     } catch (err) {
       // Причина уходит в консоль браузера, пользователю показываем одну человеческую строку.
       console.error(err)
@@ -76,13 +83,20 @@ export function PhotoSeries() {
         <h2 className="font-display text-[17px] font-semibold">{t(locale, 'promo.title')}</h2>
         <HelpHint id="promo" side="bottom" />
         <div className="flex-1" />
-        <Button size="sm" data-testid="promo-generate" disabled={busy} onClick={() => { void run() }}>
+        <Button
+          size="sm"
+          data-testid="promo-generate"
+          disabled={busy || gate.locked}
+          onClick={() => { void run() }}
+        >
           <Sparkles data-icon="inline-start" />
           {busy ? t(locale, 'promo.busy') : t(locale, 'promo.generate')}
         </Button>
       </div>
 
       <p className="max-w-[68ch] text-[13px] text-ink-secondary">{t(locale, 'promo.subtitle')}</p>
+
+      <AiGateNote gate={gate} locale={locale} testId="promo-gate" />
 
       {result !== null && !result.ok ? (
         <p

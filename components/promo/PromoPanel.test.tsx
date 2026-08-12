@@ -1,8 +1,22 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ProProvider } from '@/components/ProProvider'
+import { aiAccess, type AiAccessState } from '@/lib/ai/quota'
+import type { ProStatus } from '@/lib/stripe/pro'
 import type { MerchResult, PromoResult } from '@/lib/promo/types'
 import { useStudio } from '@/lib/store/studio'
 import { PromoPanel } from './PromoPanel'
+
+const FREE_STATUS: ProStatus = { pro: false, reason: 'free', plan: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }
+
+/** Панель в окружении с известным состоянием доступа: его считает сервер в layout. */
+function renderWithAccess(state: AiAccessState, used = 0) {
+  return render(
+    <ProProvider value={{ status: FREE_STATUS, billingEnabled: true, ai: aiAccess(state, used) }}>
+      <PromoPanel />
+    </ProProvider>,
+  )
+}
 
 const promoResult = { current: { ok: true, mock: true, kinds: ['hero', 'lifestyle', 'macro', 'package'] } as PromoResult }
 const merchResult = { current: { printful: false } as MerchResult }
@@ -97,5 +111,70 @@ describe('PromoPanel', () => {
     const limited = screen.getByTestId('promo-error').textContent ?? ''
     expect(limited).not.toBe('')
     expect(limited).not.toContain('Не получилось собрать серию')
+  })
+})
+
+describe('PromoPanel: гейт AI', () => {
+  beforeEach(() => {
+    promoResult.current = { ok: true, mock: true, kinds: ['hero', 'lifestyle', 'macro', 'package'] }
+    merchResult.current = { printful: false }
+    act(() => {
+      useStudio.getState().resetStudio()
+    })
+  })
+
+  it('гостю кнопки выключены и объяснено, почему, а не молча', () => {
+    renderWithAccess('anonymous')
+    expect(screen.getByTestId('promo-generate').hasAttribute('disabled')).toBe(true)
+    expect(screen.getByTestId('merch-generate').hasAttribute('disabled')).toBe(true)
+    expect(screen.getByTestId('promo-gate').textContent ?? '').not.toBe('')
+    expect(screen.getByTestId('merch-gate')).toBeTruthy()
+    // Гостю предлагать тарифы рано: сначала вход.
+    expect(screen.queryByTestId('promo-gate-pricing')).toBeNull()
+  })
+
+  it('бесплатному аккаунту показывает ссылку на тарифы', () => {
+    renderWithAccess('free')
+    expect(screen.getByTestId('promo-generate').hasAttribute('disabled')).toBe(true)
+    expect(screen.getByTestId('promo-gate-pricing').getAttribute('href')).toBe('/pricing')
+  })
+
+  it('подписчику кнопки открыты, а под панелью честный остаток квоты', () => {
+    renderWithAccess('pro', 4)
+    expect(screen.getByTestId('promo-generate').hasAttribute('disabled')).toBe(false)
+    const note = screen.getByTestId('promo-gate').textContent ?? ''
+    expect(note).toContain('26')
+    expect(note).toContain('30')
+    // Мокапы квоту не тратят, поэтому счётчик под ними не дублируется.
+    expect(screen.queryByTestId('merch-gate')).toBeNull()
+  })
+
+  it('выбранная квота выключает кнопку и говорит об этом', () => {
+    renderWithAccess('pro', 30)
+    expect(screen.getByTestId('promo-generate').hasAttribute('disabled')).toBe(true)
+    expect(screen.getByTestId('promo-gate').textContent ?? '').not.toBe('')
+  })
+
+  it('без ключей это демо-режим: замка нет и строки состояния тоже', () => {
+    renderWithAccess('mock')
+    expect(screen.getByTestId('promo-generate').hasAttribute('disabled')).toBe(false)
+    expect(screen.queryByTestId('promo-gate')).toBeNull()
+  })
+
+  it('после генерации счётчик обновляется остатком из ответа сервера', async () => {
+    promoResult.current = { ok: true, mock: false, images: [{ kind: 'hero', dataUrl: 'data:image/png;base64,AAAA' }], remaining: 17 }
+    renderWithAccess('pro', 4)
+    fireEvent.click(screen.getByTestId('promo-generate'))
+    await waitFor(() => expect(screen.getByTestId('promo-gate').textContent ?? '').toContain('17'))
+  })
+
+  it('отказ по квоте с сервера сразу вешает замок на кнопку', async () => {
+    promoResult.current = { ok: false, error: 'quota' }
+    renderWithAccess('pro', 29)
+    fireEvent.click(screen.getByTestId('promo-generate'))
+    await waitFor(() => expect(screen.getByTestId('promo-error')).toBeTruthy())
+    // Кнопка остаётся выключенной уже не из-за busy, а из-за нулевого остатка.
+    expect(screen.getByTestId('promo-generate').hasAttribute('disabled')).toBe(true)
+    expect(screen.getByTestId('promo-error').textContent ?? '').not.toBe('')
   })
 })

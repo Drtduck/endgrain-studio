@@ -4,6 +4,7 @@ import { useId, useState } from 'react'
 import { Shirt } from 'lucide-react'
 import { createMerchMockupsAction } from '@/app/actions/promo'
 import { Button } from '@/components/ui/button'
+import { AiGateNote, useAiGate } from '@/components/promo/AiGate'
 import { PatternCells } from '@/components/promo/PatternCells'
 import type { BoardModel } from '@/lib/engine'
 import { t } from '@/lib/i18n'
@@ -50,13 +51,18 @@ export function MerchMockups() {
   // null - не спрашивали, поэтому про недостающий ключ ещё ничего не известно.
   const [printful, setPrintful] = useState<boolean | null>(null)
   const [failed, setFailed] = useState(false)
+  // Мокапы входят в Pro, поэтому кнопка живёт по тому же гейту, что и серия фото.
+  const gate = useAiGate()
 
   const run = async (): Promise<void> => {
     setBusy(true)
     setFailed(false)
     try {
       // Мокапы уже нарисованы локально: у сервера спрашиваем ровно одно, есть ли ключ Printful.
-      setPrintful((await createMerchMockupsAction()).printful)
+      const res = await createMerchMockupsAction()
+      // Отказ гейта показываем той же строкой состояния, что и до нажатия:
+      // отдельный алерт «нужен Pro» рядом с замком был бы повтором.
+      setPrintful(res.denied === undefined ? res.printful : null)
     } catch (err) {
       console.error(err)
       setPrintful(null)
@@ -85,13 +91,21 @@ export function MerchMockups() {
             {t(locale, 'merch.openPrintful')}
           </Button>
         ) : null}
-        <Button size="sm" data-testid="merch-generate" disabled={busy} onClick={() => { void run() }}>
+        <Button
+          size="sm"
+          data-testid="merch-generate"
+          disabled={busy || gate.locked}
+          onClick={() => { void run() }}
+        >
           <Shirt data-icon="inline-start" />
           {busy ? t(locale, 'merch.busy') : t(locale, 'merch.generate')}
         </Button>
       </div>
 
       <p className="max-w-[68ch] text-[13px] text-ink-secondary">{t(locale, 'merch.subtitle')}</p>
+
+      {/* Остаток квоты здесь не показываем: мокапы её не тратят, только замок с причиной. */}
+      {gate.locked ? <AiGateNote gate={gate} locale={locale} testId="merch-gate" /> : null}
 
       {failed ? (
         <p

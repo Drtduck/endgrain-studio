@@ -467,6 +467,13 @@ const en: Record<keyof typeof ru, string> = {
   'tabs.promo': 'Promo',
   'aria.promoPanel': 'promo material for this board',
 
+  'ai.gate.anonymous': 'Sign in first: generation costs money and works for Pro subscribers only.',
+  'ai.gate.free': 'Promo tools are part of Pro. The subscription unlocks them and gives you {limit} generations a month.',
+  'ai.gate.quota': 'Monthly quota is used up: all {limit} generations are spent. The counter resets on the 1st.',
+  'ai.gate.unavailable': 'Generation is unavailable right now: the service is not configured. Try later.',
+  'ai.gate.pricing': 'See pricing',
+  'ai.quota': '{remaining} of {limit} generations left this month',
+
   'promo.title': 'Photo series for your shop',
   'promo.subtitle':
     'Four listing shots from the finished board: studio hero, kitchen scene, macro texture and packaging. The render goes to the server, the key stays there.',
@@ -477,6 +484,10 @@ const en: Record<keyof typeof ru, string> = {
   'promo.err.blocked': 'The generator refused this scene under its own rules. Change the pattern or try again.',
   'promo.err.rateLimited': 'Too often. Generation costs money, so each address gets a few series per hour: come back later.',
   'promo.err.tooLarge': 'The pattern is too fine: the render does not fit into the request. Use fewer cells or a smaller board.',
+  'promo.err.anonymous': 'Sign in first: generation costs money and works for Pro subscribers only.',
+  'promo.err.notPro': 'Promo shot generation is part of Pro. Subscribe on the pricing page.',
+  'promo.err.quota': 'The monthly generation quota is used up. A new batch opens on the 1st of next month.',
+  'promo.err.unavailable': 'Generation is unavailable right now: the service is not configured. Try later.',
   'promo.mockNote': 'Appears once Gemini is connected',
   'promo.mockBadge': 'placeholder',
   'promo.needKey': 'Real photos arrive once GEMINI_API_KEY is added to the environment. For now this is the shot layout.',

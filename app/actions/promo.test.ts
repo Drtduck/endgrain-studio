@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { AiVerdict } from '@/lib/ai/entitlements'
 import type { RateLimitVerdict } from '@/lib/promo/rateLimit'
 
 let gemini = true
@@ -7,6 +8,21 @@ let supabase = false
 let user: { id: string } | null = null
 let verdict: RateLimitVerdict = 'ok'
 const take = vi.fn<(key: string, limit: number, now: number) => RateLimitVerdict>(() => verdict)
+
+const GRANT: AiVerdict = { ok: true, userId: 'user-1', period: '2026-08', cost: 1, used: 1, remaining: 29 }
+let aiVerdict: AiVerdict = GRANT
+const release = vi.fn()
+
+// Сам гейт проверяется в lib/ai/entitlements.test.ts: здесь важно только то,
+// что действие его спрашивает, уважает отказ и возвращает резерв при пустой серии.
+vi.mock('@/lib/ai/entitlements', () => ({
+  assertAiAllowed: () => Promise.resolve(aiVerdict),
+  releaseAiQuota: (grant: unknown) => {
+    release(grant)
+    return Promise.resolve()
+  },
+  isAiDemoMode: () => !gemini,
+}))
 
 vi.mock('@/lib/promo/config', () => ({
   GEMINI_API_KEY: 'test-gemini',
@@ -50,6 +66,8 @@ describe('app/actions/promo: серия фото', () => {
     supabase = false
     user = null
     verdict = 'ok'
+    aiVerdict = GRANT
+    release.mockClear()
     take.mockClear()
     vi.unstubAllGlobals()
     vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -103,13 +121,69 @@ describe('app/actions/promo: серия фото', () => {
     expect(await generatePromoShotsAction(INPUT)).toEqual({ ok: false, error: 'rateLimited' })
   })
 
-  it('счётчик получает адрес из x-forwarded-for и обычный лимит для гостя без Supabase', async () => {
+  it('счётчик получает правый адрес цепочки x-forwarded-for и обычный лимит для гостя без Supabase', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(geminiOk()))
     const { generatePromoShotsAction } = await import('./promo')
     await generatePromoShotsAction(INPUT)
     expect(take).toHaveBeenCalledTimes(1)
-    expect(take.mock.calls[0]?.[0]).toBe('203.0.113.7')
+    // Левый элемент цепочки прислал клиент, доверять ему нельзя.
+    expect(take.mock.calls[0]?.[0]).toBe('10.0.0.1')
     expect(take.mock.calls[0]?.[1]).toBe(5)
+  })
+
+  it('без Pro наружу не ходит и отдаёт код отказа', async () => {
+    aiVerdict = { ok: false, reason: 'notPro', remaining: 0 }
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const { generatePromoShotsAction } = await import('./promo')
+    expect(await generatePromoShotsAction(INPUT)).toEqual({ ok: false, error: 'notPro' })
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(release).not.toHaveBeenCalled()
+  })
+
+  it('аноним получает свой код отказа, а не общий сбой', async () => {
+    aiVerdict = { ok: false, reason: 'anonymous', remaining: 0 }
+    vi.stubGlobal('fetch', vi.fn())
+    const { generatePromoShotsAction } = await import('./promo')
+    expect(await generatePromoShotsAction(INPUT)).toEqual({ ok: false, error: 'anonymous' })
+  })
+
+  it('выбранная квота отдаёт quota и ни одного платного запроса', async () => {
+    aiVerdict = { ok: false, reason: 'quota', remaining: 0 }
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const { generatePromoShotsAction } = await import('./promo')
+    expect(await generatePromoShotsAction(INPUT)).toEqual({ ok: false, error: 'quota' })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('удачная серия возвращает остаток квоты и резерв не возвращает', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(geminiOk()))
+    const { generatePromoShotsAction } = await import('./promo')
+    const res = await generatePromoShotsAction(INPUT)
+    if (!res.ok || res.mock) throw new Error('ожидались настоящие кадры')
+    expect(res.remaining).toBe(29)
+    expect(release).not.toHaveBeenCalled()
+  })
+
+  it('серия без единого кадра возвращает списанную квоту обратно', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')))
+    const { generatePromoShotsAction } = await import('./promo')
+    expect(await generatePromoShotsAction(INPUT)).toEqual({ ok: false, error: 'failed' })
+    expect(release).toHaveBeenCalledTimes(1)
+    expect(release).toHaveBeenCalledWith(GRANT)
+  })
+
+  it('одного кадра достаточно, чтобы квота осталась списанной', async () => {
+    let call = 0
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => {
+      call += 1
+      return call === 1 ? Promise.resolve(geminiOk()) : Promise.reject(new Error('network down'))
+    }))
+    const { generatePromoShotsAction } = await import('./promo')
+    const res = await generatePromoShotsAction(INPUT)
+    expect(res.ok).toBe(true)
+    expect(release).not.toHaveBeenCalled()
   })
 
   it('Supabase настроен, а человек не вошёл: лимит жёстче', async () => {
@@ -224,8 +298,24 @@ describe('app/actions/promo: серия фото', () => {
 
 describe('app/actions/promo: мерч', () => {
   beforeEach(() => {
+    gemini = true
     printful = true
+    aiVerdict = { ok: true, userId: 'user-1', period: '2026-08', cost: 0, used: 0, remaining: 30 }
+    release.mockClear()
     vi.unstubAllGlobals()
+  })
+
+  it('без Pro отдаёт причину отказа и ключ Printful не раскрывает', async () => {
+    aiVerdict = { ok: false, reason: 'notPro', remaining: 0 }
+    const { createMerchMockupsAction } = await import('./promo')
+    expect(await createMerchMockupsAction()).toEqual({ printful: false, denied: 'notPro' })
+  })
+
+  it('без ключа Gemini вкладка в демо-режиме и гейта нет', async () => {
+    gemini = false
+    aiVerdict = { ok: false, reason: 'anonymous', remaining: 0 }
+    const { createMerchMockupsAction } = await import('./promo')
+    expect(await createMerchMockupsAction()).toEqual({ printful: true })
   })
 
   it('без ключа Printful честно отвечает printful: false', async () => {

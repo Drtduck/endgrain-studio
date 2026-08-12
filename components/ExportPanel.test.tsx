@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProProvider } from '@/components/ProProvider'
+import { aiAccess } from '@/lib/ai/quota'
 import { ExportPanel } from './ExportPanel'
 import { useStudio } from '@/lib/store/studio'
 
@@ -54,6 +55,7 @@ describe('ExportPanel', () => {
         value={{
           status: { pro: false, reason: 'free', plan: null, currentPeriodEnd: null, cancelAtPeriodEnd: false },
           billingEnabled: true,
+          ai: aiAccess('mock'),
         }}
       >
         <ExportPanel />

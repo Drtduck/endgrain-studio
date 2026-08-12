@@ -58,8 +58,9 @@ export async function saveProjectAction(name: string, design: unknown): Promise<
 
   const sb = await getSupabaseServer()
 
-  // Единственный гейт Pro, который считается на сервере: из devtools его не обойти.
-  // Без кассы getProStatus() отдаёт pro: true, и лимита не существует вовсе.
+  // Гейт Pro считается на сервере: из devtools его не обойти. Ненастроенный
+  // Stripe больше не отдаёт pro: true, поэтому лимит работает и без кассы,
+  // а открыть его можно только рубильником или списком адресов (lib/stripe/allowlist).
   const { pro } = await getProStatus()
   if (!pro) {
     // head: true не тянет строки, RLS ограничивает счёт своими проектами.

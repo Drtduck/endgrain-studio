@@ -1,6 +1,7 @@
 'use server'
 
 import { headers } from 'next/headers'
+import { assertAiAllowed, isAiDemoMode, releaseAiQuota } from '@/lib/ai/entitlements'
 import { GEMINI_API_KEY, isGeminiConfigured, isPrintfulConfigured } from '@/lib/promo/config'
 import { PROMO_SHOTS, type MerchResult, type PromoImage, type PromoResult, type PromoShotKind } from '@/lib/promo/types'
 import { shotPrompt } from '@/lib/promo/prompts'
@@ -80,8 +81,11 @@ async function requestShot(kind: PromoShotKind, prompt: string, base64: string):
  * Ключ читается только здесь, на сервере: в клиентский бандл он не попадает никогда.
  * Без ключа возвращаем mock: true, и вкладка рисует собственные заглушки поверх рендера доски.
  *
- * Действие публичное и платное, поэтому до первого запроса наружу оно проходит счётчик
- * из lib/promo/rateLimit: личный лимит на адрес плюс общий дневной потолок.
+ * Два рубежа, и оба обязательны. Первый - счётчик из lib/promo/rateLimit: он в памяти
+ * процесса, стоит ноль и режет флуд до похода в базу. Второй - assertAiAllowed: сессия,
+ * Pro и месячная квота в Postgres, то есть единственная защита, которую нельзя ни
+ * подделать заголовком, ни обнулить перезапуском инстанса.
+ *
  * maxDuration для этого действия задан на странице, которая его вызывает (app/page.tsx):
  * из файла с 'use server' Next разрешает экспортировать только асинхронные функции.
  */
@@ -89,10 +93,12 @@ export async function generatePromoShotsAction(input: unknown): Promise<PromoRes
   const parsed = promoShotsSchema.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'invalid' }
 
+  // Ключа нет: наружу никто не идёт, платить не за что, поэтому и квоту не трогаем.
   if (!isGeminiConfigured()) return { ok: true, mock: true, kinds: PROMO_SHOTS }
 
   const head = await headers()
-  // Аккаунты в проекте есть, а человек не вошёл: генерацию не запрещаем, но лимит жёстче.
+  // Аккаунты в проекте есть, а человек не вошёл: лимит жёстче, и до платного
+  // вызова он всё равно не дойдёт, но пусть флуд отвалится подешевле.
   const anonymous = isSupabaseConfigured() && (await getCurrentUser()) === null
   const verdict = promoLimiter.take(
     clientIp(head.get('x-forwarded-for'), head.get('x-real-ip')),
@@ -100,6 +106,11 @@ export async function generatePromoShotsAction(input: unknown): Promise<PromoRes
     Date.now(),
   )
   if (verdict !== 'ok') return { ok: false, error: 'rateLimited' }
+
+  // Квота резервируется здесь, до обращения к модели: иначе параллельные запросы
+  // прочитали бы один и тот же остаток и все прошли бы. Возврат ниже.
+  const grant = await assertAiAllowed('promoShots')
+  if (!grant.ok) return { ok: false, error: grant.reason }
 
   const base64 = parsed.data.boardPng.slice(parsed.data.boardPng.indexOf(',') + 1)
 
@@ -110,7 +121,10 @@ export async function generatePromoShotsAction(input: unknown): Promise<PromoRes
   )
 
   const images = outcomes.flatMap((outcome) => (typeof outcome === 'string' ? [] : [outcome.image]))
-  if (images.length > 0) return { ok: true, mock: false, images }
+  if (images.length > 0) return { ok: true, mock: false, images, remaining: grant.remaining }
+
+  // Ни одного кадра: серия не состоялась, значит и списывать не за что.
+  await releaseAiQuota(grant)
   return { ok: false, error: outcomes.every((outcome) => outcome === 'blocked') ? 'blocked' : 'failed' }
 }
 
@@ -119,7 +133,14 @@ export async function generatePromoShotsAction(input: unknown): Promise<PromoRes
  * единственное, чего клиент не может узнать без сервера, это наличие ключа Printful:
  * от него зависит, показывать ли кнопку «Открыть в Printful».
  * Полноценная генерация мокапов на стороне Printful отложена, причины в MerchResult.
+ *
+ * Гейт здесь стоит ради правила «промо-инструменты входят в Pro», а не ради денег:
+ * квоту мокапы не тратят (стоимость 0 в AI_FEATURE_COST), потому что тратить нечего.
  */
 export async function createMerchMockupsAction(): Promise<MerchResult> {
+  if (!isAiDemoMode()) {
+    const grant = await assertAiAllowed('merchMockups')
+    if (!grant.ok) return { printful: false, denied: grant.reason }
+  }
   return { printful: isPrintfulConfigured() }
 }
