@@ -10,6 +10,7 @@ import { PromoMockShot } from '@/components/promo/PromoMockShot'
 import { renderBoardSvg, safeFileName } from '@/lib/export'
 import { t } from '@/lib/i18n'
 import { describeBoard } from '@/lib/promo/describe'
+import { MAX_PNG_CHARS } from '@/lib/promo/schema'
 import { PROMO_SHOT_META, type PromoResult, type PromoShotKind } from '@/lib/promo/types'
 import { useDerived } from '@/lib/store/derived'
 import { selectDesign, useStudio } from '@/lib/store/studio'
@@ -36,8 +37,10 @@ export function PhotoSeries() {
   const imageByKind = new Map<PromoShotKind, string>(
     result !== null && result.ok && !result.mock ? result.images.map((image) => [image.kind, image.dataUrl]) : [],
   )
-  const failed = result !== null && !result.ok
-  const mockShown = imageByKind.size === 0
+  // Три разных состояния, и путать их нельзя: пока не нажимали, врать про недостающий
+  // ключ нечестно, а после настоящей генерации незачем показывать текст про заглушки.
+  const note: 'idle' | 'needKey' | 'ready' =
+    result === null || !result.ok ? 'idle' : result.mock ? 'needKey' : 'ready'
 
   const run = async (): Promise<void> => {
     setBusy(true)
@@ -47,6 +50,12 @@ export function PhotoSeries() {
       const { svgToPngBlob } = await import('@/lib/export/png')
       const rendered = renderBoardSvg(model, { maxPx: REFERENCE_PX })
       const boardPng = await blobToDataUrl(await svgToPngBlob(rendered, { scale: 1 }))
+      // Тело серверного действия ограничено, и упереться в него лучше здесь, внятной
+      // строкой про слишком дробный узор, чем исключением из недр Next на проде.
+      if (boardPng.length > MAX_PNG_CHARS) {
+        setResult({ ok: false, error: 'tooLarge' })
+        return
+      }
       setResult(await generatePromoShotsAction({ boardPng, description: describeBoard(design, model).text }))
     } catch (err) {
       // Причина уходит в консоль браузера, пользователю показываем одну человеческую строку.
@@ -75,13 +84,13 @@ export function PhotoSeries() {
 
       <p className="max-w-[68ch] text-[13px] text-ink-secondary">{t(locale, 'promo.subtitle')}</p>
 
-      {failed ? (
+      {result !== null && !result.ok ? (
         <p
           data-testid="promo-error"
           role="alert"
           className="rounded-md border border-error-border bg-error-soft px-3 py-[11px] text-[13px] font-semibold text-error-text"
         >
-          {t(locale, 'promo.error')}
+          {t(locale, `promo.err.${result.error}`)}
         </p>
       ) : null}
 
@@ -125,7 +134,7 @@ export function PhotoSeries() {
       </ul>
 
       <p data-testid="promo-note" className="text-xs text-ink-muted">
-        {mockShown ? t(locale, 'promo.needKey') : t(locale, 'promo.ready')}
+        {t(locale, note === 'idle' ? 'promo.idle' : note === 'needKey' ? 'promo.needKey' : 'promo.ready')}
       </p>
     </section>
   )

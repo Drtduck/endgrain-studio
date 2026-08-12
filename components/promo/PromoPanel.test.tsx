@@ -5,7 +5,7 @@ import { useStudio } from '@/lib/store/studio'
 import { PromoPanel } from './PromoPanel'
 
 const promoResult = { current: { ok: true, mock: true, kinds: ['hero', 'lifestyle', 'macro', 'package'] } as PromoResult }
-const merchResult = { current: { ok: true, source: 'local', printful: false } as MerchResult }
+const merchResult = { current: { printful: false } as MerchResult }
 
 vi.mock('@/app/actions/promo', () => ({
   generatePromoShotsAction: () => Promise.resolve(promoResult.current),
@@ -18,7 +18,7 @@ vi.mock('@/lib/export/png', () => ({ svgToPngBlob: () => Promise.resolve(new Blo
 describe('PromoPanel', () => {
   beforeEach(() => {
     promoResult.current = { ok: true, mock: true, kinds: ['hero', 'lifestyle', 'macro', 'package'] }
-    merchResult.current = { ok: true, source: 'local', printful: false }
+    merchResult.current = { printful: false }
     act(() => {
       useStudio.getState().resetStudio()
     })
@@ -36,18 +36,36 @@ describe('PromoPanel', () => {
     }
   })
 
-  it('без ключа Gemini под галереей стоит честная подпись про ключ', () => {
+  it('до нажатия кнопки обе панели молчат про недостающие ключи', () => {
     render(<PromoPanel />)
-    expect(screen.getByTestId('promo-note').textContent).toContain('GEMINI_API_KEY')
+    expect(screen.getByTestId('promo-note').textContent).not.toContain('GEMINI_API_KEY')
+    expect(screen.getByTestId('merch-note').textContent).not.toContain('PRINTFUL_API_KEY')
   })
 
-  it('без ключа Printful кнопки «Открыть в Printful» нет', () => {
+  it('мок-ответ про ключ Gemini появляется только после генерации', async () => {
     render(<PromoPanel />)
+    fireEvent.click(screen.getByTestId('promo-generate'))
+    await waitFor(() => expect(screen.getByTestId('promo-note').textContent).toContain('GEMINI_API_KEY'))
+  })
+
+  it('после настоящей серии подписи про ключ нет', async () => {
+    promoResult.current = { ok: true, mock: false, images: [{ kind: 'hero', dataUrl: 'data:image/png;base64,AAAA' }] }
+    render(<PromoPanel />)
+    fireEvent.click(screen.getByTestId('promo-generate'))
+    await waitFor(() => expect(screen.getByTestId('promo-shot-hero').querySelector('img')).toBeTruthy())
+    expect(screen.getByTestId('promo-note').textContent).not.toContain('GEMINI_API_KEY')
+  })
+
+  it('без ключа Printful кнопки «Открыть в Printful» нет, а после ответа появляется подпись про ключ', async () => {
+    render(<PromoPanel />)
+    expect(screen.queryByTestId('merch-printful')).toBeNull()
+    fireEvent.click(screen.getByTestId('merch-generate'))
+    await waitFor(() => expect(screen.getByTestId('merch-note').textContent).toContain('PRINTFUL_API_KEY'))
     expect(screen.queryByTestId('merch-printful')).toBeNull()
   })
 
   it('ответ с ключом Printful показывает кнопку и убирает предупреждение', async () => {
-    merchResult.current = { ok: true, source: 'local', printful: true }
+    merchResult.current = { printful: true }
     render(<PromoPanel />)
     fireEvent.click(screen.getByTestId('merch-generate'))
     await waitFor(() => expect(screen.getByTestId('merch-printful')).toBeTruthy())
@@ -70,10 +88,14 @@ describe('PromoPanel', () => {
     expect(screen.getByTestId('promo-shot-macro').querySelector('img')).toBeNull()
   })
 
-  it('ошибка серии показывает алерт', async () => {
-    promoResult.current = { ok: false, error: 'failed' }
+  it('ошибка серии показывает алерт с текстом своего кода', async () => {
+    promoResult.current = { ok: false, error: 'rateLimited' }
     render(<PromoPanel />)
     fireEvent.click(screen.getByTestId('promo-generate'))
     await waitFor(() => expect(screen.getByTestId('promo-error')).toBeTruthy())
+    // Лимит и сетевой сбой это разные тексты: человек должен понять, ждать ему или чинить.
+    const limited = screen.getByTestId('promo-error').textContent ?? ''
+    expect(limited).not.toBe('')
+    expect(limited).not.toContain('Не получилось собрать серию')
   })
 })

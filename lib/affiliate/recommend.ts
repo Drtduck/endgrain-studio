@@ -32,6 +32,15 @@ export const MANY_STRIPS = 12
 
 const PRODUCT_BY_ID: ReadonlyMap<string, AffiliateItem> = new Map(PRODUCTS.map((item) => [item.id, item]))
 
+/**
+ * Все id, на которые ссылаются правила. Экспортируется ради теста: он сверяет список
+ * с products.json напрямую и ловит опечатку в правиле, которое сегодня не срабатывает
+ * ни на одном тестовом проекте.
+ */
+export function ruleProductIds(): readonly string[] {
+  return RULES.flatMap((rule) => rule.ids)
+}
+
 interface Rule {
   readonly reason: RecommendReason
   readonly ids: readonly string[]

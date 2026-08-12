@@ -24,7 +24,13 @@ export interface PromoImage {
   readonly dataUrl: string
 }
 
-export type PromoError = 'invalid' | 'failed'
+/**
+ * Коды, а не готовые фразы: текст выбирает клиент по своей локали.
+ * blocked это отказ модели по своим правилам (ответ 200 без картинки), он лечится
+ * другим узором, а не повтором, поэтому от сетевого failed отделён намеренно.
+ * tooLarge ловится ещё на клиенте, до отправки тела.
+ */
+export type PromoError = 'invalid' | 'failed' | 'blocked' | 'rateLimited' | 'tooLarge'
 
 /**
  * mock: true означает «ключа нет, рисуем локальные заглушки на клиенте».
@@ -36,13 +42,16 @@ export type PromoResult =
   | { readonly ok: true; readonly mock: false; readonly images: readonly PromoImage[] }
   | { readonly ok: false; readonly error: PromoError }
 
-/** Товар мерча: силуэт рисуем сами, id продукта нужен Printful. */
+/** Товар мерча: силуэт рисуем сами, id продукта пригодится будущему флоу Printful. */
 export type MerchProductId = 'tshirt' | 'mug' | 'poster' | 'apron'
 
 export interface MerchProduct {
   readonly id: MerchProductId
   readonly titleKey: MessageKey
-  /** id каталога Printful: 71 футболка Bella+Canvas 3001, 19 кружка, 1 постер, 186 фартук. */
+  /**
+   * id каталога Printful: 71 футболка Bella+Canvas 3001, 19 кружка, 1 постер, 186 фартук.
+   * Сейчас не используется: генерация мокапов на стороне Printful отложена, см. MerchResult.
+   */
   readonly printfulProductId: number
 }
 
@@ -53,18 +62,16 @@ export const MERCH_PRODUCTS: readonly MerchProduct[] = [
   { id: 'apron', titleKey: 'merch.apron', printfulProductId: 186 },
 ]
 
-export interface MerchMockup {
-  readonly id: MerchProductId
-  readonly url: string
-}
-
-export type MerchError = 'invalid' | 'failed'
-
 /**
- * source: 'local' - показываем собственные SVG-мокапы на силуэтах.
- * printful: true - ключ есть, значит кнопка «Открыть в Printful» имеет смысл.
+ * Мокапы мерча рисуются локально всегда, и это единственное, что действие сообщает:
+ * есть ли ключ Printful, то есть имеет ли смысл кнопка «Открыть в Printful».
+ *
+ * Полный флоу Mockup Generator сюда сознательно не заведён: он требует публичного
+ * https-адреса макета (Printful тянет файл со своей стороны, data:URI не примет),
+ * создания задачи с variant_ids и format, а затем поллинга task_key до готовности.
+ * Ни хостинга макета, ни очереди у нас пока нет, поэтому этап отложен, и писать
+ * заведомо нерабочую ветку в код смысла нет.
  */
-export type MerchResult =
-  | { readonly ok: true; readonly source: 'local'; readonly printful: boolean }
-  | { readonly ok: true; readonly source: 'printful'; readonly mockups: readonly MerchMockup[] }
-  | { readonly ok: false; readonly error: MerchError }
+export interface MerchResult {
+  readonly printful: boolean
+}

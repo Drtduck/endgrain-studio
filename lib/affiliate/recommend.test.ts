@@ -3,7 +3,7 @@ import { calcProject } from '@/lib/calc'
 import { compile, type Design } from '@/lib/engine'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import { PRODUCTS } from './index'
-import { MANY_CROSSCUTS, MAX_RECOMMENDATIONS, WIDE_GLUEUP_MM, recommendProducts, type RecommendInput } from './recommend'
+import { MANY_CROSSCUTS, MAX_RECOMMENDATIONS, WIDE_GLUEUP_MM, recommendProducts, ruleProductIds, type RecommendInput } from './recommend'
 
 function inputFrom(design: Design): RecommendInput {
   const model = compile(design)
@@ -74,11 +74,17 @@ describe('recommendProducts', () => {
   })
 
   it('все id из правил существуют в products.json', () => {
+    // Сверяем сами правила, а не выдачу: иначе тест проверял бы только те ветки,
+    // которые сработали на тестовом проекте, и опечатку в редком правиле пропустил бы.
     const known = new Set(PRODUCTS.map((p) => p.id))
-    // Прогоняем через заведомо «богатый» проект, чтобы сработали все правила разом.
-    const list = ids(inputFrom({ ...makeCheckerboard({ cols: 20 }), planerWidthMm: 10 }))
-    expect(list.length).toBeGreaterThan(0)
-    for (const id of list) expect(known.has(id)).toBe(true)
+    const rules = ruleProductIds()
+    expect(rules.length).toBeGreaterThan(0)
+    for (const id of rules) expect(known.has(id), id).toBe(true)
+  })
+
+  it('один товар не повторяется в двух правилах', () => {
+    const rules = ruleProductIds()
+    expect(new Set(rules).size).toBe(rules.length)
   })
 
   it('чистая функция: одинаковый вход даёт одинаковый выход', () => {

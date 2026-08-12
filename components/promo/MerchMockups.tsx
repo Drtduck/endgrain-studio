@@ -7,12 +7,11 @@ import { Button } from '@/components/ui/button'
 import { PatternCells } from '@/components/promo/PatternCells'
 import type { BoardModel } from '@/lib/engine'
 import { t } from '@/lib/i18n'
-import { describeBoard } from '@/lib/promo/describe'
 import { fitPatternCover } from '@/lib/promo/fit'
 import { MERCH_SILHOUETTE_BY_ID, type MerchSilhouette } from '@/lib/promo/merch'
-import { MERCH_PRODUCTS, type MerchProduct, type MerchResult } from '@/lib/promo/types'
+import { MERCH_PRODUCTS, type MerchProduct } from '@/lib/promo/types'
 import { useDerived } from '@/lib/store/derived'
-import { selectDesign, useStudio } from '@/lib/store/studio'
+import { useStudio } from '@/lib/store/studio'
 
 const PRINTFUL_GENERATOR_URL = 'https://www.printful.com/dashboard/generator'
 
@@ -46,24 +45,22 @@ function LocalMockup({ silhouette, model, label }: { silhouette: MerchSilhouette
 
 export function MerchMockups() {
   const locale = useStudio((s) => s.locale)
-  const design = useStudio(selectDesign)
   const { model } = useDerived()
   const [busy, setBusy] = useState(false)
-  const [result, setResult] = useState<MerchResult | null>(null)
-
-  const remote = new Map(result !== null && result.ok && result.source === 'printful' ? result.mockups.map((m) => [m.id, m.url]) : [])
-  // Ключ Printful виден только серверу, поэтому «есть ли он» узнаём из ответа действия.
-  const printful = result !== null && result.ok && (result.source === 'printful' || result.printful)
-  const failed = result !== null && !result.ok
+  // null - не спрашивали, поэтому про недостающий ключ ещё ничего не известно.
+  const [printful, setPrintful] = useState<boolean | null>(null)
+  const [failed, setFailed] = useState(false)
 
   const run = async (): Promise<void> => {
     setBusy(true)
-    setResult(null)
+    setFailed(false)
     try {
-      setResult(await createMerchMockupsAction({ description: describeBoard(design, model).text }))
+      // Мокапы уже нарисованы локально: у сервера спрашиваем ровно одно, есть ли ключ Printful.
+      setPrintful((await createMerchMockupsAction()).printful)
     } catch (err) {
       console.error(err)
-      setResult({ ok: false, error: 'failed' })
+      setPrintful(null)
+      setFailed(true)
     } finally {
       setBusy(false)
     }
@@ -78,7 +75,7 @@ export function MerchMockups() {
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-display text-[17px] font-semibold">{t(locale, 'merch.title')}</h2>
         <div className="flex-1" />
-        {printful ? (
+        {printful === true ? (
           <Button
             size="sm"
             variant="outline"
@@ -109,7 +106,6 @@ export function MerchMockups() {
       <ul data-testid="merch-gallery" className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(180px,1fr))]">
         {MERCH_PRODUCTS.map((product: MerchProduct) => {
           const silhouette = MERCH_SILHOUETTE_BY_ID.get(product.id)
-          const url = remote.get(product.id)
           const label = t(locale, product.titleKey)
           return (
             <li
@@ -118,11 +114,7 @@ export function MerchMockups() {
               className="flex flex-col gap-2 overflow-hidden rounded-lg border border-line-subtle bg-surface-raised p-3 shadow-sm"
             >
               <div className="rounded-md bg-canvas p-2">
-                {url === undefined ? (
-                  silhouette === undefined ? null : <LocalMockup silhouette={silhouette} model={model} label={label} />
-                ) : (
-                  <img src={url} alt={label} className="block h-auto w-full" />
-                )}
+                {silhouette === undefined ? null : <LocalMockup silhouette={silhouette} model={model} label={label} />}
               </div>
               <span className="text-sm font-semibold">{label}</span>
             </li>
@@ -131,7 +123,7 @@ export function MerchMockups() {
       </ul>
 
       <p data-testid="merch-note" className="text-xs text-ink-muted">
-        {printful ? t(locale, 'merch.localNote') : t(locale, 'merch.needKey')}
+        {t(locale, printful === null ? 'merch.idle' : printful ? 'merch.localNote' : 'merch.needKey')}
       </p>
     </section>
   )

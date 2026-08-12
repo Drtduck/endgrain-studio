@@ -1,13 +1,19 @@
 'use server'
 
-import { GEMINI_API_KEY, PRINTFUL_API_KEY, isGeminiConfigured, isPrintfulConfigured } from '@/lib/promo/config'
-import { MERCH_PRODUCTS, PROMO_SHOTS, type MerchMockup, type MerchResult, type PromoImage, type PromoResult } from '@/lib/promo/types'
+import { headers } from 'next/headers'
+import { GEMINI_API_KEY, isGeminiConfigured, isPrintfulConfigured } from '@/lib/promo/config'
+import { PROMO_SHOTS, type MerchResult, type PromoImage, type PromoResult, type PromoShotKind } from '@/lib/promo/types'
 import { shotPrompt } from '@/lib/promo/prompts'
-import { merchSchema, promoShotsSchema } from '@/lib/promo/schema'
+import { promoShotsSchema } from '@/lib/promo/schema'
+import { PER_IP_PER_HOUR, PER_IP_PER_HOUR_ANON, clientIp, promoLimiter } from '@/lib/promo/rateLimit'
+import { isSupabaseConfigured } from '@/lib/supabase/config'
+import { getCurrentUser } from '@/lib/supabase/session'
 
 const GEMINI_MODEL = 'gemini-2.5-flash-image'
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
-const PRINTFUL_API = 'https://api.printful.com'
+
+/** Картинка иногда рисуется долго, но висеть до бесконечности запрос не имеет права. */
+const REQUEST_TIMEOUT_MS = 30_000
 
 interface GeminiPart {
   readonly inlineData?: { readonly mimeType?: string; readonly data?: string }
@@ -15,6 +21,7 @@ interface GeminiPart {
 }
 interface GeminiResponse {
   readonly candidates?: readonly { readonly content?: { readonly parts?: readonly GeminiPart[] } }[]
+  readonly error?: { readonly status?: string; readonly code?: number }
 }
 
 /** Первая картинка из ответа. Gemini кладёт рядом с ней текст, его молча выбрасываем. */
@@ -28,10 +35,55 @@ function firstImage(body: GeminiResponse): string | null {
   return null
 }
 
+/** Что вышло с одним кадром: картинка, отказ модели по своим правилам или сбой. */
+type ShotOutcome = { readonly kind: 'image'; readonly image: PromoImage } | 'blocked' | 'failed'
+
+async function requestShot(kind: PromoShotKind, prompt: string, base64: string): Promise<ShotOutcome> {
+  try {
+    const res = await fetch(GEMINI_URL, {
+      method: 'POST',
+      headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          { role: 'user', parts: [{ text: prompt }, { inlineData: { mimeType: 'image/png', data: base64 } }] },
+        ],
+      }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    })
+    if (!res.ok) {
+      // В лог уходит только статус и код ошибки: ни тела ответа, ни тем более ключа.
+      let code = ''
+      try {
+        code = ((await res.json()) as GeminiResponse).error?.status ?? ''
+      } catch {
+        code = ''
+      }
+      console.error(`gemini ${kind}: HTTP ${res.status}${code === '' ? '' : ` ${code}`}`)
+      return 'failed'
+    }
+    const body = (await res.json()) as GeminiResponse
+    const dataUrl = firstImage(body)
+    if (dataUrl !== null) return { kind: 'image', image: { kind, dataUrl } }
+    // 200 без единого кандидата это отказ модели по своим правилам, а не сбой связи.
+    console.error(`gemini ${kind}: ответ без картинки`)
+    return (body.candidates?.length ?? 0) === 0 ? 'blocked' : 'failed'
+  } catch (err) {
+    // Таймаут, обрыв сети или битый JSON: кадр теряем, серию нет.
+    console.error(`gemini ${kind}: ${err instanceof Error ? err.name : 'unknown error'}`)
+    return 'failed'
+  }
+}
+
 /**
  * Серия продуктовых кадров через Gemini (модель gemini-2.5-flash-image, она же Nano Banana).
  * Ключ читается только здесь, на сервере: в клиентский бандл он не попадает никогда.
  * Без ключа возвращаем mock: true, и вкладка рисует собственные заглушки поверх рендера доски.
+ *
+ * Действие публичное и платное, поэтому до первого запроса наружу оно проходит счётчик
+ * из lib/promo/rateLimit: личный лимит на адрес плюс общий дневной потолок.
+ * maxDuration для этого действия задан на странице, которая его вызывает (app/page.tsx):
+ * из файла с 'use server' Next разрешает экспортировать только асинхронные функции.
  */
 export async function generatePromoShotsAction(input: unknown): Promise<PromoResult> {
   const parsed = promoShotsSchema.safeParse(input)
@@ -39,82 +91,35 @@ export async function generatePromoShotsAction(input: unknown): Promise<PromoRes
 
   if (!isGeminiConfigured()) return { ok: true, mock: true, kinds: PROMO_SHOTS }
 
+  const head = await headers()
+  // Аккаунты в проекте есть, а человек не вошёл: генерацию не запрещаем, но лимит жёстче.
+  const anonymous = isSupabaseConfigured() && (await getCurrentUser()) === null
+  const verdict = promoLimiter.take(
+    clientIp(head.get('x-forwarded-for'), head.get('x-real-ip')),
+    anonymous ? PER_IP_PER_HOUR_ANON : PER_IP_PER_HOUR,
+    Date.now(),
+  )
+  if (verdict !== 'ok') return { ok: false, error: 'rateLimited' }
+
   const base64 = parsed.data.boardPng.slice(parsed.data.boardPng.indexOf(',') + 1)
 
-  try {
-    // Четыре кадра параллельно: последовательно это минута ожидания на пустом экране.
-    // Упавший кадр не роняет серию, он просто не попадает в галерею.
-    const settled = await Promise.all(
-      PROMO_SHOTS.map(async (kind): Promise<PromoImage | null> => {
-        const res = await fetch(GEMINI_URL, {
-          method: 'POST',
-          headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [
-                  { text: shotPrompt(kind, parsed.data.description) },
-                  { inlineData: { mimeType: 'image/png', data: base64 } },
-                ],
-              },
-            ],
-          }),
-          cache: 'no-store',
-        })
-        if (!res.ok) return null
-        const dataUrl = firstImage((await res.json()) as GeminiResponse)
-        return dataUrl === null ? null : { kind, dataUrl }
-      }),
-    )
-    const images = settled.filter((image): image is PromoImage => image !== null)
-    if (images.length === 0) return { ok: false, error: 'failed' }
-    return { ok: true, mock: false, images }
-  } catch {
-    // Сеть упала или Gemini недоступен: пользователю честная ошибка, а не белый экран.
-    return { ok: false, error: 'failed' }
-  }
-}
+  // Четыре кадра параллельно: последовательно это минута ожидания на пустом экране.
+  // Каждый кадр ловит свои ошибки сам, поэтому один обрыв не выбрасывает три оплаченных.
+  const outcomes = await Promise.all(
+    PROMO_SHOTS.map((kind) => requestShot(kind, shotPrompt(kind, parsed.data.description), base64)),
+  )
 
-interface PrintfulTask {
-  readonly result?: {
-    readonly status?: string
-    readonly mockups?: readonly { readonly mockup_url?: string }[]
-  }
+  const images = outcomes.flatMap((outcome) => (typeof outcome === 'string' ? [] : [outcome.image]))
+  if (images.length > 0) return { ok: true, mock: false, images }
+  return { ok: false, error: outcomes.every((outcome) => outcome === 'blocked') ? 'blocked' : 'failed' }
 }
 
 /**
- * Мокапы мерча через Printful Mockup Generator.
- * Printful тянет картинку узора по публичному https-адресу со своей стороны, поэтому
- * без такого адреса даже с ключом честнее показать собственные силуэты, чем врать ошибкой.
- * Флаг printful в ответе включает кнопку «Открыть в Printful»: без ключа ей некуда вести.
+ * Мокапы мерча. Силуэты и узор рисует клиент сам, наружу не ходит никто, поэтому
+ * единственное, чего клиент не может узнать без сервера, это наличие ключа Printful:
+ * от него зависит, показывать ли кнопку «Открыть в Printful».
+ * Полноценная генерация мокапов на стороне Printful отложена, причины в MerchResult.
  */
-export async function createMerchMockupsAction(input: unknown): Promise<MerchResult> {
-  const parsed = merchSchema.safeParse(input)
-  if (!parsed.success) return { ok: false, error: 'invalid' }
-
-  if (!isPrintfulConfigured()) return { ok: true, source: 'local', printful: false }
-
-  const patternUrl = parsed.data.patternUrl
-  if (patternUrl === undefined) return { ok: true, source: 'local', printful: true }
-
-  try {
-    const mockups: MerchMockup[] = []
-    for (const product of MERCH_PRODUCTS) {
-      const res = await fetch(`${PRINTFUL_API}/mockup-generator/create-task/${product.printfulProductId}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${PRINTFUL_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files: [{ placement: 'front', image_url: patternUrl, position: null }] }),
-        cache: 'no-store',
-      })
-      if (!res.ok) continue
-      const body = (await res.json()) as PrintfulTask
-      const url = body.result?.mockups?.[0]?.mockup_url
-      if (typeof url === 'string' && url.length > 0) mockups.push({ id: product.id, url })
-    }
-    if (mockups.length === 0) return { ok: true, source: 'local', printful: true }
-    return { ok: true, source: 'printful', mockups }
-  } catch {
-    return { ok: false, error: 'failed' }
-  }
+export async function createMerchMockupsAction(): Promise<MerchResult> {
+  return { printful: isPrintfulConfigured() }
 }
