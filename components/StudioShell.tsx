@@ -1,5 +1,6 @@
 'use client'
 
+import { AccountButton } from '@/components/AccountButton'
 import { Board3DPanel } from '@/components/Board3DPanel'
 import { BoardCanvas } from '@/components/BoardCanvas'
 import { BoardSettings } from '@/components/BoardSettings'
@@ -12,6 +13,7 @@ import { HistoryControls } from '@/components/HistoryControls'
 import { LocaleToggle } from '@/components/LocaleToggle'
 import { PanelInspector } from '@/components/PanelInspector'
 import { PhotoImport } from '@/components/PhotoImport'
+import { ProjectsPanel } from '@/components/ProjectsPanel'
 import { RowInspector } from '@/components/RowInspector'
 import { SpeciesPalette } from '@/components/SpeciesPalette'
 import { StudioTabs } from '@/components/StudioTabs'
@@ -24,7 +26,7 @@ import { useStudio, type StudioView } from '@/lib/store/studio'
 import type { UnitSystem } from '@/lib/units'
 import { cn } from '@/lib/utils'
 
-const FULL_WIDTH: readonly StudioView[] = ['templates', 'generate', 'photo']
+const FULL_WIDTH: readonly StudioView[] = ['templates', 'generate', 'photo', 'projects']
 
 export function StudioShell() {
   const locale = useStudio((s) => s.locale)
@@ -73,6 +75,8 @@ export function StudioShell() {
 
         <LocaleToggle locale={locale} onChange={setLocale} />
 
+        <AccountButton />
+
         <Separator orientation="vertical" className="h-6" />
 
         <HistoryControls />
@@ -80,7 +84,15 @@ export function StudioShell() {
 
       <main className="mx-auto flex max-w-[1440px] flex-col gap-6 px-4 py-4">
         {FULL_WIDTH.includes(view) ? (
-          view === 'templates' ? <TemplateGallery /> : view === 'generate' ? <GeneratorPanel /> : <PhotoImport />
+          view === 'templates' ? (
+            <TemplateGallery />
+          ) : view === 'generate' ? (
+            <GeneratorPanel />
+          ) : view === 'photo' ? (
+            <PhotoImport />
+          ) : (
+            <ProjectsPanel />
+          )
         ) : (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,236px)_minmax(0,1fr)_minmax(0,268px)]">
             <div className="flex min-w-0 flex-col gap-4 overflow-auto lg:order-2">
