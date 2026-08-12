@@ -14,10 +14,7 @@ test('попап обратной связи открывается и вали�
   await page.getByTestId('feedback-text').fill('не хватает бука в палитре')
   await expect(page.getByTestId('feedback-counter')).toContainText('25')
   await expect(page.getByTestId('feedback-submit')).toBeEnabled()
-
-  // Отправка: не фиксируем конкретный текст результата, потому что в CI Supabase
-  // не настроен и ответ будет feedback.errorDisabled, а не успех.
-  await page.getByTestId('feedback-submit').click()
-  const result = page.getByTestId('feedback-sent').or(page.getByRole('alert'))
-  await expect(result).toBeVisible()
+  // Клик по отправке сознательно не делаем: локально .env.local настоящий, и клик
+  // ушёл бы настоящей строкой в прод-таблицу обратной связи. Достаточно проверить
+  // попап, валидацию пустого текста и счётчик - это и делает CI на каждом прогоне.
 })

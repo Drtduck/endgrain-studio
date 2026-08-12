@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test'
 
+// Требует живого Supabase (см. README, раздел "Переменные окружения"). После прогона
+// с E2E_AUTH=1 удалите тестового пользователя, созданного сценарием регистрации,
+// из auth.users в панели Supabase или через SQL - иначе прод-таблица засоряется.
 const enabled = process.env['E2E_AUTH'] === '1'
 
 test.describe('аккаунт', () => {
