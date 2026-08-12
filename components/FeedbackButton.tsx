@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { usePathname } from 'next/navigation'
 import { MessageSquarePlus, Paperclip, X } from 'lucide-react'
 import { submitFeedbackAction, type FeedbackResult } from '@/app/actions/feedback'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { DancingRobot } from '@/components/DancingRobot'
+import { Button } from '@/components/ui/button'
 import { HelpHint } from '@/components/ui/help-hint'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
@@ -22,6 +23,7 @@ import {
   recordAction,
 } from '@/lib/feedbackActions'
 import { t, type MessageKey } from '@/lib/i18n'
+import { cn } from '@/lib/utils'
 import { useStudio } from '@/lib/store/studio'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 
@@ -119,6 +121,9 @@ export function FeedbackButton() {
   const [error, setError] = useState<FeedbackError | null>(null)
   const [attached, setAttached] = useState<Attached | null>(null)
   const [attachError, setAttachError] = useState<AttachError | null>(null)
+  // Наведение на угол-якорь: под курсором робот уступает место кнопке с
+  // подписью, как в доноре bets-supa.
+  const [hovered, setHovered] = useState(false)
   const [pending, startTransition] = useTransition()
   const fileInputRef = useRef<HTMLInputElement>(null)
   // Системный диалог выбора файла уводит фокус из окна, и попап считает это
@@ -279,16 +284,51 @@ export function FeedbackButton() {
     })
   }
 
+  // Показываем кнопку при наведении или пока открыт попап; иначе - робот.
+  const showButton = hovered || open
+
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger
+      {/* Угол-якорь. Робот в потоке задаёт размер контейнера (зона hover),
+          кнопка лежит поверх него absolute и проявляется при наведении - так
+          попап остаётся приякорен к кнопке. Угол нижний правый, а не верхний
+          правый как в доноре: сверху справа у нас плотная шапка студии. */}
+      <div
         data-feedback-ui
         data-testid="feedback-button"
-        aria-label={t(locale, 'feedback.open')}
-        className={buttonVariants({ variant: 'default', size: 'icon', className: 'fixed right-4 bottom-4 z-40 rounded-full shadow-lg' })}
+        className="fixed right-4 bottom-4 z-40"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
       >
-        <MessageSquarePlus />
-      </PopoverTrigger>
+        {/* Робот-превью. Клик открывает попап напрямую - чтобы работало и на
+            тач-устройствах, где наведения нет. */}
+        <button
+          type="button"
+          data-feedback-ui
+          data-testid="feedback-mascot"
+          aria-label={t(locale, 'feedback.open')}
+          onClick={() => onOpenChange(true)}
+          className={cn(
+            'block transition-all duration-300 ease-out',
+            showButton ? 'pointer-events-none scale-50 opacity-0' : 'opacity-100',
+          )}
+        >
+          <DancingRobot active={!showButton} />
+        </button>
+
+        <PopoverTrigger
+          data-feedback-ui
+          data-testid="feedback-trigger"
+          aria-label={t(locale, 'feedback.open')}
+          className={cn(
+            'absolute right-0 bottom-0 h-9 gap-1.5 whitespace-nowrap rounded-md bg-[#D97757] px-2.5 text-xs text-white shadow transition-all duration-300 ease-out hover:bg-[#C15F3C]',
+            showButton ? 'opacity-100' : 'pointer-events-none scale-90 opacity-0',
+          )}
+        >
+          <MessageSquarePlus className="size-3.5" />
+          <span className="hidden sm:inline">{t(locale, 'feedback.open')}</span>
+        </PopoverTrigger>
+      </div>
       <PopoverContent data-feedback-ui side="top" align="end" className="w-[340px]">
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center gap-1.5">

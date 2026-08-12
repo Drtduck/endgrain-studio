@@ -52,13 +52,13 @@ describe('FeedbackButton', () => {
 
   it('клик по кнопке открывает попап с полем текста', async () => {
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     expect(await screen.findByTestId('feedback-text')).toBeDefined()
   })
 
   it('кнопка отправки заблокирована при пустом тексте', async () => {
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     const submit = await screen.findByTestId('feedback-submit')
     expect(submit.hasAttribute('disabled')).toBe(true)
   })
@@ -66,7 +66,7 @@ describe('FeedbackButton', () => {
   it('ввод текста и отправка зовут экшен ровно с этим текстом и с route', async () => {
     submitFeedbackAction.mockResolvedValue({ ok: true })
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     const textarea = await screen.findByTestId('feedback-text')
     fireEvent.change(textarea, { target: { value: 'привет автору' } })
     fireEvent.click(screen.getByTestId('feedback-submit'))
@@ -80,7 +80,7 @@ describe('FeedbackButton', () => {
   it('успех показывает feedback-sent', async () => {
     submitFeedbackAction.mockResolvedValue({ ok: true })
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     const textarea = await screen.findByTestId('feedback-text')
     fireEvent.change(textarea, { target: { value: 'привет' } })
     fireEvent.click(screen.getByTestId('feedback-submit'))
@@ -91,7 +91,7 @@ describe('FeedbackButton', () => {
   it('ошибка failed показывает role alert', async () => {
     submitFeedbackAction.mockResolvedValue({ ok: false, error: 'failed' })
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     const textarea = await screen.findByTestId('feedback-text')
     fireEvent.change(textarea, { target: { value: 'привет' } })
     fireEvent.click(screen.getByTestId('feedback-submit'))
@@ -102,7 +102,7 @@ describe('FeedbackButton', () => {
 
   it('счётчик показывает длину введённого текста', async () => {
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     const textarea = await screen.findByTestId('feedback-text')
     fireEvent.change(textarea, { target: { value: 'привет' } })
 
@@ -113,20 +113,20 @@ describe('FeedbackButton', () => {
   it('без настроенного Supabase кнопки прикрепления нет', async () => {
     supabaseConfigured = false
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     await screen.findByTestId('feedback-text')
     expect(screen.queryByTestId('feedback-attach')).toBe(null)
   })
 
   it('с настроенным Supabase кнопка прикрепления есть', async () => {
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     expect(await screen.findByTestId('feedback-attach')).toBeDefined()
   })
 
   it('выбранный файл показывается карточкой и убирается крестиком', async () => {
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     const input = (await screen.findByTestId('feedback-file-input')) as HTMLInputElement
     selectFile(input, new File(['данные'], 'схема.png', { type: 'image/png' }))
 
@@ -140,7 +140,7 @@ describe('FeedbackButton', () => {
 
   it('файл тяжелее 2 МБ отбивается на клиенте и не попадает в форму', async () => {
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     const input = (await screen.findByTestId('feedback-file-input')) as HTMLInputElement
     const heavy = new File(['x'], 'huge.png', { type: 'image/png' })
     Object.defineProperty(heavy, 'size', { value: 3 * 1024 * 1024 })
@@ -154,7 +154,7 @@ describe('FeedbackButton', () => {
   it('отправка везёт вложение, скриншот, viewport и лог действий', async () => {
     submitFeedbackAction.mockResolvedValue({ ok: true })
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     const input = (await screen.findByTestId('feedback-file-input')) as HTMLInputElement
     selectFile(input, new File(['данные'], 'схема.png', { type: 'image/png' }))
     await screen.findByTestId('feedback-attachment')
@@ -183,7 +183,7 @@ describe('FeedbackButton', () => {
     supabaseConfigured = false
     submitFeedbackAction.mockResolvedValue({ ok: true })
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     fireEvent.change(await screen.findByTestId('feedback-text'), { target: { value: 'текст' } })
     fireEvent.click(screen.getByTestId('feedback-submit'))
 
@@ -196,7 +196,7 @@ describe('FeedbackButton', () => {
   it('исключение из экшена не вешает попап, а показывает ошибку', async () => {
     submitFeedbackAction.mockRejectedValue(new Error('Body exceeded 5mb limit'))
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     fireEvent.change(await screen.findByTestId('feedback-text'), { target: { value: 'текст' } })
     fireEvent.click(screen.getByTestId('feedback-submit'))
 
@@ -214,7 +214,7 @@ describe('FeedbackButton', () => {
     submitFeedbackAction.mockResolvedValue({ ok: true })
     window.location.hash = '#d=' + 'x'.repeat(500)
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     fireEvent.change(await screen.findByTestId('feedback-text'), { target: { value: 'текст' } })
     fireEvent.click(screen.getByTestId('feedback-submit'))
 
@@ -229,7 +229,7 @@ describe('FeedbackButton', () => {
     submitFeedbackAction.mockResolvedValue({ ok: true })
     screenshotDataUrl = 'data:image/jpeg;base64,' + 'a'.repeat(FEEDBACK_SCREENSHOT_B64_MAX + 1)
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     fireEvent.change(await screen.findByTestId('feedback-text'), { target: { value: 'текст' } })
     fireEvent.click(screen.getByTestId('feedback-submit'))
 
@@ -252,7 +252,7 @@ describe('FeedbackButton', () => {
 
   it('input file принимает только типы из белого списка', async () => {
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     const input = (await screen.findByTestId('feedback-file-input')) as HTMLInputElement
     expect(input.getAttribute('accept')).toBe(FEEDBACK_ACCEPT_ATTR)
     expect(input.getAttribute('accept')?.includes('svg')).toBe(false)
@@ -261,7 +261,7 @@ describe('FeedbackButton', () => {
   it('ошибка attachmentTooBig от сервера показывается отдельным текстом', async () => {
     submitFeedbackAction.mockResolvedValue({ ok: false, error: 'attachmentTooBig' })
     render(<FeedbackButton />)
-    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.click(screen.getByTestId('feedback-mascot'))
     fireEvent.change(await screen.findByTestId('feedback-text'), { target: { value: 'текст' } })
     fireEvent.click(screen.getByTestId('feedback-submit'))
 

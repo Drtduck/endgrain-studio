@@ -230,6 +230,66 @@
     box-shadow: var(--shadow-lg);
   }
 
+  /* Пиксельный робот кнопки обратной связи. Правила перенесены один в один из
+     styled-jsx донорского bets-supa, имена классов получили префикс eg-robot-,
+     чтобы не пересечься с анимациями лендинга. */
+  .eg-robot-bob {
+    display: inline-block;
+    transform-origin: 50% 100%;
+    animation: eg-robot-bob 2.6s ease-in-out infinite;
+  }
+  .eg-robot-trick {
+    display: inline-block;
+    transform-origin: 50% 62%;
+  }
+  .eg-robot-hop { animation: eg-robot-hop 0.9s ease-in-out; }
+  .eg-robot-flip { animation: eg-robot-flip 0.85s ease-in-out; }
+  .eg-robot-backflip { animation: eg-robot-backflip 1s ease-in-out; }
+  .eg-robot-leg {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: eg-robot-legstep 0.8s ease-in-out infinite;
+  }
+  .eg-robot-leg-b { animation-delay: -0.4s; }
+  .eg-robot-eye {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    animation: eg-robot-blink 5.2s ease-in-out infinite;
+  }
+
+  @keyframes eg-robot-bob {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50%      { transform: translateY(-1.5px) rotate(-1.5deg); }
+  }
+  @keyframes eg-robot-legstep {
+    0%, 100% { transform: translateY(0) scaleY(1); }
+    50%      { transform: translateY(-2.2px) scaleY(0.86); }
+  }
+  @keyframes eg-robot-blink {
+    0%, 90%, 100% { transform: scaleY(1); }
+    94%           { transform: scaleY(0.1); }
+  }
+  /* переступ с ноги на ногу - мягкий вальсок с переносом опоры */
+  @keyframes eg-robot-hop {
+    0%, 100% { transform: translateX(0) rotate(0deg); }
+    25%      { transform: translateX(-2px) rotate(-7deg); }
+    50%      { transform: translateY(-3px) rotate(0deg); }
+    75%      { transform: translateX(2px) rotate(7deg); }
+  }
+  /* флип - разворот вокруг вертикальной оси с лёгким подскоком */
+  @keyframes eg-robot-flip {
+    0%   { transform: translateY(0) rotateY(0deg); }
+    50%  { transform: translateY(-5px) rotateY(180deg); }
+    100% { transform: translateY(0) rotateY(360deg); }
+  }
+  /* сальто через себя - подпрыг и полный оборот назад */
+  @keyframes eg-robot-backflip {
+    0%   { transform: translateY(0) rotate(0deg) scale(1); }
+    30%  { transform: translateY(-15px) rotate(-150deg) scale(0.94); }
+    65%  { transform: translateY(-9px) rotate(-290deg) scale(0.94); }
+    100% { transform: translateY(0) rotate(-360deg) scale(1); }
+  }
+
   /* Медленное покачивание маскота. Амплитуда намеренно маленькая:
      это фон настроения, а не аттракцион. */
   @keyframes eg-bob {
@@ -254,7 +314,9 @@
 
   /* Один выключатель на всё. Без него лендинг нарушает prefers-reduced-motion. */
   @media (prefers-reduced-motion: reduce) {
-    .eg-marquee-track, .eg-bob, .eg-reveal { animation: none !important; }
+    .eg-marquee-track, .eg-bob, .eg-reveal,
+    .eg-robot-bob, .eg-robot-leg, .eg-robot-eye,
+    .eg-robot-hop, .eg-robot-flip, .eg-robot-backflip { animation: none !important; }
     .eg-tilt:hover { transform: none; }
   }
 
