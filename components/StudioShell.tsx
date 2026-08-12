@@ -7,6 +7,7 @@ import { BoardSettings } from '@/components/BoardSettings'
 import { ComplexityMeter } from '@/components/ComplexityMeter'
 import { DiagnosticsPanel } from '@/components/DiagnosticsPanel'
 import { ExportPanel } from '@/components/ExportPanel'
+import { FeedbackButton } from '@/components/FeedbackButton'
 import { ForkDialog } from '@/components/ForkDialog'
 import { GeneratorPanel } from '@/components/GeneratorPanel'
 import { HistoryControls } from '@/components/HistoryControls'
@@ -127,6 +128,8 @@ export function StudioShell() {
 
         <ForkDialog />
       </main>
+
+      <FeedbackButton />
     </div>
   )
 }

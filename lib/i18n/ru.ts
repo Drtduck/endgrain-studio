@@ -268,6 +268,18 @@ const ru = {
   'projects.errorNotFound': 'Проект не найден, возможно, он уже удалён',
   'projects.errorFailed': 'Облако не ответило. Попробуйте ещё раз',
   'aria.projectsPanel': 'облачные проекты',
+  'feedback.open': 'Предложить доработку',
+  'feedback.title': 'Предложить доработку',
+  'feedback.hint': 'Что мешает или чего не хватает? Пишите конкретно, это читает автор',
+  'feedback.placeholder': 'Например: не хватает породы бука в палитре',
+  'feedback.submit': 'Отправить',
+  'feedback.busy': 'Отправляем',
+  'feedback.counter': '{used} из {max}',
+  'feedback.sent': 'Спасибо, обращение записано',
+  'feedback.errorEmpty': 'Сначала напишите текст',
+  'feedback.errorTooLong': 'Слишком длинно, уложитесь в {max} символов',
+  'feedback.errorDisabled': 'Отправка сейчас недоступна',
+  'feedback.errorFailed': 'Не получилось отправить. Попробуйте ещё раз',
 } as const
 
 export default ru

@@ -270,6 +270,18 @@ const en: Record<keyof typeof ru, string> = {
   'projects.errorNotFound': 'The project was not found, it may already be deleted',
   'projects.errorFailed': 'The cloud did not answer. Try again',
   'aria.projectsPanel': 'cloud projects',
+  'feedback.open': 'Suggest an improvement',
+  'feedback.title': 'Suggest an improvement',
+  'feedback.hint': 'What gets in the way or is missing? Be specific, the author reads this',
+  'feedback.placeholder': 'For example: the palette is missing beech',
+  'feedback.submit': 'Send',
+  'feedback.busy': 'Sending',
+  'feedback.counter': '{used} of {max}',
+  'feedback.sent': 'Thank you, the message is saved',
+  'feedback.errorEmpty': 'Write the text first',
+  'feedback.errorTooLong': 'Too long, keep it under {max} characters',
+  'feedback.errorDisabled': 'Sending is unavailable right now',
+  'feedback.errorFailed': 'Could not send it. Try again',
 }
 
 export default en
