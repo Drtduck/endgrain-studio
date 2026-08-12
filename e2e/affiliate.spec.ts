@@ -15,6 +15,15 @@ test('полка инструментов сворачивается и несё
   await expect(page.getByTestId('affiliate-disclosure')).toContainText('Amazon')
 })
 
+test('полка инструментов есть и на вкладке шаблонов, тоже свёрнута', async ({ page }) => {
+  await openStudio(page)
+  await page.getByTestId('tab-templates').click()
+  await expect(page.getByTestId('template-gallery')).toBeVisible()
+  const shelf = page.getByTestId('affiliate-shelf')
+  await expect(shelf).toBeVisible()
+  await expect(page.getByTestId('affiliate-disclosure')).toBeHidden()
+})
+
 test('вкладка литературы показывает восемь книг с партнёрскими ссылками', async ({ page }) => {
   await openStudio(page)
   await page.getByTestId('tab-books').click()

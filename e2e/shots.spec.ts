@@ -19,6 +19,21 @@ test.describe('скриншоты лендинга', () => {
       await page.goto('/')
       await page.getByTestId(`tab-${view.tab}`).click()
       await expect(page.getByTestId(view.marker)).toBeVisible()
+
+      if (view.tab === 'view3d') {
+        // R3F грузится динамически (см. Board3DPanel.tsx): пока идёт lazy-import сцены,
+        // на месте канваса стоит скелет с надписью "Собираем сцену". Снимок без ожидания
+        // канваса ловит именно лоадер, а не готовую 3D-доску.
+        const canvas = page.locator('[data-testid="view3d"] canvas')
+        await expect(canvas).toBeVisible({ timeout: 30_000 })
+        await expect(async () => {
+          const box = await canvas.boundingBox()
+          expect(box?.width ?? 0).toBeGreaterThan(200)
+          expect(box?.height ?? 0).toBeGreaterThan(200)
+        }).toPass({ timeout: 10_000 })
+      }
+
+      await page.evaluate(() => document.fonts.ready)
       await page.screenshot({ path: `public/landing/shots/${view.file}` })
     })
   }

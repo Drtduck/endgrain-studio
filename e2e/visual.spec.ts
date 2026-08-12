@@ -15,6 +15,7 @@ const TABS: readonly { readonly tab: string; readonly marker: string }[] = [
   { tab: 'generate', marker: 'generator-panel' },
   { tab: 'photo', marker: 'photo-panel' },
   { tab: 'view3d', marker: 'view3d' },
+  { tab: 'books', marker: 'literature-section' },
 ]
 
 for (const { tab, marker } of TABS) {
