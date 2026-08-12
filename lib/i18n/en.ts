@@ -366,6 +366,18 @@ const en: Record<keyof typeof ru, string> = {
   'landing.footer.legal.amazonDisclaimer': 'As an Amazon Associate we earn from qualifying purchases.',
   'landing.footer.legal.privacy': 'We never share your email with third parties.',
   'landing.footer.copyright': 'Endgrain Studio',
+
+  'landing.subscribe.title': 'Letters about boards, not about us',
+  'landing.subscribe.body':
+    'Once every couple of weeks: new patterns, glue-up tricks, what changed in the studio. No firehose, no selling you other people stuff.',
+  'landing.subscribe.placeholder': 'you@example.com',
+  'landing.subscribe.submit': 'Subscribe',
+  'landing.subscribe.busy': 'Sending',
+  'landing.subscribe.sent': 'Done. Check your inbox, the letter is on its way.',
+  'landing.subscribe.note': 'One click to unsubscribe from any letter. We never pass your address on.',
+  'landing.subscribe.errInvalid': 'That address looks off. Mind checking it?',
+  'landing.subscribe.errDisabled': 'Email is not wired up yet. Come back a bit later, subscription is coming.',
+  'landing.subscribe.errFailed': 'Could not send that. Try again in a minute.',
 }
 
 export default en

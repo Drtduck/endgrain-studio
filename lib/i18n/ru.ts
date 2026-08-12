@@ -364,6 +364,18 @@ const ru = {
   'landing.footer.legal.amazonDisclaimer': 'Как партнёр Amazon мы зарабатываем на подходящих покупках.',
   'landing.footer.legal.privacy': 'Мы не передаём почту третьим лицам.',
   'landing.footer.copyright': 'Endgrain Studio',
+
+  'landing.subscribe.title': 'Письма про доски, а не про нас',
+  'landing.subscribe.body':
+    'Раз в пару недель: новые узоры, приёмы склейки, что нового в студии. Без потока и без продаж чужого.',
+  'landing.subscribe.placeholder': 'you@example.com',
+  'landing.subscribe.submit': 'Подписаться',
+  'landing.subscribe.busy': 'Отправляем',
+  'landing.subscribe.sent': 'Готово. Проверьте почту, письмо уже летит.',
+  'landing.subscribe.note': 'Отписка в один клик из любого письма. Адрес никому не передаём.',
+  'landing.subscribe.errInvalid': 'Похоже, в адресе опечатка. Проверьте?',
+  'landing.subscribe.errDisabled': 'Почта пока не подключена. Загляните позже, подписка скоро заработает.',
+  'landing.subscribe.errFailed': 'Не получилось отправить. Попробуйте ещё раз через минуту.',
 } as const
 
 export default ru

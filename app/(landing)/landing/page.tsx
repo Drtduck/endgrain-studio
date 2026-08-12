@@ -6,6 +6,7 @@ import { PatternMarquee } from '@/components/landing/PatternMarquee'
 import { FeatureGrid } from '@/components/landing/FeatureGrid'
 import { HowItWorks } from '@/components/landing/HowItWorks'
 import { ShotStrip } from '@/components/landing/ShotStrip'
+import { SubscribeSection } from '@/components/landing/SubscribeSection'
 import { getLandingLocale } from '@/lib/landing/locale'
 import { t } from '@/lib/i18n'
 import { APP_ORIGIN } from '@/lib/routing/host'
@@ -46,6 +47,8 @@ export default async function LandingPage() {
             </a>
           </div>
         </section>
+
+        <SubscribeSection locale={locale} />
       </main>
       <LandingFooter locale={locale} />
     </>
