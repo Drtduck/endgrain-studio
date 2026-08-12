@@ -119,10 +119,39 @@ async function uploadFeedbackFile(
 }
 
 /**
+ * Итог обращения к GitHub: либо ссылка на issue, либо короткая машинная
+ * причина отказа. Причина нужна и в логах сервера, и в fallback-записи БД:
+ * без неё поломка primary-канала жила незаметно (фидбек молча уходил в
+ * Supabase, а мы думали, что issue создаются).
+ */
+type GithubIssueOutcome = { url: string } | { url: null; reason: string }
+
+/**
+ * Обрезает тело ответа GitHub до вменяемой длины для лога. Токена в ответе
+ * быть не может (мы его не эхоим), но лишние килобайты в логах не нужны.
+ */
+function shortenForLog(text: string): string {
+  const clean = text.replace(/\s+/g, ' ').trim()
+  return clean.length > 300 ? `${clean.slice(0, 300)}...` : clean
+}
+
+/**
+ * Читает тело ответа, не давая диагностике уронить основной путь: сюда мы
+ * приходим уже в ветке ошибки, и потерять из-за неё fallback было бы обидно.
+ */
+async function readBodySafely(res: Response): Promise<string> {
+  try {
+    return await res.text()
+  } catch {
+    return ''
+  }
+}
+
+/**
  * Primary-канал обратной связи: issue в GitHub-репозитории проекта через
  * обычный fetch (без @octokit/rest - экономим бандл). Возвращает html_url
- * при успехе и null при любой ошибке сети или ответа GitHub, чтобы вызывающий
- * код мог упасть в fallback на Supabase и не потерять фидбек.
+ * при успехе и причину отказа при любой ошибке сети или ответа GitHub, чтобы
+ * вызывающий код мог упасть в fallback на Supabase и не потерять фидбек.
  */
 async function createGithubIssue(params: {
   token: string
@@ -139,7 +168,7 @@ async function createGithubIssue(params: {
   attachmentFailed: boolean
   screenshotFailed: boolean
   actions: readonly FeedbackAction[] | undefined
-}): Promise<string | null> {
+}): Promise<GithubIssueOutcome> {
   // route приходит из клиентского window.location - чистим переносы строк,
   // чтобы им нельзя было сломать title/body issue (инъекция лишних строк).
   const route = params.route?.replace(/[\r\n]+/g, ' ')
@@ -176,13 +205,31 @@ async function createGithubIssue(params: {
         labels: ['feedback'],
       }),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      // Тело ответа GitHub - единственное место, где видно настоящую причину
+      // (Bad credentials, Resource not accessible by personal access token,
+      // Not Found на приватный репо без доступа). Без него отладка сводится
+      // к гаданию, поэтому пишем его в лог всегда.
+      const detail = shortenForLog(await readBodySafely(res))
+      console.error(
+        `[feedback] GitHub API отказал: ${res.status} ${res.statusText}; тело: ${detail}; ` +
+          `repo=${GITHUB_FEEDBACK_REPO}; длина токена=${params.token.length}`,
+      )
+      return { url: null, reason: `github ${res.status}: ${detail}` }
+    }
     const data = (await res.json()) as { html_url?: unknown }
-    return typeof data.html_url === 'string' ? data.html_url : null
-  } catch {
-    // Сюда же падает AbortError от таймаута - трактуем как обычную сетевую
-    // ошибку и уходим в fallback на Supabase.
-    return null
+    if (typeof data.html_url === 'string') return { url: data.html_url }
+    console.error('[feedback] GitHub ответил 2xx без html_url')
+    return { url: null, reason: 'github ok без html_url' }
+  } catch (e) {
+    // Сюда же падает AbortError от таймаута и TypeError от невалидного
+    // значения заголовка (например, токен с переносом строки из криво
+    // заведённой переменной окружения) - и то и другое уводит в fallback.
+    const message = e instanceof Error ? `${e.name}: ${e.message}` : String(e)
+    console.error(
+      `[feedback] запрос к GitHub не состоялся: ${message}; длина токена=${params.token.length}`,
+    )
+    return { url: null, reason: `github fetch: ${message}` }
   }
 }
 
@@ -251,9 +298,13 @@ export async function submitFeedbackAction(input: unknown): Promise<FeedbackResu
     label: sanitizeLine(a.label) ?? '-',
   }))
 
-  const token = process.env.GITHUB_REPORT_TOKEN
+  // trim обязателен: переменную окружения на Vercel заводят пайпом из файла, и
+  // хвостовой перенос строки легко уезжает внутрь значения. С ним fetch падает
+  // на невалидном заголовке authorization, и фидбек молча уходит в fallback.
+  const token = process.env.GITHUB_REPORT_TOKEN?.trim()
+  let fallbackReason: string | null = token ? null : 'GITHUB_REPORT_TOKEN не задан'
   if (token) {
-    const issueUrl = await createGithubIssue({
+    const outcome = await createGithubIssue({
       token,
       body: parsed.data.body,
       route,
@@ -269,8 +320,11 @@ export async function submitFeedbackAction(input: unknown): Promise<FeedbackResu
       screenshotFailed,
       actions,
     })
-    if (issueUrl) return { ok: true, issueUrl }
-    // GitHub недоступен или вернул ошибку - падаем в Supabase, чтобы фидбек не потерялся.
+    if (outcome.url !== null) return { ok: true, issueUrl: outcome.url }
+    // GitHub недоступен или вернул ошибку - падаем в Supabase, чтобы фидбек не
+    // потерялся. Причину тащим в запись БД: иначе поломка primary-канала снова
+    // окажется невидимой, ведь пользователю мы отвечаем спокойным «записано».
+    fallbackReason = outcome.reason
   }
 
   if (!sb) return { ok: false, error: 'disabled' }
@@ -287,15 +341,17 @@ export async function submitFeedbackAction(input: unknown): Promise<FeedbackResu
     attachment_url: attachmentUrl ?? null,
     attachment_name: attachment ? safeFeedbackFileName(attachment.name) : null,
     screenshot_url: screenshotUrl ?? null,
+    fallback_reason: fallbackReason ? fallbackReason.slice(0, 500) : null,
   })
   if (!error) return { ok: true }
 
-  // 42703 (undefined_column) значит, что миграция с колонками под вложения к
-  // этой базе ещё не применена. Деплой кода не обязан ждать миграцию: повторяем
-  // insert по старой форме, чтобы текст фидбека не потерялся. Ссылки на файлы в
-  // этом прогоне пропадут, но они и так уже лежат в теле issue.
+  // 42703 (undefined_column) значит, что миграция с колонками под вложения и
+  // причину fallback к этой базе ещё не применена. Деплой кода не обязан ждать
+  // миграцию: повторяем insert по старой форме, чтобы текст фидбека не
+  // потерялся. Ссылки на файлы в этом прогоне пропадут, но они и так уже лежат
+  // в теле issue, а причина отказа остаётся в логах сервера.
   if (error.code !== '42703') return { ok: false, error: 'failed' }
-  console.warn('[feedback] колонки вложений отсутствуют, повтор insert без них')
+  console.warn('[feedback] расширенных колонок нет, повтор insert без них')
   const retry = await sb.from('feedback').insert(base)
   if (retry.error) return { ok: false, error: 'failed' }
   return { ok: true }
