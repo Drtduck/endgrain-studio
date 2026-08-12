@@ -18,7 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const description = t(locale, 'landing.hero.subtitle')
   return {
     metadataBase: new URL(SITE_ORIGIN),
-    title,
+    title: { absolute: title },
     description,
     alternates: { canonical: SITE_ORIGIN },
     openGraph: {

@@ -20,8 +20,8 @@ export function ShotStrip({ locale }: { locale: Locale }) {
             <img
               key={shot.file}
               src={`/landing/shots/${shot.file}`}
-              width={960}
-              height={600}
+              width={1280}
+              height={720}
               loading="lazy"
               alt={locale === 'ru' ? shot.labelRu : shot.labelEn}
               data-testid={`landing-shot-${shot.slug}`}

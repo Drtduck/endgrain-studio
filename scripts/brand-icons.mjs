@@ -8,11 +8,7 @@ import path from 'node:path'
 
 const SVG_PATH = path.resolve(import.meta.dirname, '../public/brand/beaver-simple.svg')
 
-const SIZES = [
-  { size: 180, out: path.resolve(import.meta.dirname, '../app/apple-icon.png') },
-  { size: 512, out: path.resolve(import.meta.dirname, '../public/brand/beaver-512.png') },
-  { size: 32, out: path.resolve(import.meta.dirname, '../public/brand/beaver-32.png') },
-]
+const SIZES = [{ size: 180, out: path.resolve(import.meta.dirname, '../app/apple-icon.png') }]
 
 async function main() {
   const browser = await chromium.launch()
