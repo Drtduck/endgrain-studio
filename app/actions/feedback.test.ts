@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { FEEDBACK_MAX_LENGTH } from '@/lib/feedback'
+import {
+  FEEDBACK_ATTACHMENT_B64_MAX,
+  FEEDBACK_MAX_LENGTH,
+  FEEDBACK_SCREENSHOT_B64_MAX,
+} from '@/lib/feedback'
 
 const getUser = vi.fn()
 const from = vi.fn()
@@ -21,12 +25,34 @@ vi.mock('next/headers', () => ({
   headers: async () => ({ get: getHeader }),
 }))
 
+const upload = vi.fn()
+const createSignedUrl = vi.fn()
+const storageFrom = vi.fn(() => ({ upload, createSignedUrl }))
+let serviceConfigured = true
+
+vi.mock('@/lib/supabase/service', () => ({
+  isSupabaseServiceConfigured: () => serviceConfigured,
+  getSupabaseService: () => ({ storage: { from: storageFrom } }),
+}))
+
+/** Успешный ответ GitHub с телом issue, разобранным обратно из fetch-мока. */
+function issueBodyFromFetch(fetchMock: ReturnType<typeof vi.fn>): string {
+  const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+  return (JSON.parse(init.body as string) as { body: string }).body
+}
+
 describe('app/actions/feedback', () => {
   const originalToken = process.env['GITHUB_REPORT_TOKEN']
   const fetchMock = vi.fn()
 
   beforeEach(() => {
     configured = true
+    serviceConfigured = true
+    upload.mockReset()
+    createSignedUrl.mockReset()
+    storageFrom.mockClear()
+    upload.mockResolvedValue({ error: null })
+    createSignedUrl.mockResolvedValue({ data: { signedUrl: 'https://storage/signed' }, error: null })
     getUser.mockReset()
     from.mockReset()
     getHeader.mockReset()
@@ -209,5 +235,159 @@ describe('app/actions/feedback', () => {
     const res = await submitFeedbackAction({ body: 'текст' })
 
     expect(res).toEqual({ ok: false, error: 'disabled' })
+  })
+
+  it('вложение уезжает в bucket, а в тело issue идёт signed URL', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ html_url: 'https://github.com/Drtduck/endgrain-studio/issues/7' }),
+    })
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1', email: 'a@b.c' } } })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({
+      body: 'текст',
+      attachment: { name: 'скрин доски.png', type: 'image/png', dataBase64: 'AAAA' },
+    })
+
+    expect(res.ok).toBe(true)
+    expect(storageFrom).toHaveBeenCalledWith('feedback-attachments')
+    expect(upload).toHaveBeenCalledTimes(1)
+    const [path, bytes, opts] = upload.mock.calls[0] as [string, Buffer, { contentType: string }]
+    // Кириллица и пробелы в имени схлопываются, путь начинается с id автора.
+    expect(path.startsWith('user-1/')).toBe(true)
+    expect(path.endsWith('-attachment-_.png')).toBe(true)
+    expect(Buffer.isBuffer(bytes)).toBe(true)
+    expect(opts.contentType).toBe('image/png')
+
+    const body = issueBodyFromFetch(fetchMock)
+    expect(body).toContain('### Вложения')
+    expect(body).toContain('https://storage/signed')
+  })
+
+  it('скриншот грузится отдельным объектом с типом image/jpeg', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ html_url: 'https://github.com/Drtduck/endgrain-studio/issues/8' }),
+    })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    await submitFeedbackAction({ body: 'текст', screenshot: { dataBase64: 'BBBB' } })
+
+    expect(upload).toHaveBeenCalledTimes(1)
+    const [path, , opts] = upload.mock.calls[0] as [string, Buffer, { contentType: string }]
+    expect(path.startsWith('anon/')).toBe(true)
+    expect(path.endsWith('-screenshot.jpg')).toBe(true)
+    expect(opts.contentType).toBe('image/jpeg')
+    expect(issueBodyFromFetch(fetchMock)).toContain('Скриншот экрана')
+  })
+
+  it('без service-ключа вложение не грузится, но issue создаётся с пометкой', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    serviceConfigured = false
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ html_url: 'https://github.com/Drtduck/endgrain-studio/issues/9' }),
+    })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({
+      body: 'текст',
+      attachment: { name: 'a.png', type: 'image/png', dataBase64: 'AAAA' },
+    })
+
+    expect(res.ok).toBe(true)
+    expect(upload).not.toHaveBeenCalled()
+    expect(issueBodyFromFetch(fetchMock)).toContain('сохранить его в Storage не удалось')
+  })
+
+  it('ошибка upload не роняет отправку, issue уходит без ссылки на файл', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    upload.mockResolvedValue({ error: { message: 'bucket not found' } })
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ html_url: 'https://github.com/Drtduck/endgrain-studio/issues/10' }),
+    })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({
+      body: 'текст',
+      attachment: { name: 'a.png', type: 'image/png', dataBase64: 'AAAA' },
+    })
+
+    expect(res.ok).toBe(true)
+    expect(createSignedUrl).not.toHaveBeenCalled()
+    expect(issueBodyFromFetch(fetchMock)).toContain('сохранить его в Storage не удалось')
+  })
+
+  it('fallback в БД пишет signed URL и очищенное имя файла', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null })
+    from.mockReturnValue({ insert })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({
+      body: 'текст',
+      attachment: { name: 'мой файл.png', type: 'image/png', dataBase64: 'AAAA' },
+      screenshot: { dataBase64: 'BBBB' },
+    })
+
+    expect(res).toEqual({ ok: true })
+    const arg = insert.mock.calls[0]?.[0] as Record<string, unknown>
+    expect(arg['attachment_url']).toBe('https://storage/signed')
+    expect(arg['screenshot_url']).toBe('https://storage/signed')
+    expect(arg['attachment_name']).toBe('_.png')
+  })
+
+  it('вложение сверх лимита base64 даёт attachmentTooBig и никуда не грузится', async () => {
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({
+      body: 'текст',
+      attachment: {
+        name: 'big.png',
+        type: 'image/png',
+        dataBase64: 'a'.repeat(FEEDBACK_ATTACHMENT_B64_MAX + 1),
+      },
+    })
+
+    expect(res).toEqual({ ok: false, error: 'attachmentTooBig' })
+    expect(upload).not.toHaveBeenCalled()
+    expect(from).not.toHaveBeenCalled()
+  })
+
+  it('скриншот сверх лимита base64 даёт attachmentTooBig', async () => {
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({
+      body: 'текст',
+      screenshot: { dataBase64: 'a'.repeat(FEEDBACK_SCREENSHOT_B64_MAX + 1) },
+    })
+
+    expect(res).toEqual({ ok: false, error: 'attachmentTooBig' })
+    expect(upload).not.toHaveBeenCalled()
+  })
+
+  it('лог действий и viewport попадают в тело issue с почищенными переносами', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ html_url: 'https://github.com/Drtduck/endgrain-studio/issues/11' }),
+    })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    await submitFeedbackAction({
+      body: 'текст',
+      viewport: '1512x824',
+      url: 'https://app.example/board',
+      actions: [{ t: '2026-08-12T10:00:00.000Z', kind: 'click', label: 'Экспорт\nEvil: injected' }],
+    })
+
+    const body = issueBodyFromFetch(fetchMock)
+    expect(body).toContain('Viewport: 1512x824')
+    expect(body).toContain('URL: https://app.example/board')
+    expect(body).toContain('### Последние действия')
+    expect(body).toContain('клик: Экспорт Evil: injected')
   })
 })

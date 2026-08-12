@@ -18,3 +18,27 @@ test('попап обратной связи открывается и вали�
   // ушёл бы настоящей строкой в прод-таблицу обратной связи. Достаточно проверить
   // попап, валидацию пустого текста и счётчик - это и делает CI на каждом прогоне.
 })
+
+test('вложение прикрепляется и убирается, если облако подключено', async ({ page }) => {
+  await openStudio(page)
+  await page.getByTestId('feedback-button').click()
+  await expect(page.getByTestId('feedback-text')).toBeVisible()
+
+  // Без переменных Supabase вложений нет по дизайну: в таком прогоне кнопки
+  // прикрепления не существует, и проверять тут нечего.
+  if ((await page.getByTestId('feedback-attach').count()) === 0) return
+
+  await page.getByTestId('feedback-file-input').setInputFiles({
+    name: 'схема.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    ),
+  })
+
+  await expect(page.getByTestId('feedback-attachment')).toContainText('схема.png')
+  await page.getByTestId('feedback-attach-remove').click()
+  await expect(page.getByTestId('feedback-attachment')).toHaveCount(0)
+  await expect(page.getByTestId('feedback-attach')).toBeVisible()
+})
