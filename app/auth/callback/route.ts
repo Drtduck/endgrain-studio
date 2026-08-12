@@ -5,9 +5,16 @@ import { getSupabaseServer } from '@/lib/supabase/server'
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const url = new URL(request.url)
   const code = url.searchParams.get('code')
+  const oauthError = url.searchParams.get('error') ?? url.searchParams.get('error_description')
   const nextParam = url.searchParams.get('next')
   // Открытый редирект недопустим: принимаем только собственные пути.
   const next = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : '/'
+
+  // Провайдер (Google) сам может вернуться с ?error= вместо ?code=, например
+  // если пользователь отменил вход на экране согласия.
+  if (oauthError) {
+    return NextResponse.redirect(new URL('/login?error=oauth', request.url))
+  }
 
   if (!isSupabaseConfigured() || !code) {
     return NextResponse.redirect(new URL('/login?error=auth', request.url))

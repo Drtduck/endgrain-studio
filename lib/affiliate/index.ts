@@ -1,14 +1,17 @@
 /**
  * Что здесь СОЗНАТЕЛЬНО не делается и делаться не должно, пока нет доступа к
  * Amazon Product Advertising API:
- *  - не тянем и не храним картинки товаров с амазоновских CDN;
  *  - не показываем рейтинги, число отзывов и Prime-значки;
  *  - не показываем цену числом: только собственный текстовый диапазон,
  *    потому что кэшированная цена без API это прямое нарушение условий;
  *  - не скрейпим страницы товара в рантайме и ничего оттуда не показываем
- *    пользователю (разовая ручная сверка ASIN перед релизом это другое,
- *    её результат живёт в JSON и в docs/affiliate-verify.md).
- * Всё, что видит пользователь, это наш редакционный текст плюс ссылка.
+ *    пользователю в реальном времени.
+ * Картинки товаров тянутся напрямую с публичного CDN m.media-amazon.com по
+ * ASIN (см. productImageUrl) - это тот же URL, что видит любой посетитель
+ * страницы товара, а не данные из API. Для позиций, где паттерн по ASIN
+ * отдаёт 1x1 заглушку, реальный URL картинки один раз сверен вручную со
+ * страницы товара и записан в поле image в products.json/books.json.
+ * Всё остальное, что видит пользователь, это наш редакционный текст плюс ссылка.
  */
 
 import products from './products.json'
@@ -43,6 +46,15 @@ export function amazonSearchUrl(query: string): string {
 
 export function itemUrl(item: AffiliateItem): string {
   return item.unverified === true ? amazonSearchUrl(`${item.brand} ${item.title.en}`) : amazonUrl(item.asin)
+}
+
+/**
+ * URL картинки товара. Приоритет - вручную сверенное поле image (для ASIN,
+ * у которых стандартный паттерн отдаёт заглушку), иначе паттерн по ASIN на
+ * публичном Amazon CDN.
+ */
+export function productImageUrl(item: AffiliateItem): string {
+  return item.image ?? `https://m.media-amazon.com/images/P/${item.asin}.01._SCLZZZZZZZ_.jpg`
 }
 
 export const PRODUCTS: readonly AffiliateItem[] = products as readonly AffiliateItem[]

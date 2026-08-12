@@ -1,5 +1,6 @@
 'use client'
 
+import { ProductImage } from '@/components/affiliate/ProductImage'
 import { BOOKS, itemUrl } from '@/lib/affiliate'
 import { t } from '@/lib/i18n'
 import { useStudio } from '@/lib/store/studio'
@@ -29,9 +30,20 @@ export function LiteratureSection() {
               data-testid={`book-card-${book.id}`}
               className="flex h-full flex-col gap-2 rounded-lg border border-line-subtle bg-surface-raised p-4 shadow-sm transition-[box-shadow,border-color] duration-hover ease-out hover:border-accent-border hover:shadow-md"
             >
-              <span className="text-sm font-semibold">{book.title[locale]}</span>
-              <span className="font-mono text-[12px] text-ink-secondary">
-                {book.author}, {book.year}
+              <span className="flex gap-3">
+                <ProductImage
+                  item={book}
+                  alt={`${book.author}, ${book.title[locale]}`}
+                  width={64}
+                  height={92}
+                  fit="cover"
+                />
+                <span className="flex min-w-0 flex-col gap-1">
+                  <span className="text-sm font-semibold">{book.title[locale]}</span>
+                  <span className="font-mono text-[12px] text-ink-secondary">
+                    {book.author}, {book.year}
+                  </span>
+                </span>
               </span>
               <span className="text-[13px] text-ink-secondary">{book.note[locale]}</span>
 

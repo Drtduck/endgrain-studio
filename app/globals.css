@@ -53,6 +53,8 @@
   --selection-halo:    rgba(20, 97, 90, 0.14);
   --focus-ring:        0 0 0 3px var(--selection-halo);
   --cell-outline:      rgba(36, 30, 25, 0.14);
+  /* Лёгкая подсветка ячеек, которых ещё не касалась ни одна правка. */
+  --touched-highlight: rgba(62, 122, 60, 0.16);
 
   /* Радиусы */
   --radius-xs: 4px;  --radius-sm: 6px;  --radius-md: 8px;

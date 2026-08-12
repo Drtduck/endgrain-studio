@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { bitter, golos, jetbrains } from "./fonts";
+import { GoogleAuthProvider } from "@/components/GoogleAuthProvider";
 import { ProProvider } from "@/components/ProProvider";
 import { SessionProvider } from "@/components/SessionProvider";
+import { getGoogleAuthAvailable } from "@/lib/auth/googleAuth";
 import { isStripeConfigured } from "@/lib/stripe/config";
 import { getProStatus } from "@/lib/stripe/pro";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -24,6 +26,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Серверное стартовое значение из cookie eg-locale лендинга; студия дополнительно
   // правит document.documentElement.lang на клиенте (LocaleToggle) при переключении.
   const lang = await getLandingLocale();
+  const googleAuthAvailable = await getGoogleAuthAvailable();
   return (
     <html
       lang={lang}
@@ -31,7 +34,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col font-sans">
         <SessionProvider value={{ user, enabled: isSupabaseConfigured() }}>
-          <ProProvider value={{ status: proStatus, billingEnabled: isStripeConfigured() }}>{children}</ProProvider>
+          <GoogleAuthProvider value={googleAuthAvailable}>
+            <ProProvider value={{ status: proStatus, billingEnabled: isStripeConfigured() }}>{children}</ProProvider>
+          </GoogleAuthProvider>
         </SessionProvider>
       </body>
     </html>

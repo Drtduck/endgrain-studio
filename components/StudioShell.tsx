@@ -1,7 +1,6 @@
 'use client'
 
 import { AccountButton } from '@/components/AccountButton'
-import { AffiliateShelf } from '@/components/affiliate/AffiliateShelf'
 import { LiteratureSection } from '@/components/affiliate/LiteratureSection'
 import { ToolRecommendations } from '@/components/affiliate/ToolRecommendations'
 import { Board3DPanel } from '@/components/Board3DPanel'
@@ -129,21 +128,19 @@ export function StudioShell() {
               )}
             </div>
 
-            <div className="lg:order-1">
+            <div className="flex flex-col gap-4 [&>*]:shrink-0 lg:order-1 lg:sticky lg:top-4 lg:max-h-screen lg:self-start lg:overflow-y-auto">
               <SpeciesPalette />
+              <ToolRecommendations />
             </div>
 
             <aside className="flex flex-col gap-4 [&>*]:shrink-0 lg:order-3 lg:sticky lg:top-4 lg:max-h-screen lg:self-start lg:overflow-y-auto">
               <BoardSettings />
               <ComplexityMeter locale={locale} calc={calc} unit={unit} model={model} />
               <ExportPanel />
-              <ToolRecommendations />
               <DiagnosticsPanel />
             </aside>
           </div>
         )}
-
-        {view === 'editor' ? <AffiliateShelf /> : null}
 
         <ForkDialog />
       </main>

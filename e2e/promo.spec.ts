@@ -52,7 +52,7 @@ test('без ключа Printful видны локальные мокапы ме
   await expect(page.getByTestId('merch-printful')).toHaveCount(0)
 })
 
-test('рекомендации инструментов видны рядом с экспортом и ведут по партнёрским ссылкам', async ({ page }) => {
+test('рекомендации инструментов видны в левой колонке и ведут по партнёрским ссылкам', async ({ page }) => {
   await openStudio(page)
   const block = page.getByTestId('tool-recommendations')
   await expect(block).toBeVisible()

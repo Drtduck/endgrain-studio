@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ROW_LABEL_MARGIN_MM, boardLayout } from './layout'
+import { COL_LABEL_MARGIN_MM, ROW_LABEL_MARGIN_MM, boardLayout } from './layout'
 
 const model = { widthMm: 300, lengthMm: 450 }
 
@@ -24,6 +24,13 @@ describe('boardLayout', () => {
     expect(l.scale).toBeCloseTo(900 / 500, 10)
     expect(l.heightPx).toBeCloseTo(900, 6)
     expect(l.widthPx).toBeCloseTo(300 * (900 / 500), 6)
+  })
+
+  it('с колонкой номеров колонок расширяет высоту ровно на маржу', () => {
+    const l = boardLayout(model, { maxPx: 900, withColLabels: true })
+    expect(l.colMarginMm).toBe(COL_LABEL_MARGIN_MM)
+    expect(l.totalHeightMm).toBe(450 + COL_LABEL_MARGIN_MM)
+    expect(l.viewBox).toBe(`0 0 300 ${450 + COL_LABEL_MARGIN_MM}`)
   })
 
   it('нулевая доска не даёт NaN и не делит на ноль', () => {

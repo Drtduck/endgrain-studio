@@ -1,8 +1,18 @@
 'use client'
 
 import { create, type StoreApi, type UseBoundStore } from 'zustand'
-import type { Cell, Design, PaintCost, PaintResult, PanelId, RowId, SpeciesId } from '@/lib/engine'
-import { EngineError, applyPaint, compile, elementExtentMm, splitPanel, type PanelElement, type Row } from '@/lib/engine'
+import type { Cell, Design, PaintCost, PaintResult, Panel, PanelId, RowId, SpeciesId } from '@/lib/engine'
+import {
+  EngineError,
+  applyPaint,
+  compile,
+  elementExtentMm,
+  isStrip,
+  splitPanel,
+  usageCount,
+  type PanelElement,
+  type Row,
+} from '@/lib/engine'
 import { roundHalf } from '@/lib/designs/fit'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import type { Population } from '@/lib/generators'
@@ -25,6 +35,18 @@ import { nextRowId } from './ids'
 export const DEFAULT_SPECIES_ID: SpeciesId = 'walnut'
 
 export type StudioView = 'editor' | 'templates' | 'generate' | 'photo' | 'view3d' | 'projects' | 'books' | 'promo'
+
+/** Полный список вкладок студии - источник истины для валидации `?tab=` в URL. */
+export const STUDIO_VIEWS: readonly StudioView[] = [
+  'editor',
+  'templates',
+  'generate',
+  'photo',
+  'view3d',
+  'projects',
+  'books',
+  'promo',
+]
 
 export interface GeneratorUiState {
   readonly population: Population
@@ -61,6 +83,12 @@ export interface StudioState {
   readonly generator: GeneratorUiState | null
   readonly photo: PhotoUiState | null
   /**
+   * Ячейки, с которыми уже произошло хоть одно действие (клик, включая noop и разветвление).
+   * Ключ - Cell.id (`${rowId}:${elementIndex}` или `${rowId}:${elementIndex}:${k}` для SliceRef),
+   * поэтому набор сбрасывается вместе с документом: loadDesign/resetStudio дают ему заново пустой Set.
+   */
+  readonly touchedCellIds: ReadonlySet<string>
+  /**
    * false только для свежего образца по умолчанию. Восстановление из localStorage/хэша
    * сбрасывает историю (undo/redo пустые), поэтому одного canUndo||canRedo недостаточно,
    * чтобы поймать «у пользователя уже есть реальная работа» - отсюда отдельный флаг.
@@ -81,10 +109,18 @@ export interface StudioState {
   paintCell(cell: Cell): void
   confirmFork(): void
   cancelFork(): void
+  markCellTouched(cellId: string): void
 
   setStripWidth(panelId: PanelId, elementIndex: number, widthMm: number): void
   setStripSpecies(panelId: PanelId, elementIndex: number, speciesId: SpeciesId): void
   addStrip(panelId: PanelId, atIndex: number): void
+  /**
+   * Добавляет полосу сразу во все панели, на которые ссылается хотя бы один ряд: это и есть
+   * «Добавить полосу» для пользователя. Индекс клампится по каждой панели отдельно, поэтому
+   * панели разной длины не рассинхронизируются и RAGGED_BOARD не возникает. `null` - добавить
+   * в конец каждой панели.
+   */
+  addColumn(atIndex: number | null): void
   removeStrip(panelId: PanelId, elementIndex: number): void
   splitStripAt(panelId: PanelId, elementIndex: number, atMm: number): void
   moveStrip(panelId: PanelId, fromIndex: number, toIndex: number): void
@@ -141,6 +177,7 @@ const UI_DEFAULTS = {
   generator: null,
   photo: null,
   documentTouched: false,
+  touchedCellIds: new Set<string>(),
 }
 
 const DEFAULT_STRIP_WIDTH_MM = 25
@@ -154,6 +191,20 @@ function moveInPlace<T>(list: T[], from: number, to: number): boolean {
   if (item === undefined) return false
   list.splice(to, 0, item)
   return true
+}
+
+/** Иммутабельное добавление в набор тронутых ячеек: без изменений возвращает тот же Set. */
+function withTouchedCell(touched: ReadonlySet<string>, cellId: string): ReadonlySet<string> {
+  if (touched.has(cellId)) return touched
+  const next = new Set(touched)
+  next.add(cellId)
+  return next
+}
+
+/** Порода полосы по индексу, если элемент существует и это Strip (не SliceRef). */
+function stripSpeciesAt(panel: Panel, index: number): SpeciesId | undefined {
+  const el = panel.elements[index]
+  return el && isStrip(el) ? el.speciesId : undefined
 }
 
 export function createStudioStore(initialDesign: Design = makeCheckerboard()): StudioStore {
@@ -195,17 +246,22 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
           if (error instanceof EngineError) return
           throw error
         }
-        if (result.kind === 'noop') return
+        if (result.kind === 'noop') {
+          // Кисть ничего не поменяла, но клик по ячейке был - подсветку «не тронуто» пора снять.
+          set((s) => ({ touchedCellIds: withTouchedCell(s.touchedCellIds, cell.id) }))
+          return
+        }
         if (result.kind === 'inPlace') {
           set((s) => ({
             history: commitValue(s.history, result.design),
             selectedCellId: cell.id,
             pendingFork: null,
             documentTouched: true,
+            touchedCellIds: withTouchedCell(s.touchedCellIds, cell.id),
           }))
           return
         }
-        set({
+        set((s) => ({
           pendingFork: {
             cellId: cell.id,
             speciesId: state.activeSpeciesId,
@@ -213,7 +269,8 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
             forkedPanelIds: result.forkedPanelIds,
             cost: result.cost,
           },
-        })
+          touchedCellIds: withTouchedCell(s.touchedCellIds, cell.id),
+        }))
       },
 
       confirmFork: () => {
@@ -224,10 +281,13 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
           pendingFork: null,
           selectedCellId: pending.cellId,
           documentTouched: true,
+          touchedCellIds: withTouchedCell(s.touchedCellIds, pending.cellId),
         }))
       },
 
       cancelFork: () => set({ pendingFork: null }),
+
+      markCellTouched: (cellId) => set((s) => ({ touchedCellIds: withTouchedCell(s.touchedCellIds, cellId) })),
 
       setStripWidth: (panelId, elementIndex, widthMm) => {
         if (!Number.isFinite(widthMm) || widthMm <= 0) return
@@ -255,6 +315,25 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
           const widthMm = left ? elementExtentMm(left) : DEFAULT_STRIP_WIDTH_MM
           const strip: PanelElement = { kind: 'strip', speciesId, widthMm }
           panel.elements.splice(index, 0, strip)
+        })
+      },
+
+      addColumn: (atIndex) => {
+        const speciesId = get().activeSpeciesId
+        const design = get().history.present
+        const usedPanelIds = new Set(design.panels.filter((p) => usageCount(design, p.id) > 0).map((p) => p.id))
+        edit((d) => {
+          for (const panel of d.panels) {
+            if (!usedPanelIds.has(panel.id)) continue
+            const index = atIndex === null ? panel.elements.length : Math.max(0, Math.min(atIndex, panel.elements.length))
+            const left = panel.elements[index - 1] ?? panel.elements[index]
+            const widthMm = left ? elementExtentMm(left) : DEFAULT_STRIP_WIDTH_MM
+            // Продолжаем чередование пород: смотрим на предпредыдущую полосу, а не только на соседа
+            // слева, иначе шахматка после вставки колонки ломает свой порядок.
+            const continuedSpecies = stripSpeciesAt(panel, index - 2) ?? stripSpeciesAt(panel, index - 1)
+            const strip: PanelElement = { kind: 'strip', speciesId: continuedSpecies ?? speciesId, widthMm }
+            panel.elements.splice(index, 0, strip)
+          }
         })
       },
 
@@ -402,6 +481,7 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
           pendingFork: null,
           selectedCellId: null,
           documentTouched: true,
+          touchedCellIds: new Set(),
         })),
       resetStudio: (design) =>
         set((s) => ({ history: resetHistory(s.history, design ?? makeCheckerboard()), ...UI_DEFAULTS })),

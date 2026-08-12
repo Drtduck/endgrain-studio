@@ -1,6 +1,7 @@
 'use client'
 
 import { Hammer } from 'lucide-react'
+import { ProductImage } from '@/components/affiliate/ProductImage'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { itemUrl } from '@/lib/affiliate'
 import { recommendProducts } from '@/lib/affiliate/recommend'
@@ -39,13 +40,16 @@ export function ToolRecommendations() {
                 target="_blank"
                 rel="sponsored noopener noreferrer"
                 data-testid={`recommend-${item.id}`}
-                className="flex flex-col gap-0.5 rounded-md border border-line-subtle bg-surface-raised px-3 py-2 transition-[box-shadow,border-color] duration-hover ease-out hover:border-accent-border hover:shadow-sm"
+                className="flex items-center gap-2.5 rounded-md border border-line-subtle bg-surface-raised px-3 py-2 transition-[box-shadow,border-color] duration-hover ease-out hover:border-accent-border hover:shadow-sm"
               >
-                <span className="text-[11px] font-medium tracking-[0.08em] text-ink-muted uppercase">
-                  {t(locale, `recommend.reason.${reason}`)}
+                <ProductImage item={item} alt={`${item.brand} ${item.title[locale]}`} width={44} height={44} />
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="text-[11px] font-medium tracking-[0.08em] text-ink-muted uppercase">
+                    {t(locale, `recommend.reason.${reason}`)}
+                  </span>
+                  <span className="text-[13px] font-semibold">{item.title[locale]}</span>
+                  <span className="font-mono text-[10px] text-ink-secondary">{t(locale, `affiliate.price.${item.band}`)}</span>
                 </span>
-                <span className="text-[13px] font-semibold">{item.title[locale]}</span>
-                <span className="font-mono text-[10px] text-ink-secondary">{t(locale, `affiliate.price.${item.band}`)}</span>
               </a>
             </li>
           ))}

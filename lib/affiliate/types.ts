@@ -9,6 +9,12 @@ export interface AffiliateItem {
   readonly band: PriceBand
   /** Не проверен вручную владельцем: ссылка ведёт на поиск по названию, а не на ASIN. */
   readonly unverified?: boolean
+  /**
+   * Прямая ссылка на картинку товара, если паттерн по ASIN отдаёт заглушку
+   * (проверено вручную через страницу товара). Если не задано, картинка
+   * строится из ASIN хелпером productImageUrl.
+   */
+  readonly image?: string
 }
 
 export interface AffiliateBook extends AffiliateItem {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AMAZON_TAG, amazonUrl, BOOKS, itemUrl, PRODUCTS } from './index'
+import { AMAZON_TAG, amazonUrl, BOOKS, itemUrl, productImageUrl, PRODUCTS } from './index'
 import type { AffiliateItem } from './types'
 
 const ASIN_RE = /^[A-Z0-9]{10}$/
@@ -72,6 +72,30 @@ describe('affiliate data', () => {
       expect(item.unverified).toBe(false)
       expect(itemUrl(item)).toContain(`/dp/${item.asin}`)
       expect(itemUrl(item)).not.toContain('/s?k=')
+    }
+  })
+
+  it('у каждой позиции поле image либо отсутствует, либо это валидный https-URL', () => {
+    for (const item of ALL_ITEMS) {
+      if (item.image === undefined) continue
+      expect(item.image.startsWith('https://')).toBe(true)
+      expect(() => new URL(item.image as string)).not.toThrow()
+    }
+  })
+
+  it('productImageUrl возвращает поле image, если оно задано, иначе паттерн по ASIN', () => {
+    const withImage = ALL_ITEMS.find((item) => item.image !== undefined)
+    expect(withImage).toBeDefined()
+    if (withImage) {
+      expect(productImageUrl(withImage)).toBe(withImage.image)
+    }
+
+    const withoutImage = ALL_ITEMS.find((item) => item.image === undefined)
+    expect(withoutImage).toBeDefined()
+    if (withoutImage) {
+      expect(productImageUrl(withoutImage)).toBe(
+        `https://m.media-amazon.com/images/P/${withoutImage.asin}.01._SCLZZZZZZZ_.jpg`,
+      )
     }
   })
 

@@ -1,9 +1,9 @@
 'use client'
 
-import type { PointerEvent as ReactPointerEvent } from 'react'
+import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { useMemo } from 'react'
 import { BoardSvg } from '@/components/BoardSvg'
-import { rowBandsMm } from '@/lib/engine'
+import { colBandsMm, rowBandsMm } from '@/lib/engine'
 import { t } from '@/lib/i18n'
 import { useDerived } from '@/lib/store/derived'
 import { selectDesign, useStudio } from '@/lib/store/studio'
@@ -15,16 +15,30 @@ function cellIdOf(event: ReactPointerEvent<HTMLDivElement>): string | null {
   return target.closest('[data-cell]')?.getAttribute('data-cell') ?? null
 }
 
+/** Тот же приём для номера ряда: BoardSvg помечает его data-row, обработчик живёт здесь. */
+function rowIdOf(target: EventTarget | null): string | null {
+  if (!(target instanceof Element)) return null
+  return target.closest('[data-row]')?.getAttribute('data-row') ?? null
+}
+
+function scrollToRow(rowId: string): void {
+  document.querySelector(`[data-testid="row-${rowId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
 export function BoardCanvas() {
   const locale = useStudio((s) => s.locale)
   const hoveredCellId = useStudio((s) => s.hoveredCellId)
   const selectedCellId = useStudio((s) => s.selectedCellId)
+  const touchedCellIds = useStudio((s) => s.touchedCellIds)
   const paintCell = useStudio((s) => s.paintCell)
   const hoverCell = useStudio((s) => s.hoverCell)
+  const selectRow = useStudio((s) => s.selectRow)
   const design = useStudio(selectDesign)
   const { model } = useDerived()
   // Колонка номеров рядов рядом с доской: помогает сверить ряд на холсте с инспектором рядов.
   const rowLabels = useMemo(() => rowBandsMm(design), [design])
+  // Полоса номеров колонок под доской: та же идея, только по горизонтали.
+  const colLabels = useMemo(() => colBandsMm(design), [design])
   // Подпись под доской: «N полос × M рядов · ширина × длина мм». N полос - максимум ячеек
   // в одном ряду (id ячейки имеет вид `${rowId}:${index}`), M рядов - число физических рядов.
   const captionStripCount = useMemo(() => {
@@ -37,11 +51,28 @@ export function BoardCanvas() {
   }, [model])
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    const rowId = rowIdOf(event.target)
+    if (rowId !== null) {
+      selectRow(rowId)
+      scrollToRow(rowId)
+      return
+    }
     const id = cellIdOf(event)
     if (id === null) return
     const cell = model.cells.find((c) => c.id === id)
     if (!cell) return
     paintCell(cell)
+  }
+
+  // Номера рядов дублируют role="button"/tabIndex в BoardSvg, поэтому Enter и Space должны
+  // так же выбирать ряд и скроллить к нему - иначе с клавиатуры до настроек ряда не добраться.
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    const rowId = rowIdOf(event.target)
+    if (rowId === null) return
+    event.preventDefault()
+    selectRow(rowId)
+    scrollToRow(rowId)
   }
 
   return (
@@ -54,6 +85,7 @@ export function BoardCanvas() {
         onPointerDown={onPointerDown}
         onPointerOver={(event) => hoverCell(cellIdOf(event))}
         onPointerLeave={() => hoverCell(null)}
+        onKeyDown={onKeyDown}
       >
         <BoardSvg
           model={model}
@@ -61,6 +93,8 @@ export function BoardCanvas() {
           highlightCellId={hoveredCellId}
           selectedCellId={selectedCellId}
           rowLabels={rowLabels}
+          colLabels={colLabels}
+          touchedCellIds={touchedCellIds}
         />
       </div>
       <p data-testid="board-caption" className="font-mono text-[11px] tabular-nums text-ink-muted">
