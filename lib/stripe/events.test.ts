@@ -103,6 +103,17 @@ describe('parseSubscriptionEvent', () => {
     expect(res?.priceId).toBe('price_пересозданная')
   })
 
+  it('без event.created отметка берётся из текущего времени, а не из эпохи', () => {
+    const raw = newShape() as { created?: number }
+    delete raw.created
+    const before = Date.now()
+    const res = parseSubscriptionEvent(raw)
+    expect(res).not.toBe(null)
+    const at = Date.parse(res?.eventAt ?? '')
+    expect(at).toBeGreaterThanOrEqual(before - 1000)
+    expect(at).toBeGreaterThan(Date.parse('2020-01-01T00:00:00.000Z'))
+  })
+
   it('customer развёрнутым объектом тоже разбирается', () => {
     expect(parseSubscriptionEvent(newShape({ customer: { id: 'cus_2' } }))?.customerId).toBe('cus_2')
   })

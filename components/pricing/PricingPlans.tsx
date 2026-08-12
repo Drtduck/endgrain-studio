@@ -18,6 +18,8 @@ export interface PricingPlansProps {
   readonly billingEnabled: boolean
   readonly signedIn: boolean
   readonly currentPeriodEnd: string | null
+  /** true, когда подписка доработает оплаченный период и не продлится. */
+  readonly cancelAtPeriodEnd: boolean
   readonly portalUrl: string
 }
 
@@ -73,7 +75,7 @@ function FeatureList({ locale, keys }: { locale: Locale; keys: readonly MessageK
  * и signedIn там заведомо false.
  */
 export function PricingPlans(props: PricingPlansProps) {
-  const { locale, mode, pro, reason, billingEnabled, signedIn, currentPeriodEnd, portalUrl } = props
+  const { locale, mode, pro, reason, billingEnabled, signedIn, currentPeriodEnd, cancelAtPeriodEnd, portalUrl } = props
   const [error, setError] = useState<CheckoutError | null>(null)
   const [busy, startTransition] = useTransition()
 
@@ -142,8 +144,11 @@ export function PricingPlans(props: PricingPlansProps) {
                   {t(locale, 'pricing.current')}
                 </span>
                 {currentPeriodEnd === null ? null : (
-                  <span className="text-xs text-ink-secondary">
-                    {t(locale, 'pricing.until', { date: formatDate(currentPeriodEnd, locale) })}
+                  <span data-testid="pricing-period" className="text-xs text-ink-secondary">
+                    {/* Отменённая подписка честно говорит, что не продлится, а не «оплачено до». */}
+                    {t(locale, cancelAtPeriodEnd ? 'pricing.canceling' : 'pricing.until', {
+                      date: formatDate(currentPeriodEnd, locale),
+                    })}
                   </span>
                 )}
                 {portalUrl.length > 0 ? (

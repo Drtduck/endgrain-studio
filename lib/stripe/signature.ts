@@ -41,15 +41,21 @@ export function verifyStripeSignature(input: VerifyInput): VerifyResult {
   const timestampSec = Number(timestamp)
   if (!Number.isFinite(timestampSec)) return { ok: false, reason: 'malformed' }
 
-  const expected = createHmac('sha256', secret).update(`${timestampSec}.${payload}`, 'utf8').digest()
+  // Подписывается исходная строка t из заголовка, а не Number(timestamp) обратно
+  // в строку: '1699999999.0' и '+1699999999' дали бы то же число, но другую
+  // подписанную строку, и верная подпись Stripe не сошлась бы с нашей.
+  const expected = createHmac('sha256', secret).update(`${timestamp}.${payload}`, 'utf8').digest()
   const matched = signatures.some((candidate) => equalsHex(candidate, expected))
   if (!matched) return { ok: false, reason: 'mismatch' }
 
   // Проверка возраста последней: подделанное событие не должно отличаться
   // от просроченного по коду причины, а верное просроченное отличаться обязано.
+  // Считаем только возраст, без Math.abs, как это делает stripe-node: событие
+  // из будущего это разъехавшиеся часы на нашей стороне, и отвергать доставку
+  // из-за них хуже, чем принять её.
   const nowMs = input.nowMs ?? Date.now()
   const toleranceSec = input.toleranceSec ?? DEFAULT_TOLERANCE_SEC
-  if (Math.abs(nowMs / 1000 - timestampSec) > toleranceSec) return { ok: false, reason: 'too-old' }
+  if (nowMs / 1000 - timestampSec > toleranceSec) return { ok: false, reason: 'too-old' }
 
   return { ok: true }
 }

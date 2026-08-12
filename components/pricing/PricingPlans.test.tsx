@@ -14,6 +14,7 @@ function setup(patch: Partial<PricingPlansProps> = {}) {
     billingEnabled: true,
     signedIn: true,
     currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
     portalUrl: '',
     ...patch,
   }
@@ -58,6 +59,18 @@ describe('PricingPlans', () => {
       'https://billing.stripe.com/p/login/test',
     )
     expect(container.querySelector('[data-testid="pricing-buy-monthly"]')).toBe(null)
+  })
+
+  it('отменённая подписка говорит, что не продлится, а не «оплачено до»', () => {
+    const { container } = setup({
+      pro: true,
+      reason: 'subscription',
+      currentPeriodEnd: '2026-12-01T00:00:00.000Z',
+      cancelAtPeriodEnd: true,
+    })
+    const period = container.querySelector('[data-testid="pricing-period"]')?.textContent ?? ''
+    expect(period).toContain('не продлится')
+    expect(period).not.toContain('Оплачено до')
   })
 
   it('ошибка от экшена показывается текстом по коду', async () => {

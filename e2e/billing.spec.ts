@@ -53,6 +53,13 @@ test.describe('оплата без ключей', () => {
     }
   })
 
+  test('отмена оплаты показывает баннер на странице тарифов', async ({ page }) => {
+    // cancel_url ведёт именно сюда: отсюда можно сразу попробовать ещё раз.
+    await page.goto('/pricing?checkout=cancel')
+    await expect(page.getByTestId('checkout-banner')).toBeVisible()
+    await expect(page.getByTestId('pricing-plans')).toBeVisible()
+  })
+
   test('возврат из кассы показывает баннер, крестик его закрывает', async ({ page }) => {
     await page.addInitScript(() => window.localStorage.clear())
     await page.goto('/?checkout=success')

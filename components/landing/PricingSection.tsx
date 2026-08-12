@@ -23,6 +23,7 @@ export function PricingSection({ locale }: { locale: Locale }) {
           billingEnabled={hasPublicPrices()}
           signedIn={false}
           currentPeriodEnd={null}
+          cancelAtPeriodEnd={false}
           portalUrl={STRIPE_PORTAL_URL}
         />
       </div>

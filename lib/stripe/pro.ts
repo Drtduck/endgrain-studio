@@ -67,6 +67,41 @@ export function resolveProStatus(row: SubscriptionRecord | null, nowMs: number):
   }
 }
 
+/**
+ * Читает строку подписки текущего пользователя, минуя и аварийный флаг, и
+ * гвард кассы. Нужна ровно одному месту: createCheckoutAction, где вопрос стоит
+ * не «открыт ли Pro», а «есть ли уже живая подписка в Stripe». С флагом
+ * NEXT_PUBLIC_PRO_UNLOCK=1 getProStatus() отдаёт reason 'flag', и подписчик
+ * увидел бы кнопки покупки, а Stripe завёл бы вторую подписку и списал дважды.
+ */
+export const getSubscriptionStatus: () => Promise<ProStatus> = cache(async (): Promise<ProStatus> => {
+  if (!isSupabaseConfigured()) return FREE
+  try {
+    const user = await getCurrentUser()
+    if (!user) return FREE
+    return resolveProStatus(await readSubscriptionRow(user.id), Date.now())
+  } catch (err) {
+    console.error('getSubscriptionStatus failed', err)
+    return FREE
+  }
+})
+
+async function readSubscriptionRow(userId: string): Promise<SubscriptionRecord | null> {
+  const sb = await getSupabaseServer()
+  const { data, error } = await sb
+    .from('subscriptions')
+    .select('status, plan, current_period_end, cancel_at_period_end')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error || !data) return null
+  return {
+    status: String(data.status),
+    plan: String(data.plan),
+    currentPeriodEnd: data.current_period_end === null ? null : String(data.current_period_end),
+    cancelAtPeriodEnd: data.cancel_at_period_end === true,
+  }
+}
+
 /** Мемоизация на один серверный рендер, как getCurrentUser в lib/supabase/session.ts. */
 export const getProStatus: () => Promise<ProStatus> = cache(async (): Promise<ProStatus> => {
   // Аварийный рубильник выигрывает у всего, в том числе у настроенного Stripe:
@@ -79,22 +114,7 @@ export const getProStatus: () => Promise<ProStatus> = cache(async (): Promise<Pr
   try {
     const user = await getCurrentUser()
     if (!user) return FREE
-    const sb = await getSupabaseServer()
-    const { data, error } = await sb
-      .from('subscriptions')
-      .select('status, plan, current_period_end, cancel_at_period_end')
-      .eq('user_id', user.id)
-      .maybeSingle()
-    if (error || !data) return FREE
-    return resolveProStatus(
-      {
-        status: String(data.status),
-        plan: String(data.plan),
-        currentPeriodEnd: data.current_period_end === null ? null : String(data.current_period_end),
-        cancelAtPeriodEnd: data.cancel_at_period_end === true,
-      },
-      Date.now(),
-    )
+    return resolveProStatus(await readSubscriptionRow(user.id), Date.now())
   } catch (err) {
     // Лежащая база не должна ронять рендер студии, ровно как в getCurrentUser.
     console.error('getProStatus failed', err)

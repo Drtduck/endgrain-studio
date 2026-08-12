@@ -7,6 +7,9 @@ import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabase/admi
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+/** Статусы, при которых сохранённая подписка считается живой и её нельзя перетереть чужой. */
+const LIVE_STATUSES: readonly string[] = ['active', 'trialing', 'past_due']
+
 /** Ответ всегда короткий текст: никакого JSON и никакого эха события наружу. */
 function text(body: string, status: number): Response {
   return new Response(body, { status, headers: { 'content-type': 'text/plain; charset=utf-8' } })
@@ -42,15 +45,40 @@ export async function POST(request: Request): Promise<Response> {
 
     // Защита от гонки. Stripe при ретрае может доставить created после updated,
     // и без проверки активная подписка откатилась бы в incomplete. Условие .lte()
-    // в upsert не работает, поэтому сначала читаем сохранённую отметку.
-    const { data: existing } = await sb
+    // в upsert не работает, поэтому сначала читаем сохранённую строку.
+    const { data: existing, error: readError } = await sb
       .from('subscriptions')
-      .select('last_event_at')
+      .select('last_event_at, stripe_subscription_id, status')
       .eq('user_id', upsert.userId)
       .maybeSingle()
+    if (readError) {
+      // Молча писать поверх непрочитанной строки нельзя: именно эта строка и
+      // защищает от отката. Отдаём 500, Stripe переотправит событие.
+      console.error('stripe webhook read failed', readError)
+      return text('read failed', 500)
+    }
+
     const seenAt = existing?.last_event_at
+    // Сравнение строгое: у event.created секундное разрешение, и два события
+    // одной секунды получают одинаковый eventAt. При равенстве применяем
+    // пришедшее, иначе второе событие той же секунды потерялось бы.
     if (typeof seenAt === 'string' && Date.parse(seenAt) > Date.parse(upsert.eventAt)) {
       return text('stale', 200)
+    }
+
+    // У пользователя уже есть другая живая подписка: событие по старой,
+    // отменённой или задвоенной подписке не должно её перетереть. Строка одна
+    // на пользователя, поэтому решаем именно здесь.
+    const knownId = existing?.stripe_subscription_id
+    const knownStatus = existing?.status
+    if (
+      typeof knownId === 'string' &&
+      knownId !== upsert.subscriptionId &&
+      typeof knownStatus === 'string' &&
+      LIVE_STATUSES.includes(knownStatus)
+    ) {
+      console.error('stripe webhook: чужая подписка поверх живой', { knownId, incoming: upsert.subscriptionId })
+      return text('foreign subscription', 200)
     }
 
     const { error } = await sb.from('subscriptions').upsert(

@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import type { Design } from '@/lib/engine'
 import { parseDesign } from '@/lib/persist'
-import { FREE_PROJECT_LIMIT } from '@/lib/stripe/plans'
+import { FREE_PROJECT_LIMIT } from '@/lib/stripe/limits'
 import { getProStatus } from '@/lib/stripe/pro'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { getSupabaseServer } from '@/lib/supabase/server'

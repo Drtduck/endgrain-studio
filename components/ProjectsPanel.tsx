@@ -12,7 +12,7 @@ import { usePro } from '@/components/ProProvider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { t, type MessageKey } from '@/lib/i18n'
-import { FREE_PROJECT_LIMIT } from '@/lib/stripe/plans'
+import { FREE_PROJECT_LIMIT } from '@/lib/stripe/limits'
 import { selectDesign, useStudio } from '@/lib/store/studio'
 import type { ProjectSummary } from '@/lib/supabase/types'
 

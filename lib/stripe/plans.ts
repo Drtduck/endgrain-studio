@@ -2,14 +2,8 @@ import { STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY } from './config'
 
 export type PlanId = 'monthly' | 'yearly'
 
-/** Сколько проектов в облаке держит бесплатный аккаунт. */
-export const FREE_PROJECT_LIMIT = 3
-
-/** Максимальная сторона PNG: обычный экспорт и экспорт для печати. */
-export const PNG_MAX_PX_FREE = 2400
-export const PNG_MAX_PX_PRO = 4000
-export const PNG_SCALE_FREE = 2
-export const PNG_SCALE_PRO = 4
+// Числовые лимиты живут в ./limits: их читают клиентские компоненты, а этот
+// модуль импортирует ./config с серверными ключами.
 
 export function priceIdFor(plan: PlanId): string {
   return plan === 'monthly' ? STRIPE_PRICE_MONTHLY : STRIPE_PRICE_YEARLY

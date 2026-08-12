@@ -96,6 +96,34 @@ describe('verifyStripeSignature', () => {
     ).toEqual({ ok: true })
   })
 
+  it('timestamp из будущего проходит: часы могли разъехаться, а подпись верна', () => {
+    const future = T + 400
+    expect(
+      verifyStripeSignature({ payload: PAYLOAD, header: header(future, sign(future, PAYLOAD, SECRET)), secret: SECRET, nowMs: NOW_MS }),
+    ).toEqual({ ok: true })
+  })
+
+  it('подписывается исходная строка t, а не её числовое значение', () => {
+    // '1760000000.0' и 1760000000 это одно число, но разные подписанные строки.
+    const raw = `${T}.0`
+    expect(
+      verifyStripeSignature({
+        payload: PAYLOAD,
+        header: `t=${raw},v1=${sign(T, PAYLOAD, SECRET)}`,
+        secret: SECRET,
+        nowMs: NOW_MS,
+      }),
+    ).toEqual({ ok: false, reason: 'mismatch' })
+    expect(
+      verifyStripeSignature({
+        payload: PAYLOAD,
+        header: `t=${raw},v1=${createHmac('sha256', SECRET).update(`${raw}.${PAYLOAD}`, 'utf8').digest('hex')}`,
+        secret: SECRET,
+        nowMs: NOW_MS,
+      }),
+    ).toEqual({ ok: true })
+  })
+
   it('две схемы v1, из которых верна вторая, проходят (ротация секрета)', () => {
     const res = verifyStripeSignature({
       payload: PAYLOAD,

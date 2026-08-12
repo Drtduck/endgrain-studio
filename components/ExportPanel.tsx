@@ -15,7 +15,7 @@ import { bothUnits } from '@/lib/export/format'
 import { rowBandsMm } from '@/lib/engine'
 import { useDerived } from '@/lib/store/derived'
 import { selectDesign, useStudio } from '@/lib/store/studio'
-import { PNG_MAX_PX_FREE, PNG_MAX_PX_PRO, PNG_SCALE_FREE, PNG_SCALE_PRO } from '@/lib/stripe/plans'
+import { PNG_MAX_PX_FREE, PNG_MAX_PX_PRO, PNG_SCALE_FREE, PNG_SCALE_PRO } from '@/lib/stripe/limits'
 
 export type ExportFormat = 'png' | 'png-hd' | 'svg' | 'csv' | 'pdf'
 
@@ -64,6 +64,9 @@ export function ExportPanel() {
         const scale = format === 'png-hd' ? PNG_SCALE_PRO : PNG_SCALE_FREE
         // maxPx в renderBoardSvg это сторона сцены до множителя, поэтому делим:
         // 1200 на 2 даёт обещанные 2400 px, 1000 на 4 даёт 4000 px для печати.
+        // У HD-варианта сцена мельче обычной (1000 против 1200), и это осознанно:
+        // текст подписи растёт вместе с множителем, а вчетверо увеличенный SVG с
+        // мелкой сцены даёт для печати ровно тот же результат, что и крупная сцена.
         const maxPx = (format === 'png-hd' ? PNG_MAX_PX_PRO : PNG_MAX_PX_FREE) / scale
         const [{ downloadBlob }, { svgToPngBlob }] = await Promise.all([import('@/lib/export/download'), import('@/lib/export/png')])
         const rendered = renderBoardSvg(model, { title: design.name, caption, maxPx })

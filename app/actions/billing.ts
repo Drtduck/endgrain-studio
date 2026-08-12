@@ -6,7 +6,7 @@ import { APP_ORIGIN } from '@/lib/routing/host'
 import type { CheckoutResult } from '@/lib/stripe/billing'
 import { STRIPE_SECRET_KEY, isStripeConfigured } from '@/lib/stripe/config'
 import { priceIdFor } from '@/lib/stripe/plans'
-import { getProStatus } from '@/lib/stripe/pro'
+import { getSubscriptionStatus } from '@/lib/stripe/pro'
 import { getCurrentUser } from '@/lib/supabase/session'
 
 const planSchema = z.enum(['monthly', 'yearly'])
@@ -24,9 +24,11 @@ export async function createCheckoutAction(plan: unknown): Promise<CheckoutResul
   const user = await getCurrentUser()
   if (!user) return { ok: false, error: 'unauthenticated' }
 
-  // Второй чек-аут поверх активной подписки создал бы вторую подписку и двойное списание.
-  const status = await getProStatus()
-  if (status.reason === 'subscription') return { ok: false, error: 'already' }
+  // Второй чек-аут поверх активной подписки создал бы вторую подписку и двойное
+  // списание. Спрашиваем живую строку, а не getProStatus(): при аварийном флаге
+  // NEXT_PUBLIC_PRO_UNLOCK=1 причина была бы 'flag', и защита бы не сработала.
+  const subscription = await getSubscriptionStatus()
+  if (subscription.reason === 'subscription') return { ok: false, error: 'already' }
 
   // Origin из запроса, а не жёстко зашитый APP_ORIGIN: иначе с localhost
   // после оплаты уводило бы на прод.

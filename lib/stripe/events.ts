@@ -106,6 +106,9 @@ export function parseSubscriptionEvent(raw: unknown): SubscriptionUpsert | null 
     status: subscription.status,
     currentPeriodEnd: periodEndSec === null ? null : new Date(periodEndSec * 1000).toISOString(),
     cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
-    eventAt: new Date((event.created ?? 0) * 1000).toISOString(),
+    // Без created берём текущее время, а не эпоху: 1970 год сделал бы событие
+    // заведомо более старым, чем любая уже сохранённая отметка, и вебхук молча
+    // отвечал бы stale на каждое такое событие вместо того, чтобы его применить.
+    eventAt: new Date(event.created === undefined ? Date.now() : event.created * 1000).toISOString(),
   }
 }
