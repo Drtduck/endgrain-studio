@@ -78,6 +78,12 @@ export interface StudioState {
   readonly selectedCellId: string | null
   readonly selectedPanelId: PanelId | null
   readonly selectedRowId: RowId | null
+  /**
+   * Индекс колонки (позиция полосы), выбранный кликом по номеру колонки под доской.
+   * Одна колонка - это один и тот же индекс элемента сразу в нескольких панелях
+   * (шахматка чередует панели по рядам), поэтому это индекс, а не id конкретной полосы.
+   */
+  readonly selectedStripIndex: number | null
   readonly hoveredCellId: string | null
   readonly pendingFork: PendingFork | null
   readonly generator: GeneratorUiState | null
@@ -103,6 +109,7 @@ export interface StudioState {
   hoverCell(cellId: string | null): void
   selectPanel(panelId: PanelId | null): void
   selectRow(rowId: RowId | null): void
+  selectStrip(index: number | null): void
   setGenerator(next: GeneratorUiState): void
   setPhoto(next: PhotoUiState | null): void
 
@@ -172,6 +179,7 @@ const UI_DEFAULTS = {
   selectedCellId: null,
   selectedPanelId: null,
   selectedRowId: null,
+  selectedStripIndex: null,
   hoveredCellId: null,
   pendingFork: null,
   generator: null,
@@ -231,6 +239,7 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
       hoverCell: (hoveredCellId) => set({ hoveredCellId }),
       selectPanel: (selectedPanelId) => set({ selectedPanelId }),
       selectRow: (selectedRowId) => set({ selectedRowId }),
+      selectStrip: (selectedStripIndex) => set({ selectedStripIndex }),
       setGenerator: (generator) => set({ generator }),
       setPhoto: (photo) => set({ photo }),
 

@@ -1,5 +1,5 @@
 import { t, type Locale } from '@/lib/i18n'
-import { APP_ORIGIN } from '@/lib/routing/host'
+import { APP_SIGNUP_URL } from '@/lib/routing/host'
 import { speciesHex } from '@/lib/species'
 
 // Четыре полосы-породы для декоративной сетки фона. Цвета берутся из движка пород
@@ -35,7 +35,7 @@ export function LandingHero({ locale }: { locale: Locale }) {
 
           <div className="flex flex-wrap items-center gap-3">
             <a
-              href={APP_ORIGIN}
+              href={APP_SIGNUP_URL}
               data-testid="landing-cta-hero"
               className="rounded-md bg-accent px-5 py-3 font-sans text-base font-semibold text-accent-fg shadow-sm transition-colors duration-hover hover:bg-accent-hover"
             >

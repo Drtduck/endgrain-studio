@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import { baseDesign } from '@/lib/engine'
-import { LS_CURRENT_KEY, encodeDesignToHash, serializeDesign } from '@/lib/persist'
+import { LS_CURRENT_KEY, deserializeDesign, encodeDesignToHash, serializeDesign } from '@/lib/persist'
+import { useStudio } from './studio'
 import { makeDebouncedSaver, readInitialDesign, shareUrl, useStudioPersistence, SAVE_DEBOUNCE_MS } from './persist'
 
 describe('makeDebouncedSaver', () => {
@@ -88,5 +89,32 @@ describe('useStudioPersistence', () => {
     const { unmount } = renderHook(() => useStudioPersistence())
     expect(window.location.hash).toBe('')
     unmount()
+  })
+
+  it('сброс студии пишется в localStorage немедленно, а не через дебаунс: перезагрузка не воскрешает стёртый проект', () => {
+    vi.useFakeTimers()
+    try {
+      useStudio.getState().resetStudio(baseDesign({ id: 'до-сброса', name: 'до сброса' }))
+      const { unmount } = renderHook(() => useStudioPersistence())
+      act(() => {
+        useStudio.getState().setKerfMm(7) // реальная правка после монтирования: обычный дебаунс всё ещё 2с
+      })
+      expect(window.localStorage.getItem(LS_CURRENT_KEY)).toBe(null)
+
+      act(() => {
+        useStudio.getState().resetStudio() // сброс должен пройти мимо дебаунса
+      })
+      const raw = window.localStorage.getItem(LS_CURRENT_KEY)
+      expect(raw).not.toBe(null)
+      expect(deserializeDesign(raw as string).id).toBe('sample-checkerboard')
+
+      // Дебаунс от правки ДО сброса не должен всплыть позже и переписать localStorage.
+      vi.advanceTimersByTime(SAVE_DEBOUNCE_MS)
+      expect(deserializeDesign(window.localStorage.getItem(LS_CURRENT_KEY) as string).id).toBe('sample-checkerboard')
+
+      unmount()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

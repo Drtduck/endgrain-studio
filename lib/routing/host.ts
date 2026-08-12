@@ -6,6 +6,13 @@
 export const SITE_ORIGIN: string = process.env.NEXT_PUBLIC_SITE_ORIGIN ?? 'https://endgrain.app'
 export const APP_ORIGIN: string = process.env.NEXT_PUBLIC_APP_ORIGIN ?? 'https://app.endgrain.app'
 
+/**
+ * Куда ведут кнопки «Начать» с лендинга. Студия закрыта аккаунтом, поэтому вход
+ * в продукт это регистрация, а next=/ возвращает человека в редактор сразу после
+ * создания аккаунта (без него он приземлился бы на корень по умолчанию).
+ */
+export const APP_SIGNUP_URL: string = `${APP_ORIGIN}/register?next=%2F`
+
 /** Canonical-путь лендинга внутри приложения. Корень сайта переписывается сюда. */
 export const LANDING_PATH = '/landing'
 

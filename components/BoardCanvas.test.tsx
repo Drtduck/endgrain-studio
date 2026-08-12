@@ -100,4 +100,32 @@ describe('BoardCanvas', () => {
     fireEvent.keyDown(label, { key: 'Enter', bubbles: true })
     expect(useStudio.getState().selectedRowId).toBe(rowId)
   })
+
+  it('клик по номеру колонки выбирает полосу и скроллит к её карточке в инспекторе', () => {
+    useStudio.getState().resetStudio(makeCheckerboard({ cols: 3, rows: 2 }))
+    const { container } = render(<BoardCanvas />)
+    const target = document.createElement('div')
+    target.setAttribute('data-strip-col', '1')
+    const scrollIntoView = vi.fn()
+    target.scrollIntoView = scrollIntoView
+    document.body.appendChild(target)
+    try {
+      const label = container.querySelector('[data-col="1"]') as Element
+      expect(label).not.toBe(null)
+      fireEvent.pointerDown(label, { bubbles: true })
+      expect(useStudio.getState().selectedStripIndex).toBe(1)
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' })
+    } finally {
+      document.body.removeChild(target)
+    }
+  })
+
+  it('Enter на номере колонки работает так же, как клик', () => {
+    useStudio.getState().resetStudio(makeCheckerboard({ cols: 3, rows: 2 }))
+    const { container } = render(<BoardCanvas />)
+    const label = container.querySelector('[data-col="2"]') as Element
+    expect(label).not.toBe(null)
+    fireEvent.keyDown(label, { key: ' ', bubbles: true })
+    expect(useStudio.getState().selectedStripIndex).toBe(2)
+  })
 })

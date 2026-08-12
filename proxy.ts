@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { decideAccess } from '@/lib/auth/access'
 import { COUNTRY_HEADER } from '@/lib/auth/geo'
+import { flags } from '@/lib/flags'
 import { APP_ORIGIN, LANDING_PATH, SITE_ORIGIN, hostRole } from '@/lib/routing/host'
-import { updateSession } from '@/lib/supabase/proxy'
+import { isSupabaseConfigured } from '@/lib/supabase/config'
+import { carryCookies, updateSession } from '@/lib/supabase/proxy'
 
 /**
  * Vercel сам определяет страну по IP и кладёт её в x-vercel-ip-country. Переносим
@@ -35,7 +38,24 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(new URL(LANDING_PATH, SITE_ORIGIN), 308)
   }
 
-  return updateSession(withCountryHeader(request))
+  // Один поход в Supabase на переход: он же продлевает сессию, он же отвечает,
+  // авторизован ли гость.
+  const { response, authenticated } = await updateSession(withCountryHeader(request))
+
+  const decision = decideAccess({
+    role,
+    pathname: path,
+    search: request.nextUrl.search,
+    authenticated,
+    publicStudio: flags.publicStudio,
+    supabaseConfigured: isSupabaseConfigured(),
+  })
+
+  if (decision.kind === 'redirect') {
+    return carryCookies(response, NextResponse.redirect(new URL(decision.to, request.url), 307))
+  }
+
+  return response
 }
 
 // Матчер исключает статику и картинки: без него proxy отрабатывает даже на

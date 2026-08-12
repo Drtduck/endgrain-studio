@@ -31,3 +31,25 @@ test.describe('аккаунт', () => {
     await expect(page.getByTestId('projects-error')).toBeHidden()
   })
 })
+
+// Гейт студии проверяется только на сборке без аварийного флага: playwright.config.ts
+// по умолчанию поднимает сервер с PUBLIC_STUDIO=1, иначе анонимные смоки не откроют
+// редактор. Запуск: PUBLIC_STUDIO=0 pnpm test:e2e e2e/auth.spec.ts
+const gateEnabled = process.env['PUBLIC_STUDIO'] === '0'
+
+test.describe('гейт студии', () => {
+  test.skip(!gateEnabled, 'Требует сборки с PUBLIC_STUDIO=0')
+
+  test('аноним с корня улетает на логин, next сохраняет путь', async ({ page }) => {
+    await page.goto('/?tab=cut')
+    await expect(page).toHaveURL(/\/login\?next=/)
+    await expect(page.getByTestId('auth-form-login')).toBeVisible()
+  })
+
+  test('страницы входа и прайс открыты без аккаунта', async ({ page }) => {
+    await page.goto('/register')
+    await expect(page.getByTestId('auth-register-why')).toBeVisible()
+    await page.goto('/pricing')
+    await expect(page).toHaveURL(/\/pricing/)
+  })
+})

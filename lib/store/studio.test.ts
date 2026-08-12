@@ -166,6 +166,29 @@ describe('studio store: settings, selection, history', () => {
     expect(s.pendingFork).toBe(null)
   })
 
+  it('resetStudio полностью стирает историю правок, выбор ячеек/рядов/полос и подсветку тронутых ячеек', () => {
+    const store = createStudioStore(baseDesign())
+    store.getState().setKerfMm(4)
+    store.getState().setKerfMm(5)
+    store.getState().selectRow('r1')
+    store.getState().selectPanel('A')
+    store.getState().selectStrip(0)
+    store.getState().markCellTouched('r1:0')
+    expect(selectCanUndo(store.getState())).toBe(true)
+
+    store.getState().resetStudio(baseDesign())
+    const s = store.getState()
+    expect(selectCanUndo(s)).toBe(false)
+    expect(selectCanRedo(s)).toBe(false)
+    expect(s.history.past).toHaveLength(0)
+    expect(s.history.future).toHaveLength(0)
+    expect(s.selectedRowId).toBe(null)
+    expect(s.selectedPanelId).toBe(null)
+    expect(s.selectedStripIndex).toBe(null)
+    expect(s.touchedCellIds.size).toBe(0)
+    expect(s.documentTouched).toBe(false)
+  })
+
   it('fresh sample is not dirty, but loadDesign marks it dirty even though history is empty', () => {
     const store = createStudioStore(baseDesign())
     expect(selectIsDirty(store.getState())).toBe(false)

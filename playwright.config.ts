@@ -30,6 +30,11 @@ export default defineConfig({
   ],
   webServer: {
     command: `pnpm build && pnpm start --port ${PORT}`,
+    // Студия закрыта аккаунтом, но 40+ смоков ходят в редактор анонимно и живого
+    // Supabase в CI нет. Поэтому e2e-сборка по умолчанию поднимается с аварийным
+    // флагом PUBLIC_STUDIO=1. Чтобы проверить сам гейт, запускайте с PUBLIC_STUDIO=0
+    // (тогда включится сценарий «гейт» в e2e/auth.spec.ts).
+    env: { PUBLIC_STUDIO: process.env['PUBLIC_STUDIO'] ?? '1' },
     url: baseURL,
     reuseExistingServer: !isCI,
     timeout: 240_000,

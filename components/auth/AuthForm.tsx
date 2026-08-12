@@ -5,10 +5,21 @@ import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useGoogleAuthAvailable } from '@/components/GoogleAuthProvider'
+import { safeNextPath } from '@/lib/auth/access'
 import { t, type Locale } from '@/lib/i18n'
 import { getSupabaseBrowser } from '@/lib/supabase/browser'
 
 export const MIN_PASSWORD_LENGTH = 8
+
+/**
+ * Куда возвращать после входа. Читаем из адресной строки в момент отправки, а не
+ * через useSearchParams: хук заставил бы оборачивать страницу в Suspense ради
+ * значения, которое нужно ровно один раз. safeNextPath режет открытый редирект.
+ */
+function nextFromLocation(): string {
+  if (typeof window === 'undefined') return '/'
+  return safeNextPath(new URLSearchParams(window.location.search).get('next'))
+}
 
 export type AuthMode = 'login' | 'register'
 
@@ -51,7 +62,9 @@ export function AuthForm({ mode, locale }: { mode: AuthMode; locale: Locale }) {
     const sb = getSupabaseBrowser()
     const { error: oauthError } = await sb.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=/` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextFromLocation())}`,
+      },
     })
     if (oauthError) {
       setBusy(false)
@@ -70,6 +83,7 @@ export function AuthForm({ mode, locale }: { mode: AuthMode; locale: Locale }) {
     }
     setBusy(true)
     const sb = getSupabaseBrowser()
+    const next = nextFromLocation()
 
     if (mode === 'login') {
       const { error: signInError } = await sb.auth.signInWithPassword({ email, password })
@@ -80,7 +94,7 @@ export function AuthForm({ mode, locale }: { mode: AuthMode; locale: Locale }) {
         setError(t(locale, 'auth.errorBadCredentials'))
         return
       }
-      router.push('/')
+      router.push(next)
       router.refresh()
       return
     }
@@ -88,7 +102,9 @@ export function AuthForm({ mode, locale }: { mode: AuthMode; locale: Locale }) {
     const { data, error: signUpError } = await sb.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      },
     })
     setBusy(false)
     if (signUpError) {
@@ -101,7 +117,7 @@ export function AuthForm({ mode, locale }: { mode: AuthMode; locale: Locale }) {
       setConfirmSent(true)
       return
     }
-    router.push('/')
+    router.push(next)
     router.refresh()
   }
 

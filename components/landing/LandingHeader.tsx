@@ -1,6 +1,6 @@
 import { LandingLocaleToggle } from '@/components/landing/LandingLocaleToggle'
 import { t, type Locale } from '@/lib/i18n'
-import { APP_ORIGIN } from '@/lib/routing/host'
+import { APP_SIGNUP_URL } from '@/lib/routing/host'
 
 export function LandingHeader({ locale }: { locale: Locale }) {
   return (
@@ -21,11 +21,11 @@ export function LandingHeader({ locale }: { locale: Locale }) {
       <LandingLocaleToggle locale={locale} />
 
       <a
-        href={APP_ORIGIN}
+        href={APP_SIGNUP_URL}
         data-testid="landing-cta-header"
         className="rounded-md bg-accent px-3 py-1.5 font-sans text-sm font-semibold text-accent-fg transition-colors duration-hover hover:bg-accent-hover"
       >
-        {t(locale, 'landing.nav.openApp')}
+        {t(locale, 'landing.nav.cta')}
       </a>
     </header>
   )

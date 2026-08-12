@@ -1,6 +1,7 @@
 import { t, type Locale } from '@/lib/i18n'
 
-// Снимаются один раз через `pnpm shots` (e2e/shots.spec.ts) и коммитятся как обычные файлы.
+// Снимаются через `pnpm shots` (e2e/shots.spec.ts) и коммитятся как обычные файлы.
+// Комплект свой на каждую локаль: интерфейс на снимке должен совпадать с языком лендинга.
 const SHOTS = [
   { file: 'editor.png', slug: 'editor', labelRu: 'Редактор', labelEn: 'Editor' },
   { file: 'templates.png', slug: 'templates', labelRu: 'Шаблоны', labelEn: 'Templates' },
@@ -19,7 +20,7 @@ export function ShotStrip({ locale }: { locale: Locale }) {
           {SHOTS.map((shot) => (
             <img
               key={shot.file}
-              src={`/landing/shots/${shot.file}`}
+              src={`/landing/shots/${locale}/${shot.file}`}
               width={1280}
               height={720}
               loading="lazy"

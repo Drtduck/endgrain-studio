@@ -82,6 +82,17 @@ describe('PanelInspector', () => {
     expect(screen.getByText('В панели нет полос')).toBeDefined()
   })
 
+  it('подсвечивает одинаковый индекс полосы во всех используемых панелях при выборе колонки', () => {
+    render(<PanelInspector />)
+    act(() => useStudio.getState().selectStrip(0))
+    const stripInA = screen.getByTestId('strip-A-0')
+    const stripInB = screen.getByTestId('strip-B-0')
+    expect(stripInA.className).toContain('border-accent-border')
+    expect(stripInB.className).toContain('border-accent-border')
+    // Соседний индекс не подсвечен.
+    expect(screen.getByTestId('strip-A-1').className).not.toContain('border-accent-border')
+  })
+
   it('показывает вложенный срез только для чтения', () => {
     useStudio.getState().resetStudio(
       baseDesign({

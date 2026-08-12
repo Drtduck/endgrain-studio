@@ -28,6 +28,8 @@ describe('AuthForm', () => {
     signInWithOAuth.mockClear()
     push.mockClear()
     refresh.mockClear()
+    // Адресную строку читает сама форма, поэтому каждый тест стартует с чистой.
+    window.history.replaceState({}, '', '/login')
   })
 
   it('signs in with the entered credentials and navigates home', async () => {
@@ -102,7 +104,55 @@ describe('AuthForm', () => {
     await waitFor(() => expect(signInWithOAuth).toHaveBeenCalledTimes(1))
     expect(signInWithOAuth).toHaveBeenCalledWith({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=/` },
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=%2F` },
+    })
+  })
+
+  it('возвращает на next после входа по паролю', async () => {
+    window.history.replaceState({}, '', '/login?next=%2F%3Ftab%3Dcut')
+    const { container } = render(<AuthForm mode="login" locale="ru" />)
+    fillCredentials(container, 'a@example.com', 'password123')
+    fireEvent.submit(container.querySelector('[data-testid="auth-form-login"]') as HTMLFormElement)
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/?tab=cut'))
+  })
+
+  it('игнорирует открытый редирект в next и уводит на корень', async () => {
+    window.history.replaceState({}, '', '/login?next=' + encodeURIComponent('//evil.com'))
+    const { container } = render(<AuthForm mode="login" locale="ru" />)
+    fillCredentials(container, 'a@example.com', 'password123')
+    fireEvent.submit(container.querySelector('[data-testid="auth-form-login"]') as HTMLFormElement)
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/'))
+  })
+
+  it('возвращает на next после регистрации и прокидывает его в письмо', async () => {
+    window.history.replaceState({}, '', '/register?next=%2F%3Ftab%3Dprojects')
+    const { container } = render(<AuthForm mode="register" locale="ru" />)
+    fillCredentials(container, 'a@example.com', 'password123')
+    fireEvent.submit(container.querySelector('[data-testid="auth-form-register"]') as HTMLFormElement)
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/?tab=projects'))
+    expect(signUp).toHaveBeenCalledWith({
+      email: 'a@example.com',
+      password: 'password123',
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/?tab=projects')}`,
+      },
+    })
+  })
+
+  it('прокидывает next в redirectTo для входа через Google', async () => {
+    window.history.replaceState({}, '', '/login?next=%2F%3Ftab%3Dcut')
+    const { container } = render(
+      <GoogleAuthProvider value={true}>
+        <AuthForm mode="login" locale="ru" />
+      </GoogleAuthProvider>
+    )
+    fireEvent.click(container.querySelector('[data-testid="auth-google"]') as HTMLButtonElement)
+    await waitFor(() => expect(signInWithOAuth).toHaveBeenCalledTimes(1))
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/?tab=cut')}`,
+      },
     })
   })
 

@@ -207,19 +207,21 @@
 }
 
 @layer utilities {
-  /* Бегущая лента узоров. Двигаем -50%, потому что список дублируется ровно
-     дважды: на стыке рисунок совпадает и шва не видно. */
-  @keyframes eg-marquee {
-    from { transform: translate3d(0, 0, 0); }
-    to   { transform: translate3d(-50%, 0, 0); }
+  /* Карточка витрины узоров: подъём и тень у самой плитки, лёгкий наезд у фото
+     внутри. Разнесено на два класса, потому что transform нужен обоим, а
+     сложить их в один элемент нельзя. */
+  .eg-photo-card {
+    transition: transform var(--dur-panel) var(--ease-out), box-shadow var(--dur-panel) var(--ease-out);
   }
-  .eg-marquee-track {
-    display: flex;
-    width: max-content;
-    animation: eg-marquee var(--eg-marquee-dur, 60s) linear infinite;
+  .eg-photo-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
   }
-  .eg-marquee-reverse { animation-direction: reverse; }
-  .eg-marquee:hover .eg-marquee-track { animation-play-state: paused; }
+  .eg-photo-zoom {
+    transition: transform 500ms var(--ease-out);
+    will-change: transform;
+  }
+  .eg-photo-card:hover .eg-photo-zoom { transform: scale(1.05); }
 
   /* Наклон карточки под курсором: только transform и тень, никаких сдвигов
      соседей. Длительность из токена --dur-panel. */
@@ -316,10 +318,11 @@
 
   /* Один выключатель на всё. Без него лендинг нарушает prefers-reduced-motion. */
   @media (prefers-reduced-motion: reduce) {
-    .eg-marquee-track, .eg-bob, .eg-reveal,
+    .eg-bob, .eg-reveal,
     .eg-robot-bob, .eg-robot-leg, .eg-robot-eye,
     .eg-robot-hop, .eg-robot-flip, .eg-robot-backflip { animation: none !important; }
     .eg-tilt:hover { transform: none; }
+    .eg-photo-card:hover, .eg-photo-card:hover .eg-photo-zoom { transform: none; }
   }
 
   /* Плавное раскрытие <details> партнёрских блоков там, где браузер это умеет.

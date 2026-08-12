@@ -20,13 +20,21 @@ test('переключатель языка меняет копирайт', asyn
   expect(locale?.value).toBe('en')
 })
 
-test('витрина рендерит доски', async ({ page }) => {
+test('витрина показывает фото досок', async ({ page }) => {
   await openLanding(page)
-  const rowA = page.getByTestId('landing-marquee-row-a')
-  await expect(rowA).toBeVisible()
-  await expect(rowA.locator('svg')).toHaveCount(16)
-  const fill = await rowA.locator('svg rect').first().getAttribute('fill')
-  expect(fill).toMatch(/^#[0-9a-f]{6}$/i)
+  const grid = page.getByTestId('landing-pattern-grid')
+  await expect(grid).toBeVisible()
+  const shots = grid.locator('img')
+  await expect(shots).toHaveCount(16)
+
+  // Каждая карточка обязана нести осмысленный alt и реально загрузиться,
+  // иначе блок молча превратится в сетку битых иконок.
+  const first = shots.first()
+  await expect(first).toHaveAttribute('alt', /.{10,}/)
+  await expect(async () => {
+    const loaded = await first.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)
+    expect(loaded).toBe(true)
+  }).toPass()
 })
 
 test('кнопки ведут на поддомен студии', async ({ page }) => {
@@ -62,14 +70,15 @@ test('студия на корне не изменилась', async ({ page }) 
   await expect(page.getByTestId('landing')).toHaveCount(0)
 })
 
-test('карусель уважает prefers-reduced-motion', async ({ page }) => {
+test('витрина уважает prefers-reduced-motion', async ({ page }) => {
   await openLanding(page)
-  const track = page.getByTestId('landing-marquee-row-a').locator('.eg-marquee-track')
-  await expect(track).toHaveCount(1)
+  const card = page.getByTestId('landing-pattern-grid').locator('.eg-photo-card').first()
+  await expect(card).toHaveCount(1)
 
   await page.emulateMedia({ reducedMotion: 'reduce' })
+  await card.hover()
   await expect(async () => {
-    const animationName = await track.evaluate((el) => getComputedStyle(el).animationName)
-    expect(animationName).toBe('none')
+    const transform = await card.evaluate((el) => getComputedStyle(el).transform)
+    expect(transform).toBe('none')
   }).toPass()
 })

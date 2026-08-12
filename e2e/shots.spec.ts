@@ -13,10 +13,19 @@ const VIEWS = [
   { tab: 'view3d', marker: 'view3d', file: 'view3d.png' },
 ] as const
 
+// Комплект снимается на каждую локаль: английский лендинг обязан показывать английский
+// интерфейс, поэтому файлы лежат в папках по локали и ShotStrip выбирает папку сам.
+const LOCALES = ['ru', 'en'] as const
+
 test.describe('скриншоты лендинга', () => {
+  for (const locale of LOCALES) {
   for (const view of VIEWS) {
-    test(`снимок вкладки ${view.tab}`, async ({ page }) => {
+    test(`снимок вкладки ${view.tab} (${locale})`, async ({ page }) => {
       await page.goto('/')
+      if (locale !== 'ru') {
+        // Язык студии живёт в zustand-сторе, переключается той же кнопкой, что и у пользователя.
+        await page.getByTestId(`locale-${locale}`).click()
+      }
       await page.getByTestId(`tab-${view.tab}`).click()
       await expect(page.getByTestId(view.marker)).toBeVisible()
 
@@ -34,7 +43,8 @@ test.describe('скриншоты лендинга', () => {
       }
 
       await page.evaluate(() => document.fonts.ready)
-      await page.screenshot({ path: `public/landing/shots/${view.file}` })
+      await page.screenshot({ path: `public/landing/shots/${locale}/${view.file}` })
     })
+  }
   }
 })

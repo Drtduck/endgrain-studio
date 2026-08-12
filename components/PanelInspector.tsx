@@ -32,13 +32,26 @@ function StripRow({
   const removeStrip = useStudio((s) => s.removeStrip)
   const splitStripAt = useStudio((s) => s.splitStripAt)
   const moveStrip = useStudio((s) => s.moveStrip)
+  const selectStrip = useStudio((s) => s.selectStrip)
+  const selectedStripIndex = useStudio((s) => s.selectedStripIndex)
   const [splitAtMm, setSplitAtMm] = useState(0)
   const testId = `strip-${panelId}-${index}`
+  // Одна колонка на доске - это один и тот же индекс сразу в нескольких панелях (шахматка чередует
+  // панели по рядам), поэтому подсветка/скролл идут по индексу, а не по конкретной полосе.
+  const selected = index === selectedStripIndex
 
   if (!isStrip(element)) {
     const label = unitLabel(locale, unit)
     return (
-      <li data-testid={testId} className="rounded-md border border-line-subtle bg-surface px-2.5 py-2 text-sm text-ink-muted">
+      <li
+        data-testid={testId}
+        data-strip-col={index}
+        onFocus={() => selectStrip(index)}
+        className={cn(
+          'rounded-md border px-2.5 py-2 text-sm text-ink-muted',
+          selected ? 'border-accent-border bg-accent-soft' : 'border-line-subtle bg-surface'
+        )}
+      >
         {t(locale, 'panels.sliceRef', {
           panelId: element.panelId,
           thicknessMm: formatMm(element.thicknessMm, unit, label, 1),
@@ -54,7 +67,12 @@ function StripRow({
   return (
     <li
       data-testid={testId}
-      className="flex flex-wrap items-end gap-3 rounded-md border border-line-subtle bg-surface px-2.5 py-2 @min-[680px]/panel:grid @min-[680px]/panel:grid-cols-[88px_1fr_120px_120px_124px]"
+      data-strip-col={index}
+      onFocus={() => selectStrip(index)}
+      className={cn(
+        'flex flex-wrap items-end gap-3 rounded-md border px-2.5 py-2 @min-[680px]/panel:grid @min-[680px]/panel:grid-cols-[88px_1fr_120px_120px_124px]',
+        selected ? 'border-accent-border bg-accent-soft' : 'border-line-subtle bg-surface'
+      )}
     >
       <span
         aria-hidden="true"
