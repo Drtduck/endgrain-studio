@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
+  FEEDBACK_ALLOWED_MIME,
   FEEDBACK_ATTACHMENT_B64_MAX,
   FEEDBACK_MAX_LENGTH,
   FEEDBACK_SCREENSHOT_B64_MAX,
@@ -369,23 +370,37 @@ describe('app/actions/feedback', () => {
     expect(upload).not.toHaveBeenCalled()
   })
 
-  it('тип вложения из браузера маппится через белый список', async () => {
+  it('SVG не проходит белый список и в Storage не сохраняется', async () => {
     process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    // Ведём себя как настоящий bucket: allowed_mime_types из миграции, всё
+    // остальное отбивается на стороне Storage.
+    upload.mockImplementation((_path: string, _bytes: Buffer, opts: { contentType: string }) =>
+      Promise.resolve(
+        FEEDBACK_ALLOWED_MIME.includes(opts.contentType)
+          ? { error: null }
+          : { error: { message: `mime type ${opts.contentType} is not supported` } },
+      ),
+    )
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({ html_url: 'https://github.com/Drtduck/endgrain-studio/issues/12' }),
     })
     const { submitFeedbackAction } = await import('./feedback')
 
-    await submitFeedbackAction({
+    const res = await submitFeedbackAction({
       body: 'текст',
       attachment: { name: 'evil.svg', type: 'image/svg+xml', dataBase64: 'AAAA' },
     })
 
+    // SVG выполняет скрипты при открытии по прямой ссылке, поэтому его нет ни в
+    // белом списке кода, ни в allowed_mime_types bucket: тип схлопывается в
+    // octet-stream, Storage такую загрузку отклоняет, файл не сохраняется.
     const [, , opts] = upload.mock.calls[0] as [string, Buffer, { contentType: string }]
-    // SVG выполняет скрипты по прямой ссылке, поэтому в белом списке его нет:
-    // объект ляжет бинарём и браузер его скачает, а не откроет.
     expect(opts.contentType).toBe('application/octet-stream')
+    expect(createSignedUrl).not.toHaveBeenCalled()
+    // Фидбек при этом не теряется: issue создан, в нём пометка про вложение.
+    expect(res.ok).toBe(true)
+    expect(issueBodyFromFetch(fetchMock)).toContain('сохранить его в Storage не удалось')
   })
 
   it('знакомый тип с параметром charset нормализуется, а не отбрасывается', async () => {

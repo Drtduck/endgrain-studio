@@ -40,7 +40,12 @@ export const FEEDBACK_ALLOWED_MIME: readonly string[] = [
 /** Атрибут accept для input[type=file], синхронный с белым списком. */
 export const FEEDBACK_ACCEPT_ATTR = FEEDBACK_ALLOWED_MIME.join(',')
 
-/** Незнакомый тип превращаем в бинарь: браузер такой файл не выполнит, а скачает. */
+/**
+ * Незнакомый тип превращаем в application/octet-stream. Его нет в
+ * allowed_mime_types bucket, поэтому Storage такую загрузку отклонит и вложение
+ * не сохранится - в issue уйдёт пометка о несохранённом файле. Это и есть
+ * желаемое поведение: чужой Content-Type не должен попасть на signed URL.
+ */
 export function normalizeFeedbackMime(type: string): string {
   const clean = type.split(';')[0]?.trim().toLowerCase() ?? ''
   return FEEDBACK_ALLOWED_MIME.includes(clean) ? clean : 'application/octet-stream'

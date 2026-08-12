@@ -12,6 +12,7 @@ import {
   FEEDBACK_ACCEPT_ATTR,
   FEEDBACK_ATTACHMENT_MAX_BYTES,
   FEEDBACK_MAX_LENGTH,
+  FEEDBACK_SCREENSHOT_B64_MAX,
 } from '@/lib/feedback'
 import {
   clearActions,
@@ -98,7 +99,12 @@ async function captureScreenshot(): Promise<string | null> {
     })
     const dataUrl = await Promise.race([shot, timeout])
     if (dataUrl === null) return null
-    return dataUrl.slice(dataUrl.indexOf(',') + 1)
+    const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1)
+    // Кадр большого экрана бывает тяжелее лимита. Сервер такой payload отобьёт
+    // целиком, и человек потеряет текст из-за скриншота, который не заказывал.
+    // Лучше отправить фидбек без картинки, чем не отправить вовсе.
+    if (base64.length > FEEDBACK_SCREENSHOT_B64_MAX) return null
+    return base64
   } catch {
     return null
   }
@@ -127,9 +133,11 @@ export function FeedbackButton() {
   const attachmentsEnabled = isSupabaseConfigured()
 
   // Переходы пишет роутер, а не разовый эффект на монтировании: студия живёт
-  // без перезагрузки страницы, и смену маршрута видно только отсюда.
+  // без перезагрузки страницы, и смену маршрута видно только отсюда. Query
+  // берём из location: он часть маршрута (например, ?tab=3d), а useSearchParams
+  // потребовал бы Suspense вокруг кнопки ради того же значения.
   useEffect(() => {
-    if (pathname !== null) recordAction('route', pathname)
+    if (pathname !== null) recordAction('route', pathname + window.location.search)
   }, [pathname])
 
   // Лог последних действий пользователя. Слушатели глобальные и в capture-фазе,

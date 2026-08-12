@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { FEEDBACK_ACCEPT_ATTR } from '@/lib/feedback'
+import { FEEDBACK_ACCEPT_ATTR, FEEDBACK_SCREENSHOT_B64_MAX } from '@/lib/feedback'
 import { FeedbackButton } from './FeedbackButton'
 
 const submitFeedbackAction = vi.fn()
@@ -19,11 +19,14 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/',
 }))
 
+const SHOT_SMALL = 'data:image/jpeg;base64,c2hvdA=='
+let screenshotDataUrl = SHOT_SMALL
+
 // Скриншот снимает html-to-image через динамический импорт. В jsdom рисовать
 // нечем, поэтому подменяем модуль: интересует только то, что клиент дошёл до
 // вызова экшена, а не содержимое кадра.
 vi.mock('html-to-image', () => ({
-  toJpeg: async () => 'data:image/jpeg;base64,c2hvdA==',
+  toJpeg: async () => screenshotDataUrl,
 }))
 
 /** Кладёт файл в input[type=file] так, чтобы change его увидел. */
@@ -43,6 +46,7 @@ describe('FeedbackButton', () => {
   beforeEach(() => {
     submitFeedbackAction.mockReset()
     supabaseConfigured = true
+    screenshotDataUrl = SHOT_SMALL
     window.sessionStorage.clear()
   })
 
@@ -219,6 +223,31 @@ describe('FeedbackButton', () => {
     expect(arg.url.includes('#')).toBe(false)
     expect(arg.route.includes('#')).toBe(false)
     window.location.hash = ''
+  })
+
+  it('слишком тяжёлый кадр отбрасывается на клиенте, текст всё равно уходит', async () => {
+    submitFeedbackAction.mockResolvedValue({ ok: true })
+    screenshotDataUrl = 'data:image/jpeg;base64,' + 'a'.repeat(FEEDBACK_SCREENSHOT_B64_MAX + 1)
+    render(<FeedbackButton />)
+    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.change(await screen.findByTestId('feedback-text'), { target: { value: 'текст' } })
+    fireEvent.click(screen.getByTestId('feedback-submit'))
+
+    await waitFor(() => expect(submitFeedbackAction).toHaveBeenCalledTimes(1))
+    const arg = submitFeedbackAction.mock.calls[0]?.[0] as Record<string, unknown>
+    // Сервер отбил бы такой payload целиком, и человек потерял бы текст.
+    expect(arg['screenshot']).toBe(undefined)
+    expect(arg['body']).toBe('текст')
+    expect(await screen.findByTestId('feedback-sent')).toBeDefined()
+  })
+
+  it('в лог действий пишется маршрут вместе с query', async () => {
+    window.history.replaceState({}, '', '/?tab=3d')
+    render(<FeedbackButton />)
+    const raw = window.sessionStorage.getItem('eg-feedback-actions-v1') ?? '[]'
+    const actions = JSON.parse(raw) as { kind: string; label: string }[]
+    expect(actions.some((a) => a.kind === 'route' && a.label === '/?tab=3d')).toBe(true)
+    window.history.replaceState({}, '', '/')
   })
 
   it('input file принимает только типы из белого списка', async () => {
