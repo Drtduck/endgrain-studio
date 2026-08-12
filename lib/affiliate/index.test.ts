@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AMAZON_TAG, amazonUrl, BOOKS, PRODUCTS } from './index'
+import { AMAZON_TAG, amazonUrl, BOOKS, itemUrl, PRODUCTS } from './index'
 import type { AffiliateItem } from './types'
 
 const ASIN_RE = /^[A-Z0-9]{10}$/
@@ -64,6 +64,14 @@ describe('affiliate data', () => {
       for (const value of collectStrings(item)) {
         expect(value).not.toContain(EM_DASH)
       }
+    }
+  })
+
+  it('все позиции проверены вручную и ведут на карточку /dp/, а не на поиск', () => {
+    for (const item of ALL_ITEMS) {
+      expect(item.unverified).toBe(false)
+      expect(itemUrl(item)).toContain(`/dp/${item.asin}`)
+      expect(itemUrl(item)).not.toContain('/s?k=')
     }
   })
 

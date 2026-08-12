@@ -1,7 +1,7 @@
 [
   {
     "id": "glue-titebond3",
-    "asin": "B0000224B4",
+    "asin": "B0002YQ3KA",
     "brand": "Titebond",
     "title": { "ru": "Клей Titebond III Ultimate, 473 мл", "en": "Titebond III Ultimate Wood Glue, 16 oz" },
     "note": {
@@ -9,43 +9,43 @@
       "en": "Waterproof D3 with nearly an hour of open time. On an end-grain board that is the difference between laying rows calmly and racing the clamps."
     },
     "band": "b10_25",
-    "unverified": true
+    "unverified": false
   },
   {
     "id": "glue-brush",
-    "asin": "B01N7RQP4X",
+    "asin": "B0749JLW47",
     "brand": "Rockler",
-    "title": { "ru": "Силиконовая кисть и лоток для клея", "en": "Silicone glue brush and tray" },
+    "title": { "ru": "Набор для клея: кисть, лоток, шпатель", "en": "Silicone glue applicator kit, 3-piece" },
     "note": {
-      "ru": "Клеевая кисть не размазывает, а наносит ровный слой без сгустков по краям паза. Лоток снизу ловит капли, стол остаётся чистым.",
-      "en": "The brush lays down an even film instead of smearing lumps into the groove edges. The tray underneath catches drips, so the bench stays clean."
+      "ru": "Клеевая кисть не размазывает, а наносит ровный слой без сгустков по краям паза. Шпатель растягивает клей по широкой пласти за один проход, лоток снизу ловит капли, стол остаётся чистым.",
+      "en": "The brush lays down an even film instead of smearing lumps into the groove edges. The spreader pulls glue across a wide face in one pass, the tray underneath catches drips, so the bench stays clean."
     },
-    "band": "under10",
-    "unverified": true
+    "band": "b10_25",
+    "unverified": false
   },
   {
     "id": "clamps-bar-24",
-    "asin": "B0002YV1LU",
+    "asin": "B0078S1FII",
     "brand": "Bessey",
-    "title": { "ru": "Струбцина корпусная 610 мм, пара", "en": "Bar clamp 24 in, pair" },
+    "title": { "ru": "Струбцина корпусная F-типа, 610 мм", "en": "F-style bar clamp, 24 in" },
     "note": {
       "ru": "Струбцин всегда не хватает ровно на одну. Для щита шириной 300 мм нужно минимум четыре, иначе середина останется голодной до клея.",
       "en": "You are always one clamp short. A 300 mm panel wants four at the very least, or the middle stays starved of glue."
     },
     "band": "b25_50",
-    "unverified": true
+    "unverified": false
   },
   {
     "id": "clamps-pipe",
-    "asin": "B00002X21U",
+    "asin": "B0000224C9",
     "brand": "Pony",
-    "title": { "ru": "Трубные струбцины 3/4\", комплект", "en": "Pipe clamp fixtures 3/4 in, set" },
+    "title": { "ru": "Трубная струбцина 3/4\", голова", "en": "Pipe clamp fixture, 3/4 in" },
     "note": {
       "ru": "Трубные струбцины дешевле корпусных на длинных щитах: труба длиной хоть метр, а голова одна и та же. Для широкой доски это единственный вменяемый вариант по деньгам.",
       "en": "Pipe clamps beat bar clamps on long panels: the pipe can run a full metre while the head stays the same one. For a wide board this is the only sane option on price."
     },
     "band": "b25_50",
-    "unverified": true
+    "unverified": false
   },
   {
     "id": "caliper-digital",
@@ -57,11 +57,11 @@
       "en": "The studio counts in millimetres and expects the same from you. A cheap digital caliper pays for itself on the first row thickness mistake."
     },
     "band": "b10_25",
-    "unverified": true
+    "unverified": false
   },
   {
     "id": "square-combo",
-    "asin": "B00004T7NF",
+    "asin": "B008R6NLFA",
     "brand": "Empire",
     "title": { "ru": "Комбинированный угольник 300 мм", "en": "Combination square, 12 in" },
     "note": {
@@ -69,78 +69,78 @@
       "en": "One tool instead of a square, a marking gauge and a ruler. Checking a panel is square before glue-up takes seconds instead of guessing by eye."
     },
     "band": "b10_25",
-    "unverified": true
+    "unverified": false
   },
   {
     "id": "oil-mineral",
-    "asin": "B01AN0BR8O",
+    "asin": "B01B5ECU3O",
     "brand": "Thirteen Chefs",
-    "title": { "ru": "Минеральное масло пищевое, 473 мл", "en": "Food grade mineral oil, 16 oz" },
+    "title": { "ru": "Минеральное масло пищевое, 355 мл", "en": "Food grade mineral oil, 12 oz" },
     "note": {
-      "ru": "Пищевое минеральное масло не сохнет и не горкнет. Первая пропитка торцевой доски съедает неприлично много, берите большой флакон.",
-      "en": "Food grade mineral oil never dries and never goes rancid. The first soak on an end-grain board drinks an indecent amount, buy the big bottle."
+      "ru": "Пищевое минеральное масло не сохнет и не горкнет. Первая пропитка торцевой доски съедает неприлично много, берите с запасом.",
+      "en": "Food grade mineral oil never dries and never goes rancid. The first soak on an end-grain board drinks an indecent amount, so buy more than you think you need."
     },
     "band": "under10",
-    "unverified": true
+    "unverified": false
   },
   {
     "id": "wax-boardcream",
-    "asin": "B01N6XPCT2",
+    "asin": "B075LP6ZGC",
     "brand": "Walrus Oil",
-    "title": { "ru": "Воск-крем для разделочных досок", "en": "Board cream and wax finish" },
+    "title": { "ru": "Воск для разделочных досок, 85 г", "en": "Wood wax for cutting boards, 3 oz" },
     "note": {
       "ru": "Финишный слой поверх масла держит воду дольше и не липнет к рукам через час. На торцевой доске, которую моют каждый день, разница заметна уже через неделю.",
       "en": "A finishing layer over the oil holds off water longer and stops feeling tacky within the hour. On an end-grain board washed daily, the difference shows within a week."
     },
     "band": "b10_25",
-    "unverified": true
+    "unverified": false
   },
   {
     "id": "sled-miter-gauge",
-    "asin": "B00J8Y9WBW",
-    "brand": "Kreg",
+    "asin": "B0D41FNZXG",
+    "brand": "VEVOR",
     "title": { "ru": "Угловой упор с точной шкалой", "en": "Precision miter gauge" },
     "note": {
       "ru": "Поперечный рез щита должен быть строго 90 градусов, иначе финальная переклейка разъедется веером. Точный упор дешевле переделанной доски.",
       "en": "The crosscut has to be a true 90 degrees or the final glue-up fans open. A precise gauge is cheaper than a board made twice."
     },
     "band": "b50_100",
-    "unverified": true
+    "unverified": false
   },
   {
     "id": "scraper-card",
-    "asin": "B0002YSLGK",
+    "asin": "B0001P0PHW",
     "brand": "Bahco",
-    "title": { "ru": "Цикля-скребок, набор", "en": "Cabinet scraper set" },
+    "title": { "ru": "Цикля-скребок 125 мм", "en": "Cabinet scraper, 5 in" },
     "note": {
       "ru": "После шлифовки на торце всё равно остаются задиры, которые видно только под светом. Цикля снимает их за один проход без пыли и без нагрева древесины.",
       "en": "Sanding an end-grain surface still leaves tear-out that only shows under raking light. A card scraper takes it off in one pass, no dust and no heat in the wood."
     },
-    "band": "under10",
-    "unverified": true
+    "band": "b10_25",
+    "unverified": false
   },
   {
     "id": "sandpaper-set",
-    "asin": "B07T5VNCJH",
+    "asin": "B0CBSV9TH2",
     "brand": "Diablo",
-    "title": { "ru": "Шлифовальные диски 125 мм, ассорти", "en": "Sanding discs 5 in, assorted grit" },
+    "title": { "ru": "Сетчатые шлифдиски 125 мм, ассорти", "en": "SandNET discs 5 in, assorted grit" },
     "note": {
       "ru": "Торцевая доска ест наждак быстрее продольной: волокна стоят колом и забивают зерно. Держать под рукой ассорти зернистости дешевле, чем бежать в магазин на середине шлифовки.",
       "en": "End grain eats sandpaper faster than long grain: the fibres stand upright and clog the grit. Keeping a grit assortment on hand beats a mid-sanding trip to the store."
     },
     "band": "b10_25",
-    "unverified": true
+    "unverified": false
   },
   {
     "id": "feet-rubber",
-    "asin": "B07BLPS8LB",
+    "asin": "B07SZ3GVDN",
     "brand": "SoftTouch",
-    "title": { "ru": "Ножки-подпятники силиконовые, набор", "en": "Silicone bumper feet, set" },
+    "title": { "ru": "Ножки-подпятники самоклеящиеся, набор", "en": "Self-stick bumper feet, set" },
     "note": {
-      "ru": "Готовая доска на столе не должна ездить и не должна царапать столешницу. Силиконовые ножки решают обе проблемы за один клей на нижнюю сторону.",
-      "en": "A finished board on the counter should not slide and should not scratch it. Silicone feet solve both problems with one strip of glue on the underside."
+      "ru": "Готовая доска на столе не должна ездить и не должна царапать столешницу. Самоклеящиеся подпятники решают обе проблемы: снял плёнку и прижал к нижней стороне.",
+      "en": "A finished board on the counter should not slide and should not scratch it. Self-stick bumper feet solve both problems: peel the backing and press them onto the underside."
     },
     "band": "under10",
-    "unverified": true
+    "unverified": false
   }
 ]
