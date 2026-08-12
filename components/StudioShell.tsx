@@ -18,6 +18,7 @@ import { PanelInspector } from '@/components/PanelInspector'
 import { PhotoImport } from '@/components/PhotoImport'
 import { ProjectsPanel } from '@/components/ProjectsPanel'
 import { PromoPanel } from '@/components/promo/PromoPanel'
+import { ResetButton } from '@/components/ResetButton'
 import { RowInspector } from '@/components/RowInspector'
 import { SpeciesPalette } from '@/components/SpeciesPalette'
 import { StudioTabs } from '@/components/StudioTabs'
@@ -86,6 +87,10 @@ export function StudioShell() {
         <Separator orientation="vertical" className="h-6" />
 
         <HistoryControls />
+
+        <Separator orientation="vertical" className="h-6" />
+
+        <ResetButton />
       </header>
 
       <main className="mx-auto flex max-w-[1440px] flex-col gap-6 px-4 py-4">
@@ -134,10 +139,13 @@ export function StudioShell() {
             </div>
 
             <aside className="flex flex-col gap-4 [&>*]:shrink-0 lg:order-3 lg:sticky lg:top-4 lg:max-h-screen lg:self-start lg:overflow-y-auto">
+              {/* Диагностика первая: RAGGED_BOARD и другие ошибки изготовимости раньше стояли
+                  последними в прокручиваемом сайдбаре и терялись из виду (владелец не заметил
+                  предупреждение о рваной сетке). Наверху панель видна сразу, без скролла. */}
+              <DiagnosticsPanel />
               <BoardSettings />
               <ComplexityMeter locale={locale} calc={calc} unit={unit} model={model} />
               <ExportPanel />
-              <DiagnosticsPanel />
             </aside>
           </div>
         )}

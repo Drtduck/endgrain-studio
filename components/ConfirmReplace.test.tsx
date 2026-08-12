@@ -49,4 +49,34 @@ describe('ConfirmReplace', () => {
     expect(screen.getByTestId('template-confirm')).toBeDefined()
     expect(screen.getByTestId('template-cancel')).toBeDefined()
   })
+
+  it('закрывается по Escape через onCancel', () => {
+    const { onCancel } = setup()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(onCancel).toHaveBeenCalledTimes(1)
+  })
+
+  it('ставит фокус на первый элемент при открытии', () => {
+    setup()
+    expect(document.activeElement).toBe(screen.getByTestId('generator-cancel'))
+  })
+
+  it('запирает Tab внутри диалога: с последней кнопки уходит на первую', () => {
+    setup()
+    const cancelBtn = screen.getByTestId('generator-cancel')
+    const confirmBtn = screen.getByTestId('generator-confirm')
+    confirmBtn.focus()
+    expect(document.activeElement).toBe(confirmBtn)
+    fireEvent.keyDown(window, { key: 'Tab' })
+    expect(document.activeElement).toBe(cancelBtn)
+  })
+
+  it('запирает Shift+Tab: с первой кнопки уходит на последнюю', () => {
+    setup()
+    const cancelBtn = screen.getByTestId('generator-cancel')
+    const confirmBtn = screen.getByTestId('generator-confirm')
+    expect(document.activeElement).toBe(cancelBtn)
+    fireEvent.keyDown(window, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(confirmBtn)
+  })
 })

@@ -102,7 +102,17 @@ export function useStudioPersistence(): void {
     const saver = makeDebouncedSaver(saveToLocalStorage)
     const unsubscribe = useStudio.subscribe((state, prev) => {
       const design = selectDesign(state)
-      if (design !== selectDesign(prev)) saver.push(design)
+      if (design === selectDesign(prev)) return
+      // resetStudio уводит documentTouched в false вместе со сменой документа - это единственный
+      // случай, когда design меняется таким образом. Обычный дебаунс в 2 с здесь опасен: если
+      // человек перезагрузит страницу раньше, localStorage ещё хранит стёртый проект, и сброс
+      // «воскреснет» после reload. Поэтому сброс пишется в localStorage немедленно.
+      if (!state.documentTouched) {
+        saver.cancel()
+        saveToLocalStorage(design)
+        return
+      }
+      saver.push(design)
     })
     const onHide = (): void => saver.flush()
     window.addEventListener('pagehide', onHide)

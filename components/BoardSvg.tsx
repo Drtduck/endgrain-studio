@@ -114,13 +114,16 @@ export function BoardSvg({
             <text
               key={index}
               data-testid="col-label"
+              data-col={index}
+              role="button"
+              tabIndex={0}
               x={marginMm + band.leftMm + band.widthMm / 2}
               y={model.lengthMm + layout.colMarginMm / 2}
               textAnchor="middle"
               dominantBaseline="middle"
               fontSize={labelFontSizeMm}
               fill="var(--text-muted)"
-              className="font-mono select-none"
+              className="cursor-pointer font-mono select-none"
             >
               {index + 1}
             </text>

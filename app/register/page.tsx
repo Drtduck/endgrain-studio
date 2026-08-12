@@ -19,6 +19,11 @@ export default function RegisterPage() {
         </Link>
       }
     >
+      {/* Гейт на входе требует объяснения: человек пришёл рисовать доску, а его
+          просят завести аккаунт. Говорим честно, что он за это получает. */}
+      <p data-testid="auth-register-why" className="mb-4 text-sm leading-normal text-ink-secondary">
+        {t(locale, 'auth.registerWhy')}
+      </p>
       <AuthForm mode="register" locale={locale} />
     </AuthCard>
   )
