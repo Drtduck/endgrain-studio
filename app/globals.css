@@ -257,4 +257,20 @@
     .eg-marquee-track, .eg-bob, .eg-reveal { animation: none !important; }
     .eg-tilt:hover { transform: none; }
   }
+
+  /* Плавное раскрытие <details> партнёрских блоков там, где браузер это умеет.
+     Без поддержки ::details-content блок просто раскрывается мгновенно, это
+     штатный запасной вариант, а не поломка. */
+  @supports (interpolate-size: allow-keywords) {
+    :root { interpolate-size: allow-keywords; }
+    details::details-content {
+      height: 0;
+      overflow: hidden;
+      transition: height var(--dur-panel, 0.2s) var(--ease-out, ease), content-visibility var(--dur-panel, 0.2s) allow-discrete;
+      transition-behavior: allow-discrete;
+    }
+    details[open]::details-content {
+      height: auto;
+    }
+  }
 }

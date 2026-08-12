@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { AffiliateShelf } from '@/components/affiliate/AffiliateShelf'
 import { BoardSvg } from '@/components/BoardSvg'
 import { ConfirmReplace } from '@/components/ConfirmReplace'
 import { Badge } from '@/components/ui/badge'
@@ -98,6 +99,8 @@ export function TemplateGallery() {
           </div>
         )
       })}
+
+      <AffiliateShelf />
 
       {pending ? (
         <ConfirmReplace

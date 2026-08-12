@@ -1,6 +1,8 @@
 'use client'
 
 import { AccountButton } from '@/components/AccountButton'
+import { AffiliateShelf } from '@/components/affiliate/AffiliateShelf'
+import { LiteratureSection } from '@/components/affiliate/LiteratureSection'
 import { Board3DPanel } from '@/components/Board3DPanel'
 import { BoardCanvas } from '@/components/BoardCanvas'
 import { BoardSettings } from '@/components/BoardSettings'
@@ -28,7 +30,7 @@ import { useStudio, type StudioView } from '@/lib/store/studio'
 import type { UnitSystem } from '@/lib/units'
 import { cn } from '@/lib/utils'
 
-const FULL_WIDTH: readonly StudioView[] = ['templates', 'generate', 'photo', 'projects']
+const FULL_WIDTH: readonly StudioView[] = ['templates', 'generate', 'photo', 'projects', 'books']
 
 export function StudioShell() {
   const locale = useStudio((s) => s.locale)
@@ -92,6 +94,8 @@ export function StudioShell() {
             <GeneratorPanel />
           ) : view === 'photo' ? (
             <PhotoImport />
+          ) : view === 'books' ? (
+            <LiteratureSection />
           ) : (
             <ProjectsPanel />
           )
@@ -132,6 +136,8 @@ export function StudioShell() {
             </aside>
           </div>
         )}
+
+        {view === 'editor' ? <AffiliateShelf /> : null}
 
         <ForkDialog />
       </main>

@@ -108,6 +108,7 @@ const ru = {
   'tabs.generate': 'Генератор',
   'tabs.photo': 'Фото',
   'tabs.view3d': '3D',
+  'tabs.books': 'Литература',
   'aria.tabs': 'разделы студии',
   'tplGroup.checkerboard': 'Шахматки',
   'tplGroup.brick': 'Кирпич',
@@ -376,6 +377,20 @@ const ru = {
   'landing.subscribe.errInvalid': 'Похоже, в адресе опечатка. Проверьте?',
   'landing.subscribe.errDisabled': 'Почта пока не подключена. Загляните позже, подписка скоро заработает.',
   'landing.subscribe.errFailed': 'Не получилось отправить. Попробуйте ещё раз через минуту.',
+
+  'affiliate.disclosure':
+    'Как участник партнёрской программы Amazon, автор получает комиссию с покупок по этим ссылкам. Цена для вас не меняется, а подборка собрана до того, как появились ссылки.',
+  'affiliate.tools.title': 'Инструменты для мастерской',
+  'affiliate.tools.subtitle': 'Что реально держат в руках при склейке торцевой доски',
+  'affiliate.books.title': 'Литература',
+  'affiliate.books.subtitle': 'Восемь книг, которые отвечают на вопросы, которых студия не заменит',
+  'affiliate.books.why': 'Редакция рекомендует',
+  'affiliate.price.under10': 'до $10',
+  'affiliate.price.b10_25': '$10-25',
+  'affiliate.price.b25_50': '$25-50',
+  'affiliate.price.b50_100': '$50-100',
+
+  'landing.books.viewAll': 'Вся подборка в студии',
 } as const
 
 export default ru

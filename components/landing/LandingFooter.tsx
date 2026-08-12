@@ -25,7 +25,6 @@ export function LandingFooter({ locale }: { locale: Locale }) {
 
         <div className="flex flex-col gap-2">
           <span className="font-display text-sm font-semibold">{t(locale, 'landing.footer.legal.title')}</span>
-          {/* Полный дисклеймер об ассоциированной программе Amazon появляется в задаче 4. */}
           <p className="font-sans text-xs text-ink-secondary">{t(locale, 'landing.footer.legal.amazonDisclaimer')}</p>
           <p className="font-sans text-xs text-ink-secondary">{t(locale, 'landing.footer.legal.privacy')}</p>
         </div>

@@ -110,6 +110,7 @@ const en: Record<keyof typeof ru, string> = {
   'tabs.generate': 'Generator',
   'tabs.photo': 'Photo',
   'tabs.view3d': '3D',
+  'tabs.books': 'Books',
   'aria.tabs': 'studio sections',
   'tplGroup.checkerboard': 'Checkerboards',
   'tplGroup.brick': 'Brick',
@@ -378,6 +379,20 @@ const en: Record<keyof typeof ru, string> = {
   'landing.subscribe.errInvalid': 'That address looks off. Mind checking it?',
   'landing.subscribe.errDisabled': 'Email is not wired up yet. Come back a bit later, subscription is coming.',
   'landing.subscribe.errFailed': 'Could not send that. Try again in a minute.',
+
+  'affiliate.disclosure':
+    'As an Amazon Associate the author earns from qualifying purchases. The price for you does not change, and the list was picked before the links were added.',
+  'affiliate.tools.title': 'Tools for the shop',
+  'affiliate.tools.subtitle': 'What you actually hold while gluing up an end-grain board',
+  'affiliate.books.title': 'Books',
+  'affiliate.books.subtitle': 'Eight books that answer what the studio cannot',
+  'affiliate.books.why': 'Why we picked it',
+  'affiliate.price.under10': 'under $10',
+  'affiliate.price.b10_25': '$10-25',
+  'affiliate.price.b25_50': '$25-50',
+  'affiliate.price.b50_100': '$50-100',
+
+  'landing.books.viewAll': 'See the full list in the studio',
 }
 
 export default en
