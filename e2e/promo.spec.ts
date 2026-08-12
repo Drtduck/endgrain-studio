@@ -19,15 +19,18 @@ test('вкладка «Промо» открывается и показывае
   await expect(page.getByTestId('promo-merch')).toBeVisible()
 })
 
-test('без ключа Gemini видна мок-галерея из четырёх кадров с честной подписью', async ({ page }) => {
+test('без ключа Gemini видна мок-галерея набора по умолчанию с честной подписью', async ({ page }) => {
   test.skip(!noKeys, 'в окружении есть ключ: генерация платная и отвечает не заглушками')
   await openStudio(page)
   await page.getByTestId('tab-promo').click()
   const gallery = page.getByTestId('promo-gallery')
   await expect(gallery).toBeVisible()
-  for (const kind of ['hero', 'lifestyle', 'macro', 'package']) {
+  // Набор по умолчанию: четыре отмеченных пресета из двенадцати.
+  for (const kind of ['hero', 'serving', 'macroOil', 'package']) {
     await expect(page.getByTestId(`promo-shot-${kind}`)).toBeVisible()
   }
+  // Неотмеченный пресет в сетке не рисуется: за него никто не платил.
+  await expect(page.getByTestId('promo-shot-catalog')).toHaveCount(0)
   // До нажатия кнопки панель не имеет права утверждать, что ключа нет: она этого не знает.
   await expect(page.getByTestId('promo-note')).not.toContainText('GEMINI_API_KEY')
 
@@ -36,6 +39,28 @@ test('без ключа Gemini видна мок-галерея из четыр�
   await expect(page.getByTestId('promo-note')).toContainText('GEMINI_API_KEY')
   await expect(page.getByTestId('promo-error')).toHaveCount(0)
   await expect(page.getByTestId('promo-shot-hero')).toBeVisible()
+})
+
+test('набор кадров выбирается чипами, и цена в квоте меняется вместе с ним', async ({ page }) => {
+  await openStudio(page)
+  await page.getByTestId('tab-promo').click()
+  const cost = page.getByTestId('promo-cost')
+  await expect(cost).toContainText('4')
+  await page.getByTestId('promo-preset-catalog').click()
+  await expect(cost).toContainText('5')
+  await expect(page.getByTestId('promo-shot-catalog')).toBeVisible()
+  // Снять можно тем же нажатием: кадр уходит из сетки.
+  await page.getByTestId('promo-preset-catalog').click()
+  await expect(page.getByTestId('promo-shot-catalog')).toHaveCount(0)
+})
+
+test('панель съёмки по референсу открыта и честно предупреждает про стиль', async ({ page }) => {
+  await openStudio(page)
+  await page.getByTestId('tab-promo').click()
+  await expect(page.getByTestId('promo-reference')).toBeVisible()
+  await expect(page.getByTestId('ref-disclaimer')).toContainText('стил')
+  // Без файла разбирать нечего.
+  await expect(page.getByTestId('ref-analyze')).toBeDisabled()
 })
 
 test('без ключа Printful видны локальные мокапы мерча и нет кнопки Printful', async ({ page }) => {
@@ -50,6 +75,16 @@ test('без ключа Printful видны локальные мокапы ме
   await page.getByTestId('merch-generate').click()
   await expect(page.getByTestId('merch-note')).toContainText('PRINTFUL_API_KEY')
   await expect(page.getByTestId('merch-printful')).toHaveCount(0)
+})
+
+test('товары для Printful выбираются чипами, по умолчанию два', async ({ page }) => {
+  await openStudio(page)
+  await page.getByTestId('tab-promo').click()
+  await expect(page.getByTestId('merch-pick-tshirt')).toHaveAttribute('aria-pressed', 'true')
+  // Printful пускает пару мокапов в минуту, поэтому все четыре разом не отмечены.
+  await expect(page.getByTestId('merch-pick-poster')).toHaveAttribute('aria-pressed', 'false')
+  await page.getByTestId('merch-pick-poster').click()
+  await expect(page.getByTestId('merch-pick-poster')).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('рекомендации инструментов видны в левой колонке и ведут по партнёрским ссылкам', async ({ page }) => {

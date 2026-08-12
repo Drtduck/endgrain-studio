@@ -3,10 +3,18 @@ import { flags } from '@/lib/flags'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { getSupabaseServer } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/supabase/session'
-import { isStripeConfigured } from './config'
+import { isAllowlistedEmail, isProUnlockedForAll } from './allowlist'
 import type { PlanId } from './plans'
 
-export type ProReason = 'flag' | 'no-stripe' | 'subscription' | 'free'
+/**
+ * flag - поднят аварийный рубильник, allowlist - адрес в конкурсном списке,
+ * subscription - живая подписка Stripe, free - всё остальное.
+ * Причины 'no-stripe' больше нет: раньше ненастроенная касса выдавала Pro всем,
+ * то есть один незаведённый ключ на проде открывал платные AI-фичи анонимам.
+ * Отсутствие кассы теперь значит ровно одно: витрину цен не показываем
+ * (за это отвечает отдельный флаг billingEnabled), а прав это никому не даёт.
+ */
+export type ProReason = 'flag' | 'allowlist' | 'subscription' | 'free'
 
 export interface ProStatus {
   readonly pro: boolean
@@ -31,9 +39,10 @@ export const GRACE_MS = 3 * 24 * 60 * 60 * 1000
 const LIVE_STATUSES: readonly string[] = ['active', 'trialing', 'past_due']
 
 const FREE: ProStatus = { pro: false, reason: 'free', plan: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }
-const OPEN_NO_STRIPE: ProStatus = {
+const UNLOCKED: ProStatus = { pro: true, reason: 'flag', plan: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }
+const ALLOWLISTED: ProStatus = {
   pro: true,
-  reason: 'no-stripe',
+  reason: 'allowlist',
   plan: null,
   currentPeriodEnd: null,
   cancelAtPeriodEnd: false,
@@ -106,14 +115,17 @@ async function readSubscriptionRow(userId: string): Promise<SubscriptionRecord |
 export const getProStatus: () => Promise<ProStatus> = cache(async (): Promise<ProStatus> => {
   // Аварийный рубильник выигрывает у всего, в том числе у настроенного Stripe:
   // ключи заведены, а вебхук не доехал во время демонстрации это реальный сценарий.
-  if (flags.pro) return { pro: true, reason: 'flag', plan: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }
-  // Кассы нет, значит и гейтов нет: paywall без работающей оплаты это тупик.
-  if (!isStripeConfigured()) return OPEN_NO_STRIPE
+  // NEXT_PUBLIC_PRO_UNLOCK инлайнится и в клиентский бандл, PRO_UNLOCK_ALL живёт
+  // только на сервере: для серверного гейта опираться надо на второй.
+  if (flags.pro || isProUnlockedForAll()) return UNLOCKED
   if (!isSupabaseConfigured()) return FREE
 
   try {
     const user = await getCurrentUser()
     if (!user) return FREE
+    // Конкурсный обход: жюри и автор получают Pro без карты, но по адресу из
+    // серверного списка, а не по факту незаведённых ключей Stripe.
+    if (isAllowlistedEmail(user.email)) return ALLOWLISTED
     return resolveProStatus(await readSubscriptionRow(user.id), Date.now())
   } catch (err) {
     // Лежащая база не должна ронять рендер студии, ровно как в getCurrentUser.

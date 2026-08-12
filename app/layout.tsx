@@ -3,6 +3,7 @@ import { bitter, golos, jetbrains } from "./fonts";
 import { GoogleAuthProvider } from "@/components/GoogleAuthProvider";
 import { ProProvider } from "@/components/ProProvider";
 import { SessionProvider } from "@/components/SessionProvider";
+import { getAiAccess } from "@/lib/ai/entitlements";
 import { getGoogleAuthAvailable } from "@/lib/auth/googleAuth";
 import { isStripeConfigured } from "@/lib/stripe/config";
 import { getProStatus } from "@/lib/stripe/pro";
@@ -23,6 +24,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Статус Pro считается на сервере и уезжает пропсом: клиент серверные ключи
   // Stripe не видит и isStripeConfigured() у себя вызвать не может.
   const proStatus = await getProStatus();
+  // Доступ к платным AI-фичам и остаток квоты считаются там же и тем же способом:
+  // клиенту нельзя доверить ни проверку подписки, ни счётчик генераций.
+  const aiAccess = await getAiAccess();
   // Серверное стартовое значение из cookie eg-locale лендинга; студия дополнительно
   // правит document.documentElement.lang на клиенте (LocaleToggle) при переключении.
   const lang = await getLandingLocale();
@@ -35,7 +39,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col font-sans">
         <SessionProvider value={{ user, enabled: isSupabaseConfigured() }}>
           <GoogleAuthProvider value={googleAuthAvailable}>
-            <ProProvider value={{ status: proStatus, billingEnabled: isStripeConfigured() }}>{children}</ProProvider>
+            <ProProvider value={{ status: proStatus, billingEnabled: isStripeConfigured(), ai: aiAccess }}>
+              {children}
+            </ProProvider>
           </GoogleAuthProvider>
         </SessionProvider>
       </body>

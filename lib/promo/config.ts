@@ -8,6 +8,15 @@
 export const GEMINI_API_KEY: string = process.env['GEMINI_API_KEY'] ?? ''
 export const PRINTFUL_API_KEY: string = process.env['PRINTFUL_API_KEY'] ?? ''
 
+/**
+ * Id магазина Printful. Токен уровня аккаунта сам по себе не знает, в каком
+ * магазине работать, и генератор мокапов на него отвечает «This endpoint
+ * requires store_id». Значение уезжает заголовком X-PF-Store-Id.
+ * Пусто допустимо: токен уровня магазина заголовка не требует, и тогда запрос
+ * уходит без него. Магазин заводится в кабинете Printful, через API его не создать.
+ */
+export const PRINTFUL_STORE_ID: string = (process.env['PRINTFUL_STORE_ID'] ?? '').trim()
+
 export function isGeminiConfigured(): boolean {
   return GEMINI_API_KEY.length > 0
 }

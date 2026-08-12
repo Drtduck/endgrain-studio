@@ -186,6 +186,41 @@ describe('app/actions/feedback', () => {
     expect(from).toHaveBeenCalledWith('feedback')
   })
 
+  it('причина отказа GitHub уезжает в fallback_reason записи БД', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 401,
+      statusText: 'Unauthorized',
+      text: async () => '{"message":"Bad credentials"}',
+    })
+    const insert = vi.fn().mockResolvedValue({ error: null })
+    from.mockReturnValue({ insert })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({ body: 'текст' })
+
+    expect(res).toEqual({ ok: true })
+    const arg = insert.mock.calls[0]?.[0] as Record<string, unknown>
+    expect(arg['fallback_reason']).toContain('github 401')
+    expect(arg['fallback_reason']).toContain('Bad credentials')
+  })
+
+  it('хвостовой перенос строки в токене не уходит в заголовок authorization', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token\n'
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ html_url: 'https://github.com/Drtduck/endgrain-studio/issues/3' }),
+    })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    await submitFeedbackAction({ body: 'текст' })
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const auth = (init.headers as Record<string, string>)['authorization']
+    expect(auth).toBe('Bearer test-token')
+  })
+
   it('сбой сети до GitHub падает в fallback на insert в БД', async () => {
     process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
     fetchMock.mockRejectedValue(new Error('network down'))

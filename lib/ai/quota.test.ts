@@ -1,0 +1,72 @@
+import { describe, expect, it } from 'vitest'
+import { AI_FEATURE_COST, AI_MONTHLY_LIMIT, aiAccess, aiPeriod, aiRemaining } from './quota'
+
+describe('aiPeriod', () => {
+  it('даёт календарный месяц в формате YYYY-MM', () => {
+    expect(aiPeriod(Date.parse('2026-08-12T12:00:00.000Z'))).toBe('2026-08')
+  })
+
+  it('первая и последняя секунды месяца лежат в одном периоде', () => {
+    expect(aiPeriod(Date.parse('2026-08-01T00:00:00.000Z'))).toBe('2026-08')
+    expect(aiPeriod(Date.parse('2026-08-31T23:59:59.999Z'))).toBe('2026-08')
+  })
+
+  it('на границе месяца период меняется, то есть квота обнуляется первого числа', () => {
+    expect(aiPeriod(Date.parse('2026-08-31T23:59:59.999Z'))).not.toBe(
+      aiPeriod(Date.parse('2026-09-01T00:00:00.000Z')),
+    )
+    expect(aiPeriod(Date.parse('2026-09-01T00:00:00.000Z'))).toBe('2026-09')
+  })
+
+  it('декабрь переходит в январь следующего года', () => {
+    expect(aiPeriod(Date.parse('2026-12-31T23:59:59.000Z'))).toBe('2026-12')
+    expect(aiPeriod(Date.parse('2027-01-01T00:00:01.000Z'))).toBe('2027-01')
+  })
+
+  it('считает по UTC, а не по зоне инстанса: у Vercel она не гарантирована', () => {
+    // Полночь 1 сентября по UTC это ещё 31 августа в Нью-Йорке, но период уже новый.
+    expect(aiPeriod(Date.parse('2026-09-01T00:30:00.000Z'))).toBe('2026-09')
+  })
+
+  it('формат совпадает с check-констрейнтом таблицы ai_usage', () => {
+    expect(aiPeriod(Date.parse('2026-01-09T00:00:00.000Z'))).toMatch(/^[0-9]{4}-[0-9]{2}$/)
+  })
+})
+
+describe('aiRemaining', () => {
+  it('пустой счётчик даёт весь лимит', () => {
+    expect(aiRemaining(0)).toBe(AI_MONTHLY_LIMIT)
+  })
+
+  it('арифметика простая: тридцать минус потраченное', () => {
+    expect(aiRemaining(1)).toBe(29)
+    expect(aiRemaining(29)).toBe(1)
+  })
+
+  it('выбранная квота даёт ноль, а не отрицательное число', () => {
+    expect(aiRemaining(30)).toBe(0)
+    expect(aiRemaining(45)).toBe(0)
+  })
+
+  it('испорченная строка в базе не рисует остаток больше лимита', () => {
+    expect(aiRemaining(-5)).toBe(AI_MONTHLY_LIMIT)
+  })
+})
+
+describe('aiAccess', () => {
+  it('собирает состояние для интерфейса с остатком', () => {
+    expect(aiAccess('pro', 4)).toEqual({ state: 'pro', limit: 30, used: 4, remaining: 26 })
+  })
+
+  it('состояния без счётчика показывают полный лимит', () => {
+    expect(aiAccess('anonymous')).toEqual({ state: 'anonymous', limit: 30, used: 0, remaining: 30 })
+  })
+})
+
+describe('AI_FEATURE_COST', () => {
+  it('серия фото стоит одну генерацию, мокапы мерча не стоят ничего', () => {
+    // Мокапы рисуются локально: гейт на них про правило «это Pro», а не про деньги.
+    expect(AI_FEATURE_COST.promoShots).toBe(1)
+    expect(AI_FEATURE_COST.merchMockups).toBe(0)
+  })
+})

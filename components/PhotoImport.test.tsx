@@ -8,6 +8,8 @@ import type { PixelGrid } from '@/lib/photo'
 vi.mock('./photoDecode', () => ({
   ACCEPTED_TYPES: ['image/png'],
   isImageFile: (file: File) => file.type.startsWith('image/'),
+  isFileTooLarge: (file: File) => file.size > 25 * 1024 * 1024,
+  PhotoTooLargeError: class PhotoTooLargeError extends Error {},
   fitGrid: () => ({ cols: 8, rows: 6 }),
   decodeToGrid: vi.fn(async () => bandsGrid()),
 }))
@@ -45,6 +47,13 @@ function bandsGrid(): PixelGrid {
 
 function pngFile(name = 'demo.png'): File {
   return new File([new Uint8Array([137, 80, 78, 71])], name, { type: 'image/png' })
+}
+
+function oversizedPngFile(name = 'huge.png'): File {
+  const file = pngFile(name)
+  // File.size обычно только для чтения: подменяем геттер, не выделяя реальные 30 МБ в памяти теста.
+  Object.defineProperty(file, 'size', { value: 30 * 1024 * 1024 })
+  return file
 }
 
 async function upload(): Promise<void> {
@@ -123,6 +132,13 @@ describe('PhotoImport', () => {
     await waitFor(() => expect(screen.getByTestId('photo-error')).toBeTruthy())
   })
 
+  it('слишком большой файл отвергается ещё до попытки декода', async () => {
+    render(<PhotoImport />)
+    fireEvent.change(screen.getByTestId('photo-file'), { target: { files: [oversizedPngFile()] } })
+    await waitFor(() => expect(screen.getByTestId('photo-error')).toBeTruthy())
+    expect(decodeToGrid).not.toHaveBeenCalled()
+  })
+
   it('на чистом документе применяет узор сразу', async () => {
     render(<PhotoImport />)
     await upload()
@@ -142,6 +158,29 @@ describe('PhotoImport', () => {
     expect(screen.getByTestId('photo-confirm-dialog')).toBeTruthy()
     fireEvent.click(screen.getByTestId('photo-confirm'))
     expect(useStudio.getState().view).toBe('editor')
+  })
+
+  it('на контрастных полосах подсказка о пригодности не показывается', async () => {
+    render(<PhotoImport />)
+    await upload()
+    expect(screen.queryByTestId('photo-quality-hint')).toBe(null)
+  })
+
+  it('на мелком шуме показывает мягкую подсказку о пригодности', async () => {
+    const cols = 20
+    const rows = 14
+    const rgba = new Uint8ClampedArray(cols * rows * 4)
+    for (let i = 0; i < cols * rows; i += 1) {
+      const noise = (i * 2654435761) % 256
+      rgba[i * 4] = noise
+      rgba[i * 4 + 1] = (noise * 3) % 256
+      rgba[i * 4 + 2] = (noise * 7) % 256
+      rgba[i * 4 + 3] = 255
+    }
+    vi.mocked(decodeToGrid).mockResolvedValueOnce({ cols, rows, rgba })
+    render(<PhotoImport />)
+    await upload()
+    expect(screen.getByTestId('photo-quality-hint')).toBeTruthy()
   })
 
   it('картинка переживает уход на другую вкладку', async () => {

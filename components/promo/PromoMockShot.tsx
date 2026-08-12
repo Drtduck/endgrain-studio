@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import type { BoardModel } from '@/lib/engine'
 import { fitPatternContain, fitPatternCover } from '@/lib/promo/fit'
-import type { PromoShotKind } from '@/lib/promo/types'
+import type { PromoMockLayout } from '@/lib/promo/types'
 import { PatternCells } from './PatternCells'
 
 const W = 320
@@ -11,8 +11,12 @@ const H = 240
  * Заглушка кадра на время, пока в окружении нет GEMINI_API_KEY. Это не серая плашка:
  * сцена собрана из настоящего узора доски, поэтому по ней видно и композицию будущего
  * кадра, и то, что генератор получит на вход. Ни одного внешнего файла, только SVG.
+ *
+ * Пресетов двенадцать, а раскладок четыре: рисовать двенадцать самодельных сцен
+ * незачем, у заглушки одна задача - показать, как ляжет узор. Какая раскладка
+ * какому пресету достаётся, решает PROMO_SHOT_META.
  */
-export function PromoMockShot({ kind, model }: { kind: PromoShotKind; model: BoardModel }) {
+export function PromoMockShot({ layout, model }: { layout: PromoMockLayout; model: BoardModel }) {
   const id = useId()
   const clip = `promo-clip-${id}`
   const sky = `promo-sky-${id}`
@@ -25,22 +29,22 @@ export function PromoMockShot({ kind, model }: { kind: PromoShotKind; model: Boa
           <rect x="0" y="0" width={W} height={H} />
         </clipPath>
         <linearGradient id={sky} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={kind === 'package' ? '#dedbd4' : '#f7f3ec'} />
-          <stop offset="1" stopColor={kind === 'package' ? '#c9c5bd' : '#e6ddcf'} />
+          <stop offset="0" stopColor={layout === 'package' ? '#dedbd4' : '#f7f3ec'} />
+          <stop offset="1" stopColor={layout === 'package' ? '#c9c5bd' : '#e6ddcf'} />
         </linearGradient>
       </defs>
 
       <g clipPath={`url(#${clip})`}>
         <rect x="0" y="0" width={W} height={H} fill={`url(#${sky})`} />
 
-        {kind === 'hero' ? (
+        {layout === 'solo' ? (
           <>
             <ellipse cx={W / 2} cy={205} rx={92} ry={14} fill="rgba(36,30,25,0.16)" />
             <PatternCells model={model} fit={fitPatternContain(widthMm, lengthMm, { x: 108, y: 26, w: 104, h: 168 })} />
           </>
         ) : null}
 
-        {kind === 'lifestyle' ? (
+        {layout === 'scene' ? (
           <>
             <rect x="0" y="150" width={W} height={90} fill="#b98f63" />
             <rect x="0" y="150" width={W} height="4" fill="rgba(36,30,25,0.18)" />
@@ -57,7 +61,7 @@ export function PromoMockShot({ kind, model }: { kind: PromoShotKind; model: Boa
           </>
         ) : null}
 
-        {kind === 'macro' ? (
+        {layout === 'macro' ? (
           <>
             <PatternCells model={model} fit={fitPatternCover(widthMm, lengthMm, { x: -320, y: -240, w: 960, h: 720 })} />
             {/* Косой свет и мелкая глубина резкости: светлый клин сверху, затемнение по краям. */}
@@ -66,7 +70,7 @@ export function PromoMockShot({ kind, model }: { kind: PromoShotKind; model: Boa
           </>
         ) : null}
 
-        {kind === 'package' ? (
+        {layout === 'package' ? (
           <>
             <rect x="24" y="52" width="150" height="150" rx="4" fill="#c8a778" />
             <rect x="24" y="52" width="150" height="150" rx="4" fill="none" stroke="rgba(36,30,25,0.22)" />

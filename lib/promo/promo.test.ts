@@ -5,7 +5,9 @@ import { describeBoard, patternGrain, speciesByShare } from './describe'
 import { fitPatternContain, fitPatternCover } from './fit'
 import { MERCH_SILHOUETTES, MERCH_SILHOUETTE_BY_ID } from './merch'
 import { shotPrompt } from './prompts'
-import { PROMO_SHOTS, PROMO_SHOT_META, MERCH_PRODUCTS } from './types'
+import { PROMO_DEFAULT_SHOTS, PROMO_SHOTS, PROMO_SHOT_LAYOUT, PROMO_SHOT_META, MERCH_PRODUCTS } from './types'
+import en from '@/lib/i18n/en'
+import ru from '@/lib/i18n/ru'
 
 const EM_DASH = String.fromCharCode(0x2014)
 
@@ -41,7 +43,7 @@ describe('describeBoard', () => {
 })
 
 describe('shotPrompt', () => {
-  it('в каждый из четырёх кадров попадает описание доски и запрет текста', () => {
+  it('в каждый из двенадцати кадров попадает описание доски и запрет текста', () => {
     for (const kind of PROMO_SHOTS) {
       const prompt = shotPrompt(kind, 'описание доски')
       expect(prompt).toContain('описание доски')
@@ -57,6 +59,33 @@ describe('shotPrompt', () => {
 
   it('у каждого кадра есть подпись в i18n', () => {
     expect(PROMO_SHOT_META.map((m) => m.kind)).toEqual([...PROMO_SHOTS])
+    for (const meta of PROMO_SHOT_META) {
+      expect(ru[meta.titleKey]).toBeTruthy()
+      expect(ru[meta.noteKey]).toBeTruthy()
+      expect(en[meta.titleKey]).toBeTruthy()
+      expect(en[meta.noteKey]).toBeTruthy()
+    }
+  })
+
+  it('пресетов дюжина и промпт каждого действительно подробный', () => {
+    // Двенадцать сцен это заявленный набор, а не «четыре и восемь синонимов».
+    expect(PROMO_SHOTS).toHaveLength(12)
+    for (const kind of PROMO_SHOTS) {
+      const scene = shotPrompt(kind, 'x').split('\n\nSubject:')[0] ?? ''
+      // Свет, ракурс и оптика: без них модель рисует случайный сток.
+      expect(scene.length).toBeGreaterThan(200)
+      expect(scene.toLowerCase()).toMatch(/light|lit/)
+      expect(scene.toLowerCase()).toMatch(/lens|macro/)
+    }
+  })
+
+  it('набор по умолчанию входит в список пресетов и не пустой', () => {
+    expect(PROMO_DEFAULT_SHOTS.length).toBeGreaterThan(0)
+    for (const kind of PROMO_DEFAULT_SHOTS) expect(PROMO_SHOTS).toContain(kind)
+  })
+
+  it('у каждого пресета есть раскладка заглушки', () => {
+    for (const kind of PROMO_SHOTS) expect(PROMO_SHOT_LAYOUT.get(kind)).toBeTruthy()
   })
 })
 
