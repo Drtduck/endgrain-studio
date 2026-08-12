@@ -1,23 +1,72 @@
 import type { AiDenyReason } from '@/lib/ai/quota'
 import type { MessageKey } from '@/lib/i18n'
 
-/** Четыре кадра продуктовой серии для карточки товара в магазине. */
-export type PromoShotKind = 'hero' | 'lifestyle' | 'macro' | 'package'
+/**
+ * Сценарии съёмки продуктовой серии. Двенадцать штук вместо прежних четырёх:
+ * карточку товара на маркетплейсе одним ракурсом не закрыть, а вкусы у мастеров
+ * разные - кому-то нужен каталожный чёрно-белый кадр, кому-то доска в руках.
+ * Генерируются не все сразу: каждый кадр стоит единицу квоты, поэтому набор
+ * выбирает пользователь.
+ */
+export type PromoShotKind =
+  | 'hero'
+  | 'studioDark'
+  | 'hands'
+  | 'serving'
+  | 'macroOil'
+  | 'workbench'
+  | 'package'
+  | 'stack'
+  | 'island'
+  | 'edge'
+  | 'flatlay'
+  | 'catalog'
 
-export const PROMO_SHOTS: readonly PromoShotKind[] = ['hero', 'lifestyle', 'macro', 'package']
+/**
+ * Компоновка заглушки. Двенадцать самодельных SVG-сцен рисовать незачем: у
+ * заглушки одна задача - показать, как ляжет узор, поэтому кадры сведены к
+ * четырём типовым раскладкам.
+ */
+export type PromoMockLayout = 'solo' | 'scene' | 'macro' | 'package'
 
 export interface PromoShotMeta {
   readonly kind: PromoShotKind
   readonly titleKey: MessageKey
   readonly noteKey: MessageKey
+  readonly mock: PromoMockLayout
 }
 
 export const PROMO_SHOT_META: readonly PromoShotMeta[] = [
-  { kind: 'hero', titleKey: 'promo.shot.hero', noteKey: 'promo.shot.heroNote' },
-  { kind: 'lifestyle', titleKey: 'promo.shot.lifestyle', noteKey: 'promo.shot.lifestyleNote' },
-  { kind: 'macro', titleKey: 'promo.shot.macro', noteKey: 'promo.shot.macroNote' },
-  { kind: 'package', titleKey: 'promo.shot.package', noteKey: 'promo.shot.packageNote' },
+  { kind: 'hero', titleKey: 'promo.shot.hero', noteKey: 'promo.shot.heroNote', mock: 'solo' },
+  { kind: 'studioDark', titleKey: 'promo.shot.studioDark', noteKey: 'promo.shot.studioDarkNote', mock: 'solo' },
+  { kind: 'hands', titleKey: 'promo.shot.hands', noteKey: 'promo.shot.handsNote', mock: 'solo' },
+  { kind: 'serving', titleKey: 'promo.shot.serving', noteKey: 'promo.shot.servingNote', mock: 'scene' },
+  { kind: 'macroOil', titleKey: 'promo.shot.macroOil', noteKey: 'promo.shot.macroOilNote', mock: 'macro' },
+  { kind: 'workbench', titleKey: 'promo.shot.workbench', noteKey: 'promo.shot.workbenchNote', mock: 'scene' },
+  { kind: 'package', titleKey: 'promo.shot.package', noteKey: 'promo.shot.packageNote', mock: 'package' },
+  { kind: 'stack', titleKey: 'promo.shot.stack', noteKey: 'promo.shot.stackNote', mock: 'solo' },
+  { kind: 'island', titleKey: 'promo.shot.island', noteKey: 'promo.shot.islandNote', mock: 'scene' },
+  { kind: 'edge', titleKey: 'promo.shot.edge', noteKey: 'promo.shot.edgeNote', mock: 'macro' },
+  { kind: 'flatlay', titleKey: 'promo.shot.flatlay', noteKey: 'promo.shot.flatlayNote', mock: 'scene' },
+  { kind: 'catalog', titleKey: 'promo.shot.catalog', noteKey: 'promo.shot.catalogNote', mock: 'package' },
 ]
+
+export const PROMO_SHOTS: readonly PromoShotKind[] = PROMO_SHOT_META.map((meta) => meta.kind)
+
+export const PROMO_SHOT_LAYOUT: ReadonlyMap<PromoShotKind, PromoMockLayout> = new Map(
+  PROMO_SHOT_META.map((meta) => [meta.kind, meta.mock]),
+)
+
+/**
+ * Что отмечено при первом открытии вкладки: четыре кадра, которые закрывают
+ * карточку товара сами по себе (витрина, кухня, макро, упаковка). Ровно те же
+ * четыре, что серия рисовала до расширения набора, так что привычный сценарий
+ * «нажал и получил» не изменился и стоит столько же.
+ */
+export const PROMO_DEFAULT_SHOTS: readonly PromoShotKind[] = ['hero', 'serving', 'macroOil', 'package']
+
+/** Больше двенадцати кадров за раз не бывает: столько всего пресетов. */
+export const PROMO_MAX_SHOTS = PROMO_SHOTS.length
 
 /** Один готовый кадр: data:URI картинки, пришедшей от Gemini. */
 export interface PromoImage {
@@ -49,38 +98,64 @@ export type PromoResult =
     }
   | { readonly ok: false; readonly error: PromoError }
 
-/** Товар мерча: силуэт рисуем сами, id продукта пригодится будущему флоу Printful. */
+/** Товар мерча. Координаты в каталоге Printful лежат в printfulCatalog.ts. */
 export type MerchProductId = 'tshirt' | 'mug' | 'poster' | 'apron'
 
 export interface MerchProduct {
   readonly id: MerchProductId
   readonly titleKey: MessageKey
-  /**
-   * id каталога Printful: 71 футболка Bella+Canvas 3001, 19 кружка, 1 постер, 186 фартук.
-   * Сейчас не используется: генерация мокапов на стороне Printful отложена, см. MerchResult.
-   */
-  readonly printfulProductId: number
 }
 
 export const MERCH_PRODUCTS: readonly MerchProduct[] = [
-  { id: 'tshirt', titleKey: 'merch.tshirt', printfulProductId: 71 },
-  { id: 'mug', titleKey: 'merch.mug', printfulProductId: 19 },
-  { id: 'poster', titleKey: 'merch.poster', printfulProductId: 1 },
-  { id: 'apron', titleKey: 'merch.apron', printfulProductId: 186 },
+  { id: 'tshirt', titleKey: 'merch.tshirt' },
+  { id: 'mug', titleKey: 'merch.mug' },
+  { id: 'poster', titleKey: 'merch.poster' },
+  { id: 'apron', titleKey: 'merch.apron' },
 ]
 
+export const MERCH_PRODUCT_IDS: readonly MerchProductId[] = MERCH_PRODUCTS.map((p) => p.id)
+
 /**
- * Мокапы мерча рисуются локально всегда, и это единственное, что действие сообщает:
- * есть ли ключ Printful, то есть имеет ли смысл кнопка «Открыть в Printful».
- *
- * Полный флоу Mockup Generator сюда сознательно не заведён: он требует публичного
- * https-адреса макета (Printful тянет файл со своей стороны, data:URI не примет),
- * создания задачи с variant_ids и format, а затем поллинга task_key до готовности.
- * Ни хостинга макета, ни очереди у нас пока нет, поэтому этап отложен, и писать
- * заведомо нерабочую ветку в код смысла нет.
+ * Что отмечено при первом открытии. Ровно два товара, и это не вкусовщина:
+ * генератор мокапов Printful пускает два create-task в минуту (замерено на
+ * живом ключе), а четыре разом гарантированно упрутся в 429 на половине.
+ * Остальные товары остаются локальной компоновкой, пока их не отметят.
+ */
+export const MERCH_DEFAULT_PRODUCTS: readonly MerchProductId[] = ['tshirt', 'mug']
+
+/** Готовый мокап от Printful: ссылка на их CDN, срок жизни на их стороне. */
+export interface MerchMockup {
+  readonly id: MerchProductId
+  readonly url: string
+}
+
+/**
+ * Почему мокапы не приехали. notConfigured это «ключа Printful нет» и
+ * «магазин не задан»: обе беды лечит владелец в окружении, а не пользователь.
+ * rejected - Printful не принял макет, timeout - не успел отрисовать.
+ */
+export type MerchError =
+  | 'invalid'
+  | 'rateLimited'
+  | 'notConfigured'
+  | 'storage'
+  | 'rejected'
+  /** Printful упёрся в свой лимит: пара мокапов в минуту, остальные чуть позже. */
+  | 'busy'
+  | 'timeout'
+  | 'failed'
+
+/**
+ * Итог сборки мерча. Силуэты в браузере рисуются всегда и остаются на месте,
+ * если Printful недоступен: вкладка не имеет права опустеть из-за чужого сбоя.
  */
 export interface MerchResult {
+  /** Настроен ли Printful: от этого зависит кнопка «Открыть в Printful». */
   readonly printful: boolean
+  /** Настоящие мокапы. Пусто значит, что показываем локальные силуэты. */
+  readonly mockups?: readonly MerchMockup[]
+  /** Заполнено, когда настоящие мокапы не вышли: панель объясняет причину. */
+  readonly error?: MerchError
   /** Заполнено, когда сервер отказал: мокапы входят в Pro, и причина отказа нужна тексту в панели. */
   readonly denied?: AiDenyReason
 }

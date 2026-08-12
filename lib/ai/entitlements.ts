@@ -7,9 +7,9 @@ import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { getSupabaseService, isSupabaseServiceConfigured } from '@/lib/supabase/service'
 import { getCurrentUser } from '@/lib/supabase/session'
 import {
-  AI_FEATURE_COST,
   AI_MONTHLY_LIMIT,
   aiAccess,
+  aiCost,
   aiPeriod,
   aiRemaining,
   type AiAccess,
@@ -107,8 +107,12 @@ async function consume(userId: string, period: string, cost: number): Promise<nu
 /**
  * Проверка прав и резерв квоты одним вызовом. Возвращает структуру, а не бросает:
  * серверное действие обязано отдать клиенту код причины, а не пятисотку.
+ *
+ * units это сколько единиц фичи просят за раз: серия из восьми кадров резервирует
+ * восемь, а не одну. Резерв целиком, а не по кадру, сознательно: половина
+ * оплаченной серии при выбранной квоте хуже честного отказа до начала работы.
  */
-export async function assertAiAllowed(feature: AiFeature): Promise<AiVerdict> {
+export async function assertAiAllowed(feature: AiFeature, units = 1): Promise<AiVerdict> {
   // Без аккаунтов гейт не построить вовсе, а пускать всех подряд в платную
   // модель нельзя: это ровно тот дефект, из-за которого правка и затевалась.
   if (!isSupabaseConfigured()) return deny('unavailable')
@@ -120,7 +124,8 @@ export async function assertAiAllowed(feature: AiFeature): Promise<AiVerdict> {
   if (!pro) return deny('notPro')
 
   const period = aiPeriod(Date.now())
-  const cost = AI_FEATURE_COST[feature]
+  // units это число кадров в серии: платит человек за каждый, а не за нажатие кнопки.
+  const cost = aiCost(feature, units)
 
   // Бесплатная фича: Pro нужен, счётчик не трогаем и в базу за ним не идём.
   if (cost === 0) return { ok: true, userId: user.id, period, cost: 0, used: 0, remaining: AI_MONTHLY_LIMIT }

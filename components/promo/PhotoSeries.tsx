@@ -1,32 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Check, Sparkles } from 'lucide-react'
 import { generatePromoShotsAction } from '@/app/actions/promo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { HelpHint } from '@/components/ui/help-hint'
 import { AiGateNote, useAiGate } from '@/components/promo/AiGate'
 import { PromoMockShot } from '@/components/promo/PromoMockShot'
-import { renderBoardSvg, safeFileName } from '@/lib/export'
+import { boardPngDataUrl } from '@/components/promo/boardPng'
+import { aiCost } from '@/lib/ai/quota'
+import { safeFileName } from '@/lib/export'
 import { t } from '@/lib/i18n'
 import { describeBoard } from '@/lib/promo/describe'
 import { MAX_PNG_CHARS } from '@/lib/promo/schema'
-import { PROMO_SHOT_META, type PromoResult, type PromoShotKind } from '@/lib/promo/types'
+import { PROMO_DEFAULT_SHOTS, PROMO_SHOT_META, type PromoResult, type PromoShotKind } from '@/lib/promo/types'
 import { useDerived } from '@/lib/store/derived'
 import { selectDesign, useStudio } from '@/lib/store/studio'
-
-/** Сторона рендера доски, который уходит в промпт. Больше 1024 Gemini всё равно ужмёт сам. */
-const REFERENCE_PX = 1024
-
-function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(new Error('FileReader failed'))
-    reader.readAsDataURL(blob)
-  })
-}
 
 export function PhotoSeries() {
   const locale = useStudio((s) => s.locale)
@@ -34,10 +24,14 @@ export function PhotoSeries() {
   const { model } = useDerived()
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<PromoResult | null>(null)
+  // Отмеченные пресеты. Двенадцать кадров разом стоят двенадцать единиц квоты
+  // из тридцати, поэтому набор выбирает человек, а не кнопка за него.
+  const [selected, setSelected] = useState<readonly PromoShotKind[]>(PROMO_DEFAULT_SHOTS)
   // Остаток квоты после последней генерации: сервер возвращает его в ответе.
   const [remaining, setRemaining] = useState<number | null>(null)
   const gate = useAiGate(remaining)
 
+  const cost = aiCost('promoShots', selected.length)
   const imageByKind = new Map<PromoShotKind, string>(
     result !== null && result.ok && !result.mock ? result.images.map((image) => [image.kind, image.dataUrl]) : [],
   )
@@ -46,21 +40,26 @@ export function PhotoSeries() {
   const note: 'idle' | 'needKey' | 'ready' =
     result === null || !result.ok ? 'idle' : result.mock ? 'needKey' : 'ready'
 
+  const toggle = (kind: PromoShotKind): void => {
+    setSelected((prev) => (prev.includes(kind) ? prev.filter((k) => k !== kind) : [...prev, kind]))
+  }
+
   const run = async (): Promise<void> => {
     setBusy(true)
     setResult(null)
     try {
-      // Растеризация только по клику: канвас-конвертер незачем тащить в первый бандл страницы.
-      const { svgToPngBlob } = await import('@/lib/export/png')
-      const rendered = renderBoardSvg(model, { maxPx: REFERENCE_PX })
-      const boardPng = await blobToDataUrl(await svgToPngBlob(rendered, { scale: 1 }))
+      const boardPng = await boardPngDataUrl(model)
       // Тело серверного действия ограничено, и упереться в него лучше здесь, внятной
       // строкой про слишком дробный узор, чем исключением из недр Next на проде.
       if (boardPng.length > MAX_PNG_CHARS) {
         setResult({ ok: false, error: 'tooLarge' })
         return
       }
-      const res = await generatePromoShotsAction({ boardPng, description: describeBoard(design, model).text })
+      const res = await generatePromoShotsAction({
+        boardPng,
+        description: describeBoard(design, model).text,
+        kinds: selected,
+      })
       setResult(res)
       if (res.ok && !res.mock && res.remaining !== undefined) setRemaining(res.remaining)
       if (!res.ok && res.error === 'quota') setRemaining(0)
@@ -86,7 +85,7 @@ export function PhotoSeries() {
         <Button
           size="sm"
           data-testid="promo-generate"
-          disabled={busy || gate.locked}
+          disabled={busy || gate.locked || selected.length === 0}
           onClick={() => { void run() }}
         >
           <Sparkles data-icon="inline-start" />
@@ -95,6 +94,37 @@ export function PhotoSeries() {
       </div>
 
       <p className="max-w-[68ch] text-[13px] text-ink-secondary">{t(locale, 'promo.subtitle')}</p>
+
+      <fieldset className="flex flex-col gap-2" data-testid="promo-presets">
+        <legend className="mb-1 text-[13px] font-semibold">{t(locale, 'promo.presets')}</legend>
+        <div className="flex flex-wrap gap-2">
+          {PROMO_SHOT_META.map((shot) => {
+            const on = selected.includes(shot.kind)
+            return (
+              <button
+                key={shot.kind}
+                type="button"
+                data-testid={`promo-preset-${shot.kind}`}
+                aria-pressed={on}
+                onClick={() => { toggle(shot.kind) }}
+                className={
+                  on
+                    ? 'flex items-center gap-1.5 rounded-full border border-accent bg-accent/10 px-3 py-1.5 text-[13px] font-semibold text-accent'
+                    : 'flex items-center gap-1.5 rounded-full border border-line-subtle bg-surface-raised px-3 py-1.5 text-[13px] text-ink-secondary hover:border-line'
+                }
+              >
+                {on ? <Check aria-hidden className="size-3.5 shrink-0" /> : null}
+                {t(locale, shot.titleKey)}
+              </button>
+            )
+          })}
+        </div>
+        <p data-testid="promo-cost" className="text-[13px] text-ink-secondary">
+          {selected.length === 0
+            ? t(locale, 'promo.pickAtLeastOne')
+            : t(locale, 'promo.cost', { count: selected.length, cost })}
+        </p>
+      </fieldset>
 
       <AiGateNote gate={gate} locale={locale} testId="promo-gate" />
 
@@ -109,7 +139,7 @@ export function PhotoSeries() {
       ) : null}
 
       <ul data-testid="promo-gallery" className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
-        {PROMO_SHOT_META.map((shot) => {
+        {PROMO_SHOT_META.filter((shot) => selected.includes(shot.kind) || imageByKind.has(shot.kind)).map((shot) => {
           const dataUrl = imageByKind.get(shot.kind)
           return (
             <li
@@ -119,7 +149,7 @@ export function PhotoSeries() {
             >
               <div className="relative bg-canvas">
                 {dataUrl === undefined ? (
-                  <PromoMockShot kind={shot.kind} model={model} />
+                  <PromoMockShot layout={shot.mock} model={model} />
                 ) : (
                   <img src={dataUrl} alt={t(locale, shot.titleKey)} className="block h-auto w-full" />
                 )}
