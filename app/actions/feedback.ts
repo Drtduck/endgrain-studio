@@ -13,6 +13,7 @@ import {
   GITHUB_FEEDBACK_REPO,
   buildFeedbackIssueBody,
   buildFeedbackIssueTitle,
+  normalizeFeedbackMime,
   safeFeedbackFileName,
   type FeedbackAction,
 } from '@/lib/feedback'
@@ -32,9 +33,12 @@ const actionSchema = z.object({
 
 const schema = z.object({
   body: z.string().trim().min(1).max(FEEDBACK_MAX_LENGTH),
-  route: z.string().max(512).optional(),
+  // route и url приходят из window.location и длину не гарантируют: битая
+  // share-ссылка легко даёт километровый адрес. Отбивать из-за этого весь
+  // фидбек нельзя - схема их не ограничивает, а обрезает уже код ниже.
+  route: z.string().optional(),
   locale: z.enum(['ru', 'en']).optional(),
-  url: z.string().max(2000).optional(),
+  url: z.string().optional(),
   viewport: z.string().max(50).optional(),
   actions: z.array(actionSchema).max(FEEDBACK_MAX_ACTIONS).optional(),
   attachment: z
@@ -56,11 +60,6 @@ interface UploadedFile {
 }
 
 /**
- * Схлопывает переносы строк в пробел. Любая строка из клиента, которая идёт
- * отдельной строкой в теле issue, обязана пройти через это: иначе в разметку
- * можно дописать чужие поля.
- */
-/**
  * Отличает «payload не прошёл схему из-за размера вложения» от пустого или
  * слишком длинного текста: пользователю про эти случаи надо сказать разное.
  */
@@ -78,6 +77,11 @@ function isAttachmentTooBig(raw: Record<string, unknown>): boolean {
   return false
 }
 
+/**
+ * Схлопывает переносы строк в пробел. Любая строка из клиента, которая идёт
+ * отдельной строкой в теле issue, обязана пройти через это: иначе в разметку
+ * можно дописать чужие поля.
+ */
 function sanitizeLine(value: string | undefined): string | undefined {
   if (value === undefined) return undefined
   const clean = value.replace(/[\r\n]+/g, ' ').trim()
@@ -133,6 +137,7 @@ async function createGithubIssue(params: {
   attachmentName: string | undefined
   screenshotUrl: string | undefined
   attachmentFailed: boolean
+  screenshotFailed: boolean
   actions: readonly FeedbackAction[] | undefined
 }): Promise<string | null> {
   // route приходит из клиентского window.location - чистим переносы строк,
@@ -165,6 +170,7 @@ async function createGithubIssue(params: {
           attachmentName: params.attachmentName,
           screenshotUrl: params.screenshotUrl,
           attachmentFailed: params.attachmentFailed,
+          screenshotFailed: params.screenshotFailed,
           actions: params.actions,
         }),
         labels: ['feedback'],
@@ -206,34 +212,41 @@ export async function submitFeedbackAction(input: unknown): Promise<FeedbackResu
   const user = sb ? (await sb.auth.getUser()).data.user : null
 
   const { attachment, screenshot } = parsed.data
+  // Длину режем, а не отбиваем: адрес страницы приходит из браузера и по битой
+  // share-ссылке бывает любым. Пределы совпадают с check-констрейнтами таблицы.
+  const route = parsed.data.route?.slice(0, 512)
+  const url = parsed.data.url?.slice(0, 2000)
   const owner = user?.id ?? 'anon'
-  const stamp = Date.now()
+  // Не Date.now(): у анонимов общая «папка», и два одновременных фидбека с
+  // одинаковым именем файла упёрлись бы в upsert: false. UUID это исключает.
+  const key = crypto.randomUUID()
 
   let attachmentUrl: string | undefined
   let screenshotUrl: string | undefined
   if (attachment) {
     const name = safeFeedbackFileName(attachment.name)
     const uploaded = await uploadFeedbackFile(
-      `${owner}/${stamp}-attachment-${name}`,
+      `${owner}/${key}-attachment-${name}`,
       attachment.dataBase64,
-      attachment.type.length > 0 ? attachment.type : 'application/octet-stream',
+      normalizeFeedbackMime(attachment.type),
     )
     attachmentUrl = uploaded.url ?? undefined
   }
   if (screenshot) {
     const uploaded = await uploadFeedbackFile(
-      `${owner}/${stamp}-screenshot.jpg`,
+      `${owner}/${key}-screenshot.jpg`,
       screenshot.dataBase64,
       'image/jpeg',
     )
     screenshotUrl = uploaded.url ?? undefined
   }
   const attachmentFailed = attachment !== undefined && attachmentUrl === undefined
+  const screenshotFailed = screenshot !== undefined && screenshotUrl === undefined
 
-  // Метки действий тоже пришли из браузера: чистим переносы, чтобы список
-  // действий не смог дорисовать себе секций в теле issue.
+  // Метки и время действий тоже пришли из браузера: чистим переносы, чтобы
+  // список действий не смог дорисовать себе секций в теле issue.
   const actions: FeedbackAction[] | undefined = parsed.data.actions?.map((a) => ({
-    t: a.t,
+    t: sanitizeLine(a.t) ?? '-',
     kind: a.kind,
     label: sanitizeLine(a.label) ?? '-',
   }))
@@ -243,16 +256,17 @@ export async function submitFeedbackAction(input: unknown): Promise<FeedbackResu
     const issueUrl = await createGithubIssue({
       token,
       body: parsed.data.body,
-      route: parsed.data.route,
+      route,
       locale: parsed.data.locale,
       userAgent,
       email: user?.email ?? undefined,
-      url: parsed.data.url,
+      url,
       viewport: parsed.data.viewport,
       attachmentUrl,
       attachmentName: attachment?.name,
       screenshotUrl,
       attachmentFailed,
+      screenshotFailed,
       actions,
     })
     if (issueUrl) return { ok: true, issueUrl }
@@ -261,16 +275,28 @@ export async function submitFeedbackAction(input: unknown): Promise<FeedbackResu
 
   if (!sb) return { ok: false, error: 'disabled' }
 
-  const { error } = await sb.from('feedback').insert({
+  const base = {
     user_id: user?.id ?? null,
     body: parsed.data.body,
-    route: parsed.data.route ?? null,
+    route: route ?? null,
     user_agent: userAgent.length > 0 ? userAgent : null,
     locale: parsed.data.locale ?? null,
+  }
+  const { error } = await sb.from('feedback').insert({
+    ...base,
     attachment_url: attachmentUrl ?? null,
     attachment_name: attachment ? safeFeedbackFileName(attachment.name) : null,
     screenshot_url: screenshotUrl ?? null,
   })
-  if (error) return { ok: false, error: 'failed' }
+  if (!error) return { ok: true }
+
+  // 42703 (undefined_column) значит, что миграция с колонками под вложения к
+  // этой базе ещё не применена. Деплой кода не обязан ждать миграцию: повторяем
+  // insert по старой форме, чтобы текст фидбека не потерялся. Ссылки на файлы в
+  // этом прогоне пропадут, но они и так уже лежат в теле issue.
+  if (error.code !== '42703') return { ok: false, error: 'failed' }
+  console.warn('[feedback] колонки вложений отсутствуют, повтор insert без них')
+  const retry = await sb.from('feedback').insert(base)
+  if (retry.error) return { ok: false, error: 'failed' }
   return { ok: true }
 }

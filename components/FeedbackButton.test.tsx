@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { FEEDBACK_ACCEPT_ATTR } from '@/lib/feedback'
 import { FeedbackButton } from './FeedbackButton'
 
 const submitFeedbackAction = vi.fn()
@@ -11,6 +12,11 @@ vi.mock('@/app/actions/feedback', () => ({
 
 vi.mock('@/lib/supabase/config', () => ({
   isSupabaseConfigured: () => supabaseConfigured,
+}))
+
+// Роутера в jsdom нет, а трекер переходов читает usePathname.
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/',
 }))
 
 // Скриншот снимает html-to-image через динамический импорт. В jsdom рисовать
@@ -181,6 +187,46 @@ describe('FeedbackButton', () => {
     const arg = submitFeedbackAction.mock.calls[0]?.[0] as Record<string, unknown>
     expect(arg['attachment']).toBe(undefined)
     expect(arg['screenshot']).toBe(undefined)
+  })
+
+  it('исключение из экшена не вешает попап, а показывает ошибку', async () => {
+    submitFeedbackAction.mockRejectedValue(new Error('Body exceeded 5mb limit'))
+    render(<FeedbackButton />)
+    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.change(await screen.findByTestId('feedback-text'), { target: { value: 'текст' } })
+    fireEvent.click(screen.getByTestId('feedback-submit'))
+
+    const alert = await screen.findByTestId('feedback-error')
+    expect(alert.getAttribute('role')).toBe('alert')
+    // Текст остался в поле: терять набранное при аварии сети нельзя.
+    expect((screen.getByTestId('feedback-text') as HTMLTextAreaElement).value).toBe('текст')
+    // И попап не завис в «Отправляем»: кнопка снова доступна.
+    await waitFor(() =>
+      expect(screen.getByTestId('feedback-submit').hasAttribute('disabled')).toBe(false),
+    )
+  })
+
+  it('в url не уезжает хэш с документом студии', async () => {
+    submitFeedbackAction.mockResolvedValue({ ok: true })
+    window.location.hash = '#d=' + 'x'.repeat(500)
+    render(<FeedbackButton />)
+    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.change(await screen.findByTestId('feedback-text'), { target: { value: 'текст' } })
+    fireEvent.click(screen.getByTestId('feedback-submit'))
+
+    await waitFor(() => expect(submitFeedbackAction).toHaveBeenCalledTimes(1))
+    const arg = submitFeedbackAction.mock.calls[0]?.[0] as { url: string; route: string }
+    expect(arg.url.includes('#')).toBe(false)
+    expect(arg.route.includes('#')).toBe(false)
+    window.location.hash = ''
+  })
+
+  it('input file принимает только типы из белого списка', async () => {
+    render(<FeedbackButton />)
+    fireEvent.click(screen.getByTestId('feedback-button'))
+    const input = (await screen.findByTestId('feedback-file-input')) as HTMLInputElement
+    expect(input.getAttribute('accept')).toBe(FEEDBACK_ACCEPT_ATTR)
+    expect(input.getAttribute('accept')?.includes('svg')).toBe(false)
   })
 
   it('ошибка attachmentTooBig от сервера показывается отдельным текстом', async () => {

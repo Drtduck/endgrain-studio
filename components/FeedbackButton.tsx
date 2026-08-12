@@ -1,13 +1,18 @@
 'use client'
 
 import { useEffect, useRef, useState, useTransition } from 'react'
+import { usePathname } from 'next/navigation'
 import { MessageSquarePlus, Paperclip, X } from 'lucide-react'
 import { submitFeedbackAction, type FeedbackResult } from '@/app/actions/feedback'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { HelpHint } from '@/components/ui/help-hint'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
-import { FEEDBACK_ATTACHMENT_MAX_BYTES, FEEDBACK_MAX_LENGTH } from '@/lib/feedback'
+import {
+  FEEDBACK_ACCEPT_ATTR,
+  FEEDBACK_ATTACHMENT_MAX_BYTES,
+  FEEDBACK_MAX_LENGTH,
+} from '@/lib/feedback'
 import {
   clearActions,
   describeClickable,
@@ -101,6 +106,7 @@ async function captureScreenshot(): Promise<string | null> {
 
 export function FeedbackButton() {
   const locale = useStudio((s) => s.locale)
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [body, setBody] = useState('')
   const [sent, setSent] = useState(false)
@@ -120,10 +126,15 @@ export function FeedbackButton() {
   // фидбек продолжает работать как раньше.
   const attachmentsEnabled = isSupabaseConfigured()
 
+  // Переходы пишет роутер, а не разовый эффект на монтировании: студия живёт
+  // без перезагрузки страницы, и смену маршрута видно только отсюда.
+  useEffect(() => {
+    if (pathname !== null) recordAction('route', pathname)
+  }, [pathname])
+
   // Лог последних действий пользователя. Слушатели глобальные и в capture-фазе,
   // клики по самому окну фидбека отфильтрованы по data-feedback-ui.
   useEffect(() => {
-    recordAction('route', window.location.pathname + window.location.search)
     const onClick = (e: MouseEvent): void => {
       if (!(e.target instanceof Element)) return
       const label = describeClickable(e.target)
@@ -215,37 +226,47 @@ export function FeedbackButton() {
     // Маршрут собираем в момент отправки: хэш содержит закодированный
     // документ и в базу ему не надо, берём только pathname + search.
     const route = window.location.pathname + window.location.search
-    const url = window.location.href
+    // Хэш сознательно отрезаем: в нём лежит весь документ студии в base64, для
+    // разбора обращения он бесполезен, а адрес раздувает на десятки килобайт.
+    const url = window.location.origin + route
     const viewport = `${window.innerWidth}x${window.innerHeight}`
     const actions = getRecentActions()
     startTransition(async () => {
-      const screenshot = attachmentsEnabled ? await captureScreenshot() : null
-      const res = await submitFeedbackAction({
-        body: text,
-        route,
-        locale,
-        url,
-        viewport,
-        actions,
-        ...(attached !== null && attachmentsEnabled
-          ? {
-              attachment: {
-                name: attached.name,
-                type: attached.type,
-                dataBase64: attached.dataBase64,
-              },
-            }
-          : {}),
-        ...(screenshot !== null ? { screenshot: { dataBase64: screenshot } } : {}),
-      })
-      if (res.ok) {
-        setBody('')
-        setAttached(null)
-        setAttachError(null)
-        setSent(true)
-        clearActions()
-      } else {
-        setError(res.error)
+      try {
+        const screenshot = attachmentsEnabled ? await captureScreenshot() : null
+        const res = await submitFeedbackAction({
+          body: text,
+          route,
+          locale,
+          url,
+          viewport,
+          actions,
+          ...(attached !== null && attachmentsEnabled
+            ? {
+                attachment: {
+                  name: attached.name,
+                  type: attached.type,
+                  dataBase64: attached.dataBase64,
+                },
+              }
+            : {}),
+          ...(screenshot !== null ? { screenshot: { dataBase64: screenshot } } : {}),
+        })
+        if (res.ok) {
+          setBody('')
+          setAttached(null)
+          setAttachError(null)
+          setSent(true)
+          clearActions()
+        } else {
+          setError(res.error)
+        }
+      } catch {
+        // Сюда прилетает всё, что экшен не смог вернуть значением: превышенный
+        // bodySizeLimit, 500 на сервере, оборванная сеть. Без перехвата это был
+        // бы unhandled rejection: попап навсегда остаётся в «Отправляем», а
+        // набранный текст пропадает.
+        setError('failed')
       }
     })
   }
@@ -336,6 +357,7 @@ export function FeedbackButton() {
                   <input
                     ref={fileInputRef}
                     type="file"
+                    accept={FEEDBACK_ACCEPT_ATTR}
                     data-testid="feedback-file-input"
                     className="hidden"
                     onChange={onFileChange}

@@ -11,12 +11,14 @@ values (
   'feedback-attachments',
   false,
   2097152, -- 2 МБ, тот же предел проверяет клиент и zod-схема server action
+  -- Список синхронен с FEEDBACK_ALLOWED_MIME из lib/feedback.ts. SVG тут нет
+  -- намеренно: он выполняет скрипты при открытии по прямой ссылке, а signed URL
+  -- живёт 30 дней - получился бы stored XSS на домене Storage.
   array[
     'image/png',
     'image/jpeg',
     'image/webp',
     'image/gif',
-    'image/svg+xml',
     'application/pdf',
     'text/plain'
   ]
@@ -26,20 +28,12 @@ on conflict (id) do update
       file_size_limit = excluded.file_size_limit,
       allowed_mime_types = excluded.allowed_mime_types;
 
--- Загрузку делает server action под service-ключом, а он RLS обходит. Политика
--- ниже нужна на случай, если когда-нибудь класть файл будет сам браузер:
--- залогиненный пользователь пишет только в папку со своим id и никуда больше.
+-- Политик на storage.objects для этого bucket нет вообще, и это осознанно.
+-- Пишет в него только server action под service-ключом, а он RLS обходит.
+-- Разреши мы insert обычным пользователям - получился бы бесплатный
+-- файлохостинг; разреши select - любой залогиненный, зная путь, подписал бы
+-- себе чужое вложение. Наружу файл уходит исключительно по signed URL.
 drop policy if exists feedback_attachments_insert_own on storage.objects;
-create policy feedback_attachments_insert_own on storage.objects
-  for insert to authenticated
-  with check (
-    bucket_id = 'feedback-attachments'
-    and (storage.foldername(name))[1] = (select auth.uid())::text
-  );
-
--- Чтения нет ни у anon, ни у authenticated: файл выдаётся только по signed URL.
--- Отдельная политика select тут была бы дырой - зная путь, любой залогиненный
--- пользователь подписал бы себе чужое вложение.
 drop policy if exists feedback_attachments_select_own on storage.objects;
 
 -- 2. Ссылки в записи обратной связи ------------------------------------------

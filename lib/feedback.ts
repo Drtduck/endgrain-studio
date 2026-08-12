@@ -15,11 +15,36 @@ export const FEEDBACK_SIGNED_URL_TTL_SEC = 60 * 60 * 24 * 30
 export const FEEDBACK_ATTACHMENT_MAX_BYTES = 2 * 1024 * 1024
 
 // Лимиты на base64-строки в payload server action. base64 раздувает бинарь
-// примерно в 1.37 раза, поэтому 2 МБ файла это ~2.8M символов. Скриншот жмётся
-// в JPEG на клиенте, но ему даём запас. Сумма обязана влезать в
-// serverActions.bodySizeLimit из next.config.ts.
+// примерно в 1.37 раза, поэтому 2 МБ файла это ~2.8M символов. Скриншоту
+// достаётся столько же по бинарю, сколько разрешает file_size_limit bucket:
+// больше 2 МБ Storage всё равно не примет, и кадр потерялся бы молча. Сумма
+// двух лимитов (~4.8 МБ) обязана влезать в serverActions.bodySizeLimit 5mb.
 export const FEEDBACK_ATTACHMENT_B64_MAX = 2_800_000
-export const FEEDBACK_SCREENSHOT_B64_MAX = 4_000_000
+export const FEEDBACK_SCREENSHOT_B64_MAX = 2_000_000
+
+/**
+ * Белый список типов вложения. Тип приходит из браузера, верить ему нельзя:
+ * с ним объект ляжет в Storage и по signed URL отдастся с этим же
+ * Content-Type. Отсюда нет image/svg+xml - SVG выполняет скрипты при открытии
+ * по прямой ссылке, а ссылка живёт 30 дней.
+ */
+export const FEEDBACK_ALLOWED_MIME: readonly string[] = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+  'text/plain',
+]
+
+/** Атрибут accept для input[type=file], синхронный с белым списком. */
+export const FEEDBACK_ACCEPT_ATTR = FEEDBACK_ALLOWED_MIME.join(',')
+
+/** Незнакомый тип превращаем в бинарь: браузер такой файл не выполнит, а скачает. */
+export function normalizeFeedbackMime(type: string): string {
+  const clean = type.split(';')[0]?.trim().toLowerCase() ?? ''
+  return FEEDBACK_ALLOWED_MIME.includes(clean) ? clean : 'application/octet-stream'
+}
 
 /** Сколько последних действий пользователя уходит вместе с фидбеком. */
 export const FEEDBACK_MAX_ACTIONS = 25
@@ -81,6 +106,8 @@ export interface FeedbackIssueBodyParams {
   screenshotUrl?: string | undefined
   /** Вложение пришло, но сохранить его не удалось - помечаем это явно */
   attachmentFailed?: boolean | undefined
+  /** То же самое про автоскриншот */
+  screenshotFailed?: boolean | undefined
   /** Последние действия пользователя, старые -> новые */
   actions?: readonly FeedbackAction[] | undefined
 }
@@ -114,6 +141,9 @@ export function buildFeedbackIssueBody(params: FeedbackIssueBodyParams): string 
   }
   if (params.attachmentFailed) {
     attachments.push('- Вложение пришло, но сохранить его в Storage не удалось')
+  }
+  if (params.screenshotFailed) {
+    attachments.push('- Скриншот снялся, но сохранить его в Storage не удалось')
   }
   if (attachments.length > 0) {
     sections.push(`### Вложения\n${attachments.join('\n')}`)

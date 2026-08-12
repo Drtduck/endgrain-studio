@@ -25,8 +25,12 @@ test('вложение прикрепляется и убирается, есл�
   await expect(page.getByTestId('feedback-text')).toBeVisible()
 
   // Без переменных Supabase вложений нет по дизайну: в таком прогоне кнопки
-  // прикрепления не существует, и проверять тут нечего.
-  if ((await page.getByTestId('feedback-attach').count()) === 0) return
+  // прикрепления не существует, и тест честно помечается пропущенным, а не
+  // притворяется пройденным.
+  test.skip(
+    (await page.getByTestId('feedback-attach').count()) === 0,
+    'NEXT_PUBLIC_SUPABASE_* не заданы, вложения выключены гейтом',
+  )
 
   await page.getByTestId('feedback-file-input').setInputFiles({
     name: 'схема.png',

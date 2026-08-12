@@ -369,6 +369,108 @@ describe('app/actions/feedback', () => {
     expect(upload).not.toHaveBeenCalled()
   })
 
+  it('тип вложения из браузера маппится через белый список', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ html_url: 'https://github.com/Drtduck/endgrain-studio/issues/12' }),
+    })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    await submitFeedbackAction({
+      body: 'текст',
+      attachment: { name: 'evil.svg', type: 'image/svg+xml', dataBase64: 'AAAA' },
+    })
+
+    const [, , opts] = upload.mock.calls[0] as [string, Buffer, { contentType: string }]
+    // SVG выполняет скрипты по прямой ссылке, поэтому в белом списке его нет:
+    // объект ляжет бинарём и браузер его скачает, а не откроет.
+    expect(opts.contentType).toBe('application/octet-stream')
+  })
+
+  it('знакомый тип с параметром charset нормализуется, а не отбрасывается', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ html_url: 'https://github.com/Drtduck/endgrain-studio/issues/13' }),
+    })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    await submitFeedbackAction({
+      body: 'текст',
+      attachment: { name: 'note.txt', type: 'text/plain; charset=utf-8', dataBase64: 'AAAA' },
+    })
+
+    const [, , opts] = upload.mock.calls[0] as [string, Buffer, { contentType: string }]
+    expect(opts.contentType).toBe('text/plain')
+  })
+
+  it('сбой загрузки скриншота помечается в теле issue отдельной строкой', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    upload.mockResolvedValue({ error: { message: 'payload too large' } })
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ html_url: 'https://github.com/Drtduck/endgrain-studio/issues/14' }),
+    })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    await submitFeedbackAction({ body: 'текст', screenshot: { dataBase64: 'BBBB' } })
+
+    expect(issueBodyFromFetch(fetchMock)).toContain('Скриншот снялся, но сохранить его')
+  })
+
+  it('километровый url не отбивает фидбек, а обрезается', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ html_url: 'https://github.com/Drtduck/endgrain-studio/issues/15' }),
+    })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({
+      body: 'текст',
+      url: 'https://app.example/board?d=' + 'x'.repeat(5000),
+      route: '/board?d=' + 'y'.repeat(5000),
+    })
+
+    expect(res.ok).toBe(true)
+    const body = issueBodyFromFetch(fetchMock)
+    const urlLine = body.split('\n').find((l) => l.startsWith('URL: ')) ?? ''
+    expect(urlLine.length).toBe('URL: '.length + 2000)
+  })
+
+  it('без применённой миграции insert повторяется без колонок вложений', async () => {
+    const insert = vi
+      .fn()
+      .mockResolvedValueOnce({ error: { code: '42703', message: 'column attachment_url does not exist' } })
+      .mockResolvedValueOnce({ error: null })
+    from.mockReturnValue({ insert })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({
+      body: 'текст',
+      attachment: { name: 'a.png', type: 'image/png', dataBase64: 'AAAA' },
+    })
+
+    expect(res).toEqual({ ok: true })
+    expect(insert).toHaveBeenCalledTimes(2)
+    const second = insert.mock.calls[1]?.[0] as Record<string, unknown>
+    expect('attachment_url' in second).toBe(false)
+    expect('screenshot_url' in second).toBe(false)
+    expect(second['body']).toBe('текст')
+  })
+
+  it('обычная ошибка insert не превращается в повтор', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: { code: '23514', message: 'check violation' } })
+    from.mockReturnValue({ insert })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({ body: 'текст' })
+
+    expect(res).toEqual({ ok: false, error: 'failed' })
+    expect(insert).toHaveBeenCalledTimes(1)
+  })
+
   it('лог действий и viewport попадают в тело issue с почищенными переносами', async () => {
     process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
     fetchMock.mockResolvedValue({

@@ -1,3 +1,6 @@
+// Импорт роняет сборку, если модуль случайно затянут в клиентский бандл:
+// service-ключ не должен уехать в браузер ни при какой правке.
+import 'server-only'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { SUPABASE_URL } from './config'
 
