@@ -1,6 +1,8 @@
 'use client'
 
 import { AccountButton } from '@/components/AccountButton'
+import { AffiliateShelf } from '@/components/affiliate/AffiliateShelf'
+import { LiteratureSection } from '@/components/affiliate/LiteratureSection'
 import { Board3DPanel } from '@/components/Board3DPanel'
 import { BoardCanvas } from '@/components/BoardCanvas'
 import { BoardSettings } from '@/components/BoardSettings'
@@ -28,7 +30,7 @@ import { useStudio, type StudioView } from '@/lib/store/studio'
 import type { UnitSystem } from '@/lib/units'
 import { cn } from '@/lib/utils'
 
-const FULL_WIDTH: readonly StudioView[] = ['templates', 'generate', 'photo', 'projects']
+const FULL_WIDTH: readonly StudioView[] = ['templates', 'generate', 'photo', 'projects', 'books']
 
 export function StudioShell() {
   const locale = useStudio((s) => s.locale)
@@ -46,9 +48,7 @@ export function StudioShell() {
         className="flex min-h-14 flex-wrap items-center gap-4 border-b border-line bg-surface px-4 py-2"
       >
         <div className="flex items-center gap-2">
-          <span className="flex size-[22px] items-center justify-center rounded-xs bg-accent font-display text-[13px] text-ink-inverse">
-            E
-          </span>
+          <img src="/brand/beaver-simple.svg" alt="" width={24} height={24} className="size-6 shrink-0" />
           <span className="font-display text-[17px] font-semibold">{t(locale, 'app.title')}</span>
         </div>
 
@@ -92,6 +92,8 @@ export function StudioShell() {
             <GeneratorPanel />
           ) : view === 'photo' ? (
             <PhotoImport />
+          ) : view === 'books' ? (
+            <LiteratureSection />
           ) : (
             <ProjectsPanel />
           )
@@ -132,6 +134,8 @@ export function StudioShell() {
             </aside>
           </div>
         )}
+
+        {view === 'editor' ? <AffiliateShelf /> : null}
 
         <ForkDialog />
       </main>

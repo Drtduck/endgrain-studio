@@ -56,6 +56,7 @@
 Назначение: навигация между режимами и глобальные переключатели.
 Layout: горизонтальная строка, min-height 56px, padding 8px 16px, flex, gap 16px, `flex-wrap: wrap` на узких ширинах. Фон `--surface`, снизу 1px `--border-default`.
 - Логотип: квадрат 22px, radius `--radius-xs`, фон `--accent`, буква E шрифтом display 13px `--text-inverse`. Рядом название, Bitter 17 / 600.
+  Логотип с фазы 8: марка-бобёр `public/brand/beaver-simple.svg`, 24px, без подложки. Описание квадрата с буквой E оставлено как история.
 - Вкладки (Редактор, Шаблоны, Генератор, Фото, 3D): padding 7px 13px, radius `--radius-sm`, body 14. Неактивная: текст `--text-secondary`, вес 500. Hover: фон `--bg-app`, текст `--text-primary`. Активная: фон `--accent-soft`, текст `--accent`, вес 600. Focus: `--focus-ring`.
 - Переключатели единиц (мм / in) и языка (RU / EN): сегмент-контрол, фон `--surface-sunken`, radius `--radius-md`, внутренний padding 2px. Активный сегмент: фон `--surface-raised`, тень `--shadow-sm`, radius `--radius-sm`. Единицы набраны mono 12, язык sans 12 / 600.
 - Undo / redo: ghost-кнопки 32×32, radius `--radius-sm`, иконка 16px stroke 1.6. Недоступное состояние: цвет `--border-strong`, без hover.

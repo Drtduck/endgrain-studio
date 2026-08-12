@@ -1,0 +1,149 @@
+[
+  {
+    "id": "hoadley-understanding-wood",
+    "asin": "1561583588",
+    "brand": "The Taunton Press",
+    "author": "R. Bruce Hoadley",
+    "year": 2000,
+    "title": {
+      "ru": "Как устроено дерево: путеводитель мастера по технологии древесины",
+      "en": "Understanding Wood: A Craftsman's Guide to Wood Technology"
+    },
+    "note": {
+      "ru": "Академичная, но незаменимая книга о том, почему дерево ведёт себя так, а не иначе.",
+      "en": "Academic but essential on why wood behaves the way it does."
+    },
+    "why": {
+      "ru": "Единственная книга, которая объясняет, почему торцевая доска ведёт себя не как обычная. Усушка поперёк волокон, движение по сезонам, почему щит трескается. Без неё расчёты студии останутся цифрами без смысла.",
+      "en": "The one book that explains why an end-grain board behaves unlike any other. Cross-grain shrinkage, seasonal movement, why panels crack. Without it the studio numbers stay numbers without meaning."
+    },
+    "band": "b25_50",
+    "unverified": true
+  },
+  {
+    "id": "flexner-finishing",
+    "asin": "1565239288",
+    "brand": "Fox Chapel Publishing",
+    "author": "Bob Flexner",
+    "year": 2010,
+    "title": { "ru": "Как понять отделку дерева", "en": "Understanding Wood Finishing" },
+    "note": {
+      "ru": "Разбирает химию покрытий понятным языком, без магии и мифов из мастерских.",
+      "en": "Breaks down finish chemistry in plain language, no shop-floor mythology."
+    },
+    "why": {
+      "ru": "Финиш это половина впечатления от готовой доски. Флекснер разбирает химию по полочкам и отдельно объясняет, что можно класть на то, с чего едят.",
+      "en": "Finish is half of how the finished board reads. Flexner lays the chemistry out plainly and covers separately what may go on a surface people eat from."
+    },
+    "band": "b25_50",
+    "unverified": true
+  },
+  {
+    "id": "korn-basics",
+    "asin": "1561586200",
+    "brand": "The Taunton Press",
+    "author": "Peter Korn",
+    "year": 2003,
+    "title": { "ru": "Основы столярного дела: азы ремесла", "en": "Woodworking Basics: Mastering the Essentials of Craftsmanship" },
+    "note": {
+      "ru": "Спокойное пошаговое введение для тех, кто ещё не держал стамеску в руках.",
+      "en": "A calm, step-by-step start for anyone who has not yet held a chisel."
+    },
+    "why": {
+      "ru": "Книга для тех, кто ещё путает стамеску с долотом. Корн объясняет не рецепты, а то, почему рука держит инструмент именно так.",
+      "en": "A book for anyone who still confuses a chisel with a gouge. Korn explains not recipes but why the hand holds a tool the way it does."
+    },
+    "band": "b10_25",
+    "unverified": true
+  },
+  {
+    "id": "schwarz-toolchest",
+    "asin": "0982378130",
+    "brand": "Lost Art Press",
+    "author": "Christopher Schwarz",
+    "year": 2011,
+    "title": { "ru": "Инструментальный сундук анархиста", "en": "The Anarchist's Tool Chest" },
+    "note": {
+      "ru": "Про минимальный набор инструмента и сундук, в котором он живёт, а не про доски.",
+      "en": "About the minimal tool kit and the chest it lives in, not about boards."
+    },
+    "why": {
+      "ru": "Не про доски, а про то, какой минимум инструмента реально нужен. Отрезвляет раньше, чем вы потратите вторую тысячу долларов на железо.",
+      "en": "Not about boards but about the minimum kit you actually need. It sobers you up before the second thousand dollars goes into steel."
+    },
+    "band": "b25_50",
+    "unverified": true
+  },
+  {
+    "id": "hylton-cabinetmaking",
+    "asin": "1565233697",
+    "brand": "Reader's Digest",
+    "author": "Bill Hylton",
+    "year": 2008,
+    "title": { "ru": "Столярное дело в чертежах", "en": "Illustrated Cabinetmaking" },
+    "note": {
+      "ru": "Толстый чертёжный справочник узлов и соединений на все случаи.",
+      "en": "A thick illustrated reference of joints and assemblies for every occasion."
+    },
+    "why": {
+      "ru": "Справочник узлов и соединений, к которому возвращаешься годами. Полезен не как чтение, а как чертёж на столе, когда нужен конкретный узел.",
+      "en": "A reference of joints and assemblies you keep coming back to for years. Useful not as reading but as a drawing on the bench when you need a specific joint."
+    },
+    "band": "b25_50",
+    "unverified": true
+  },
+  {
+    "id": "pekovich-why-how",
+    "asin": "1631869310",
+    "brand": "The Taunton Press",
+    "author": "Michael Pekovich",
+    "year": 2018,
+    "title": { "ru": "Столярное дело: почему и как", "en": "The Why and How of Woodworking" },
+    "note": {
+      "ru": "Про решения дизайна и пропорции, а не только про технику исполнения.",
+      "en": "About design decisions and proportion, not just execution technique."
+    },
+    "why": {
+      "ru": "Редактор Fine Woodworking пишет о решениях, а не о процедурах. После неё понятно, зачем доска выглядит именно так, а не просто как её сделать.",
+      "en": "The Fine Woodworking editor writes about decisions, not procedures. After it you understand why a piece looks the way it does, not just how to make it."
+    },
+    "band": "b25_50",
+    "unverified": true
+  },
+  {
+    "id": "spagnuolo-hybrid",
+    "asin": "1440323844",
+    "brand": "Fox Chapel Publishing",
+    "author": "Marc Spagnuolo",
+    "year": 2013,
+    "title": { "ru": "Гибридное столярное дело", "en": "Hybrid Woodworking" },
+    "note": {
+      "ru": "О разумном сочетании станка и ручного инструмента в одной мастерской.",
+      "en": "About a sensible mix of machine and hand tool work in one shop."
+    },
+    "why": {
+      "ru": "Про то, где станок экономит день, а где рука точнее машины. Полезно именно тем, кто уже собрал студию и режет доски регулярно.",
+      "en": "About where a machine saves you a day and where a hand beats it on precision. Useful exactly for someone who already runs the studio and cuts boards regularly."
+    },
+    "band": "b25_50",
+    "unverified": true
+  },
+  {
+    "id": "jackson-day-manual",
+    "asin": "0679766111",
+    "brand": "Dorling Kindersley",
+    "author": "Albert Jackson, David Day",
+    "year": 1996,
+    "title": { "ru": "Полное руководство по столярному делу", "en": "The Complete Manual of Woodworking" },
+    "note": {
+      "ru": "Толстый общий справочник от пород дерева до фурнитуры и станков.",
+      "en": "A thick general reference from wood species to hardware and machines."
+    },
+    "why": {
+      "ru": "Толстый справочник на все случаи, от пород дерева до фурнитуры. Держат не ради чтения от корки до корки, а чтобы найти один нужный факт за минуту.",
+      "en": "A thick reference for every occasion, from wood species to hardware. You keep it not to read cover to cover but to find one needed fact in a minute."
+    },
+    "band": "b25_50",
+    "unverified": true
+  }
+]

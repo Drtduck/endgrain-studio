@@ -203,3 +203,74 @@
     @apply font-sans;
   }
 }
+
+@layer utilities {
+  /* Бегущая лента узоров. Двигаем -50%, потому что список дублируется ровно
+     дважды: на стыке рисунок совпадает и шва не видно. */
+  @keyframes eg-marquee {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(-50%, 0, 0); }
+  }
+  .eg-marquee-track {
+    display: flex;
+    width: max-content;
+    animation: eg-marquee var(--eg-marquee-dur, 60s) linear infinite;
+  }
+  .eg-marquee-reverse { animation-direction: reverse; }
+  .eg-marquee:hover .eg-marquee-track { animation-play-state: paused; }
+
+  /* Наклон карточки под курсором: только transform и тень, никаких сдвигов
+     соседей. Длительность из токена --dur-panel. */
+  .eg-tilt {
+    transition: transform var(--dur-panel) var(--ease-out), box-shadow var(--dur-panel) var(--ease-out);
+    will-change: transform;
+  }
+  .eg-tilt:hover {
+    transform: perspective(800px) rotateX(2.5deg) rotateY(-2.5deg) translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Медленное покачивание маскота. Амплитуда намеренно маленькая:
+     это фон настроения, а не аттракцион. */
+  @keyframes eg-bob {
+    0%, 100% { transform: translateY(0) rotate(-1deg); }
+    50%      { transform: translateY(-10px) rotate(1deg); }
+  }
+  .eg-bob { animation: eg-bob 6s ease-in-out infinite; }
+
+  /* Проявление секции при прокрутке. Scroll-driven animations есть не везде,
+     поэтому базовое состояние видимое, а анимация только добавляется сверху. */
+  @supports (animation-timeline: view()) {
+    .eg-reveal {
+      animation: eg-fade-up linear both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 32%;
+    }
+    @keyframes eg-fade-up {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: none; }
+    }
+  }
+
+  /* Один выключатель на всё. Без него лендинг нарушает prefers-reduced-motion. */
+  @media (prefers-reduced-motion: reduce) {
+    .eg-marquee-track, .eg-bob, .eg-reveal { animation: none !important; }
+    .eg-tilt:hover { transform: none; }
+  }
+
+  /* Плавное раскрытие <details> партнёрских блоков там, где браузер это умеет.
+     Без поддержки ::details-content блок просто раскрывается мгновенно, это
+     штатный запасной вариант, а не поломка. */
+  @supports (interpolate-size: allow-keywords) {
+    :root { interpolate-size: allow-keywords; }
+    details::details-content {
+      height: 0;
+      overflow: hidden;
+      transition: height var(--dur-panel, 0.2s) var(--ease-out, ease), content-visibility var(--dur-panel, 0.2s) allow-discrete;
+      transition-behavior: allow-discrete;
+    }
+    details[open]::details-content {
+      height: auto;
+    }
+  }
+}

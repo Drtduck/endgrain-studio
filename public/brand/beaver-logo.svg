@@ -1,0 +1,330 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Endgrain Studio mascot: beaver in a flat cap flexing a tattooed arm">
+  <title>Endgrain Studio - Beaver Mascot</title>
+
+  <!-- ============================================================
+       PALETTE
+       fur        light #a9713f | base #8a5a33 | shade #6d4426 | line #4a2b16
+       cream      light #f7ead0 | base #f0dab4 | shade #dcbf93 | line #9d7742
+       cap tweed  light #979083 | base #7d7568 | shade #635c51 | line #3c3830
+       nose/ink   #33231a  | tattoo ink #2f4f6e
+       ============================================================ -->
+
+  <defs>
+    <!-- Soft drop shadow blur -->
+    <filter id="soft" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+
+    <!-- = SILHOUETTE PATHS (no paint attrs: painted via <use>) = -->
+
+    <!-- torso / shoulders, bust-cropped at y=960 -->
+    <path id="p-torso" d="M 230 960
+      C 214 852 254 762 344 716
+      C 390 640 480 620 552 640
+      C 640 660 700 716 718 792
+      C 734 844 738 904 740 960 Z"/>
+
+    <!-- ears (tucked behind head + cap) -->
+    <path id="p-earL" d="M 244 306
+      C 210 288 176 302 172 338
+      C 168 374 194 398 228 392
+      C 238 366 238 330 244 306 Z"/>
+    <path id="p-earR" d="M 616 306
+      C 650 288 684 302 688 338
+      C 692 374 666 398 632 392
+      C 622 366 622 330 616 306 Z"/>
+
+    <!-- head: broad beaver skull -->
+    <path id="p-head" d="M 430 232
+      C 300 232 218 300 208 400
+      C 200 470 205 522 232 566
+      C 268 626 340 660 430 660
+      C 520 660 592 626 628 566
+      C 655 522 660 470 652 400
+      C 642 300 560 232 430 232 Z"/>
+
+    <!-- two big incisors, protruding past the jaw -->
+    <path id="p-teeth" d="M 350 540 L 426 540 L 426 604
+      C 426 628 410 642 388 642 C 366 642 350 628 350 604 Z
+      M 434 540 L 510 540 L 510 604
+      C 510 628 494 642 472 642 C 450 642 434 628 434 604 Z"/>
+
+    <!-- flat cap crown -->
+    <path id="p-cap" d="M 200 312
+      C 178 236 234 158 350 136
+      C 452 116 566 136 626 184
+      C 674 222 692 274 678 316
+      C 606 276 520 262 440 262
+      C 348 262 262 282 200 312 Z"/>
+
+    <!-- cap brim, jutting to the viewer's left -->
+    <path id="p-brim" d="M 232 288
+      C 156 292 96 314 76 340
+      C 62 358 74 376 106 378
+      C 164 380 216 358 246 330
+      C 262 314 256 288 232 288 Z"/>
+
+    <!-- flexing arm: deltoid -> bicep peak -> crease -> forearm -> fist -->
+    <path id="p-arm" d="M 664 646
+      C 676 562 728 506 790 518
+      C 838 528 860 578 860 634
+      C 842 566 826 512 814 470
+      C 804 428 828 392 868 384
+      C 922 374 966 412 966 462
+      C 966 500 956 534 948 566
+      C 966 640 974 700 972 752
+      C 970 808 940 846 894 848
+      C 816 852 736 846 688 830
+      C 662 822 654 706 664 646 Z"/>
+
+    <!-- = CLIP PATHS for hard-edged cel shading = -->
+    <clipPath id="clipHead"><use href="#p-head"/></clipPath>
+    <clipPath id="clipCap"><use href="#p-cap"/></clipPath>
+    <clipPath id="clipArm"><use href="#p-arm"/></clipPath>
+    <clipPath id="clipTorso"><use href="#p-torso"/></clipPath>
+    <clipPath id="clipBelly">
+      <path d="M 470 700 C 386 716 340 800 344 900 C 346 940 352 960 358 980
+               L 612 980 C 620 906 608 806 566 744 C 542 710 508 694 470 700 Z"/>
+    </clipPath>
+    <clipPath id="clipMuzzle">
+      <path d="M 430 452 C 378 438 316 448 292 488
+        C 264 532 278 594 330 618 C 372 638 412 630 430 612
+        C 448 630 488 638 530 618 C 582 594 596 532 568 488
+        C 544 448 482 438 430 452 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- ============================================================
+       1. DROP SHADOW - blurred silhouette, offset down-right
+       ============================================================ -->
+  <g transform="translate(18,24)" filter="url(#soft)" opacity="0.22"
+     fill="#40342c" stroke="#40342c" stroke-width="46" stroke-linejoin="round">
+    <use href="#p-torso"/><use href="#p-earL"/><use href="#p-earR"/>
+    <use href="#p-head"/><use href="#p-teeth"/>
+    <use href="#p-cap"/><use href="#p-brim"/><use href="#p-arm"/>
+  </g>
+
+  <!-- ============================================================
+       2. WHITE DIE-CUT STICKER BORDER (~22px = 2.1% of canvas)
+       ============================================================ -->
+  <g fill="#ffffff" stroke="#ffffff" stroke-width="46" stroke-linejoin="round" stroke-linecap="round">
+    <use href="#p-torso"/><use href="#p-earL"/><use href="#p-earR"/>
+    <use href="#p-head"/><use href="#p-teeth"/>
+    <use href="#p-cap"/><use href="#p-brim"/><use href="#p-arm"/>
+  </g>
+
+  <!-- ============================================================
+       3. TORSO
+       ============================================================ -->
+  <g id="torso">
+    <use href="#p-torso" fill="#8a5a33" stroke="#4a2b16" stroke-width="20" stroke-linejoin="round"/>
+    <g clip-path="url(#clipTorso)">
+      <!-- chest / belly cream patch -->
+      <path id="p-belly" d="M 470 700 C 386 716 340 800 344 900 C 346 940 352 960 358 980
+               L 612 980 C 620 906 608 806 566 744 C 542 710 508 694 470 700 Z"
+            fill="#f0dab4" stroke="#c9a570" stroke-width="14"/>
+      <g clip-path="url(#clipBelly)">
+        <path d="M 470 700 C 520 704 552 744 566 790 C 586 856 588 930 580 980
+                 L 660 980 L 660 690 Z" fill="#dcbf93"/>
+      </g>
+      <!-- right-side body shadow -->
+      <path d="M 640 640 C 690 700 716 790 720 900 L 720 990 L 800 990 L 800 640 Z"
+            fill="#6d4426" opacity="0.9"/>
+      <!-- fur ticks -->
+      <g stroke="#6d4426" stroke-width="12" stroke-linecap="round" fill="none" opacity="0.75">
+        <path d="M 288 812 C 300 838 300 862 292 886"/>
+        <path d="M 250 878 C 262 900 262 920 256 940"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- ============================================================
+       4. EARS (behind head)
+       ============================================================ -->
+  <g id="ears">
+    <use href="#p-earL" fill="#8a5a33" stroke="#4a2b16" stroke-width="20" stroke-linejoin="round"/>
+    <use href="#p-earR" fill="#7a4d2b" stroke="#4a2b16" stroke-width="20" stroke-linejoin="round"/>
+    <path d="M 224 330 C 202 324 188 338 190 358 C 192 374 204 384 222 382 Z" fill="#6d4426"/>
+    <path d="M 636 330 C 658 324 672 338 670 358 C 668 374 656 384 638 382 Z" fill="#5d3a20"/>
+  </g>
+
+  <!-- ============================================================
+       5. HEAD + FACE
+       ============================================================ -->
+  <g id="head">
+    <use href="#p-head" fill="#8a5a33" stroke="#4a2b16" stroke-width="20" stroke-linejoin="round"/>
+
+    <!-- cel shading inside the head -->
+    <g clip-path="url(#clipHead)">
+      <!-- right-side shadow -->
+      <path d="M 568 200 C 622 300 646 420 622 534 C 604 618 556 668 502 692
+               L 760 692 L 760 200 Z" fill="#6d4426"/>
+      <!-- upper-left highlight -->
+      <path d="M 240 300 C 268 258 320 236 372 240 C 330 262 296 300 278 348
+               C 264 384 262 420 268 452 C 232 424 222 350 240 300 Z" fill="#a9713f"/>
+      <!-- brow-band shadow cast by the cap -->
+      <path d="M 180 250 C 300 300 560 300 690 250 L 690 200 L 180 200 Z"
+            fill="#6d4426" opacity="0.55"/>
+    </g>
+
+    <!-- muzzle -->
+    <path d="M 430 452 C 378 438 316 448 292 488
+             C 264 532 278 594 330 618 C 372 638 412 630 430 612
+             C 448 630 488 638 530 618 C 582 594 596 532 568 488
+             C 544 448 482 438 430 452 Z"
+          fill="#f0dab4" stroke="#9d7742" stroke-width="18" stroke-linejoin="round"/>
+    <g clip-path="url(#clipMuzzle)">
+      <path d="M 470 430 C 520 450 552 500 548 552 C 544 596 518 626 484 644
+               L 640 644 L 640 430 Z" fill="#dcbf93"/>
+      <path d="M 320 470 C 356 456 396 458 424 470 C 386 476 350 494 332 520
+               C 318 540 314 560 316 578 C 292 552 296 496 320 470 Z" fill="#f7ead0"/>
+      <!-- whisker dots -->
+      <g fill="#b08c56">
+        <circle cx="340" cy="534" r="7"/><circle cx="330" cy="566" r="7"/>
+        <circle cx="366" cy="512" r="7"/>
+        <circle cx="520" cy="534" r="7"/><circle cx="530" cy="566" r="7"/>
+        <circle cx="494" cy="512" r="7"/>
+      </g>
+    </g>
+
+    <!-- nose -->
+    <path d="M 430 428 C 400 428 378 444 378 466
+             C 378 490 404 506 430 506 C 456 506 482 490 482 466
+             C 482 444 460 428 430 428 Z"
+          fill="#33231a" stroke="#231610" stroke-width="12" stroke-linejoin="round"/>
+    <path d="M 402 446 C 414 438 430 438 440 442 C 426 448 412 452 402 446 Z" fill="#6d5a4c"/>
+
+    <!-- confident smirk: low on the left, hitched up on the right -->
+    <path d="M 430 506 L 430 522" stroke="#9d7742" stroke-width="12" stroke-linecap="round" fill="none"/>
+    <path d="M 302 522 C 322 556 344 560 358 546
+             M 534 480 C 546 512 532 542 506 552"
+          stroke="#4a2b16" stroke-width="18" stroke-linecap="round" fill="none"/>
+    <!-- dark mouth interior behind the incisors -->
+    <path d="M 352 512 C 402 536 464 532 508 506 L 508 558 C 460 574 400 574 352 558 Z" fill="#4a2b16"/>
+
+    <!-- incisors: wide flat beaver blades -->
+    <use href="#p-teeth" fill="#fff8e8" stroke="#a8823f" stroke-width="16" stroke-linejoin="round"/>
+    <path d="M 482 552 L 504 552 L 504 598 C 504 618 494 628 478 634
+             C 490 622 482 614 482 598 Z" fill="#e8d5ae"/>
+    <path d="M 398 552 L 420 552 L 420 598 C 420 616 410 624 398 632
+             C 408 618 398 612 398 598 Z" fill="#e8d5ae"/>
+    <path d="M 370 558 L 370 596" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/>
+    <path d="M 454 558 L 454 596" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/>
+
+    <!-- eyes -->
+    <g id="eyes">
+      <ellipse cx="348" cy="392" rx="56" ry="60" fill="#ffffff" stroke="#4a2b16" stroke-width="18"/>
+      <ellipse cx="520" cy="388" rx="56" ry="60" fill="#ffffff" stroke="#4a2b16" stroke-width="18"/>
+      <ellipse cx="360" cy="400" rx="28" ry="32" fill="#241610"/>
+      <ellipse cx="530" cy="396" rx="28" ry="32" fill="#241610"/>
+      <circle cx="348" cy="386" r="12" fill="#ffffff"/>
+      <circle cx="518" cy="382" r="12" fill="#ffffff"/>
+      <circle cx="370" cy="420" r="6" fill="#ffffff" opacity="0.8"/>
+      <circle cx="540" cy="416" r="6" fill="#ffffff" opacity="0.8"/>
+      <!-- half-lidded cocky lids -->
+      <path d="M 292 372 C 320 344 376 340 404 364 L 404 340 L 292 344 Z" fill="#6d4426"/>
+      <path d="M 464 368 C 492 340 548 336 576 360 L 576 336 L 464 340 Z" fill="#6d4426"/>
+    </g>
+
+    <!-- brows: left level, right cocked up -->
+    <path d="M 288 336 C 316 302 366 296 402 316 L 394 344 C 364 330 322 334 300 358 Z"
+          fill="#4a2b16"/>
+    <path d="M 462 318 C 494 288 552 286 580 312 L 566 338 C 542 320 502 320 476 342 Z"
+          fill="#4a2b16"/>
+  </g>
+
+  <!-- ============================================================
+       6. FLAT CAP (Peaky Blinders tweed)
+       ============================================================ -->
+  <g id="cap">
+    <!-- brim first, sits under the crown edge -->
+    <use href="#p-brim" fill="#635c51" stroke="#3c3830" stroke-width="20" stroke-linejoin="round"/>
+    <path d="M 232 300 C 168 306 116 324 96 344 C 130 336 186 328 236 326 Z" fill="#7d7568"/>
+
+    <!-- crown -->
+    <use href="#p-cap" fill="#7d7568" stroke="#3c3830" stroke-width="20" stroke-linejoin="round"/>
+    <g clip-path="url(#clipCap)">
+      <!-- right shadow wedge -->
+      <path d="M 560 100 C 616 150 660 210 670 300 L 720 300 L 720 100 Z" fill="#635c51"/>
+      <!-- top-left highlight -->
+      <path d="M 240 250 C 262 190 320 154 400 144 C 336 168 288 210 264 268 Z" fill="#979083"/>
+      <!-- herringbone suggestion -->
+      <g stroke="#979083" stroke-width="9" stroke-linecap="round" fill="none" opacity="0.85">
+        <path d="M 248 296 l 22 -26 l 22 26"/>
+        <path d="M 320 276 l 22 -26 l 22 26"/>
+        <path d="M 392 268 l 22 -26 l 22 26"/>
+        <path d="M 464 268 l 22 -26 l 22 26"/>
+        <path d="M 536 276 l 22 -26 l 22 26"/>
+        <path d="M 608 290 l 22 -26 l 22 26"/>
+        <path d="M 268 226 l 22 -26 l 22 26"/>
+        <path d="M 344 202 l 22 -26 l 22 26"/>
+        <path d="M 420 190 l 22 -26 l 22 26"/>
+        <path d="M 496 192 l 22 -26 l 22 26"/>
+        <path d="M 572 212 l 22 -26 l 22 26"/>
+        <path d="M 316 150 l 22 -26 l 22 26"/>
+        <path d="M 400 128 l 22 -26 l 22 26"/>
+        <path d="M 484 132 l 22 -26 l 22 26"/>
+      </g>
+      <!-- seam / panel line -->
+      <path d="M 208 300 C 300 246 520 240 664 300" stroke="#3c3830" stroke-width="14" fill="none" opacity="0.55"/>
+      <!-- button on top -->
+      <circle cx="418" cy="150" r="16" fill="#635c51" stroke="#3c3830" stroke-width="10"/>
+    </g>
+  </g>
+
+  <!-- ============================================================
+       7. FLEXING ARM + SAW TATTOO
+       ============================================================ -->
+  <g id="arm">
+    <use href="#p-arm" fill="#8a5a33" stroke="#4a2b16" stroke-width="20" stroke-linejoin="round"/>
+
+    <g clip-path="url(#clipArm)">
+      <!-- outer-edge shadow down the forearm and under the arm -->
+      <path d="M 936 400 C 976 470 966 560 958 620 C 950 700 952 790 932 860
+               L 1026 860 L 1026 380 Z" fill="#6d4426"/>
+      <path d="M 676 812 C 756 842 866 846 936 826 L 936 900 L 656 900 Z" fill="#6d4426"/>
+      <!-- bicep top highlight -->
+      <path d="M 684 630 C 702 566 742 526 796 532 C 746 546 716 584 702 636 Z" fill="#a9713f"/>
+      <!-- bicep peak crease -->
+      <path d="M 716 620 C 752 570 802 566 842 606" stroke="#5d3a20" stroke-width="14"
+            stroke-linecap="round" fill="none" opacity="0.7"/>
+      <!-- elbow crease between forearm and bicep -->
+      <path d="M 854 630 C 872 664 882 706 882 748" stroke="#5d3a20" stroke-width="14"
+            stroke-linecap="round" fill="none" opacity="0.7"/>
+
+      <!-- = SAW TATTOO on the bicep = -->
+      <g transform="translate(778,676) rotate(-18)" fill="#2f4f6e" opacity="0.92">
+        <!-- blade with toothed lower edge -->
+        <path d="M -56 -18 L 66 -34 L 70 -8
+                 L 58 -4 L 52 8 L 45 -2 L 38 10 L 31 0 L 24 12 L 17 2
+                 L 10 14 L 3 4 L -4 16 L -11 6 L -18 18 L -25 8
+                 L -32 20 L -39 10 L -46 22 L -53 12 Z"/>
+        <!-- pistol grip handle -->
+        <path d="M -54 -24 C -84 -30 -106 -16 -104 6
+                 C -102 26 -80 36 -56 28 L -52 6
+                 C -66 10 -76 4 -76 -6 C -76 -14 -66 -18 -52 -16 Z"/>
+        <!-- blade spine highlight -->
+        <path d="M -50 -22 L 60 -36" stroke="#5a86a8" stroke-width="5" fill="none" opacity="0.9"/>
+      </g>
+    </g>
+
+    <!-- fist detail: curled fingers + thumb laid across them -->
+    <g clip-path="url(#clipArm)">
+      <g stroke="#4a2b16" stroke-width="15" stroke-linecap="round" fill="none">
+        <path d="M 826 418 C 862 400 908 402 940 424"/>
+        <path d="M 822 462 C 860 444 908 446 942 468"/>
+        <path d="M 830 506 C 866 490 910 492 940 510"/>
+      </g>
+      <!-- knuckle highlights -->
+      <g stroke="#a9713f" stroke-width="10" stroke-linecap="round" fill="none" opacity="0.8">
+        <path d="M 846 396 C 872 386 902 388 922 400"/>
+      </g>
+    </g>
+    <!-- thumb -->
+    <path d="M 828 508 C 802 504 788 480 800 458 C 812 436 846 436 858 456
+             C 868 474 858 500 840 506 Z"
+          fill="#8a5a33" stroke="#4a2b16" stroke-width="18" stroke-linejoin="round"/>
+    <path d="M 816 470 C 810 482 814 494 826 500" stroke="#5d3a20" stroke-width="11"
+          stroke-linecap="round" fill="none"/>
+  </g>
+</svg>

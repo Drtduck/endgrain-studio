@@ -1,0 +1,10 @@
+import type { MetadataRoute } from 'next'
+import { SITE_ORIGIN, APP_ORIGIN } from '@/lib/routing/host'
+
+// sitemap.ts отдаётся с обоих доменов одинаково (см. комментарий в app/robots.ts).
+export default function sitemap(): MetadataRoute.Sitemap {
+  return [
+    { url: SITE_ORIGIN, priority: 1.0 },
+    { url: APP_ORIGIN, priority: 0.8 },
+  ]
+}
