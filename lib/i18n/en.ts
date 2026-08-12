@@ -309,6 +309,15 @@ const en: Record<keyof typeof ru, string> = {
   'help.view3d.body': 'The scene shows the board with volume: you see how the rows stack into thickness and how the end grain reads at an angle. Drag to orbit, scroll to zoom, right button to pan. On large patterns the scene shows only part of the cells so weaker graphics cards survive.',
   'help.feedback.title': 'How to write feedback',
   'help.feedback.body': 'Write what exactly got in the way and at which step: «the walnut strip disappeared after flipping a row» helps far more than «inconvenient». The page address and the browser version go along with the text, no files or images are attached. There is no reply inside the app, the author reads the messages.',
+  'landing.hero.title': 'Rip it right',
+  'landing.nav.openApp': 'Open the studio',
+  'landing.locale.aria': 'Landing language',
+  'landing.footer.product.title': 'Product',
+  'landing.footer.contact.title': 'Contact',
+  'landing.footer.legal.title': 'Legal',
+  'landing.footer.legal.amazonDisclaimer': 'As an Amazon Associate we earn from qualifying purchases.',
+  'landing.footer.legal.privacy': 'We never share your email with third parties.',
+  'landing.footer.copyright': 'Endgrain Studio',
 }
 
 export default en

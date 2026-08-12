@@ -3,6 +3,7 @@ import { bitter, golos, jetbrains } from "./fonts";
 import { SessionProvider } from "@/components/SessionProvider";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getCurrentUser } from "@/lib/supabase/session";
+import { getLandingLocale } from "@/lib/landing/locale";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,9 +13,12 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const user = await getCurrentUser();
+  // Серверное стартовое значение из cookie eg-locale лендинга; студия дополнительно
+  // правит document.documentElement.lang на клиенте (LocaleToggle) при переключении.
+  const lang = await getLandingLocale();
   return (
     <html
-      lang="ru"
+      lang={lang}
       className={`${bitter.variable} ${golos.variable} ${jetbrains.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
