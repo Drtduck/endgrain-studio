@@ -25,12 +25,16 @@ describe('GeneratorPanel', () => {
   })
 
   it('первая девятка одинакова при каждом монтировании', () => {
-    const first = render(<GeneratorPanel />).container.innerHTML
+    // Сравниваем именно сетку карточек, а не весь контейнер: HelpHint рядом с заголовком
+    // рисует триггер Base UI Popover с id через React useId, а он не детерминирован между
+    // независимыми вызовами render() в одном тесте и не имеет отношения к самой девятке.
+    const first = render(<GeneratorPanel />).container.querySelector('[role="group"][aria-label="девять вариантов узора"]')?.innerHTML
     act(() => {
       useStudio.getState().resetStudio(makeCheckerboard())
     })
-    const second = render(<GeneratorPanel />).container.innerHTML
+    const second = render(<GeneratorPanel />).container.querySelector('[role="group"][aria-label="девять вариантов узора"]')?.innerHTML
     expect(second).toBe(first)
+    expect(first).toBeTruthy()
   })
 
   it('перемешать меняет все девять досок', () => {

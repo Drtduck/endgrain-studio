@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { Component, type ReactNode } from 'react'
+import { HelpHint } from '@/components/ui/help-hint'
 import { t } from '@/lib/i18n'
 import { useDerived } from '@/lib/store/derived'
 import { MAX_INSTANCES } from '@/lib/render3d/instances'
@@ -45,6 +46,10 @@ export function Board3DPanel() {
 
   return (
     <section data-testid="view3d" aria-label={t(locale, 'view3d.title')} className="flex flex-col gap-2">
+      <div className="flex items-center gap-1.5">
+        <h2 className="font-display text-2xl font-semibold">{t(locale, 'view3d.title')}</h2>
+        <HelpHint id="view3d" side="bottom" />
+      </div>
       <div className="h-[26rem] w-full overflow-hidden rounded-lg border border-line-subtle bg-surface-panel sm:h-[32rem]">
         <WebglBoundary
           fallback={

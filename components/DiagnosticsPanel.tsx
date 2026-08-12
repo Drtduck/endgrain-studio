@@ -2,6 +2,7 @@
 
 import { AlertCircle, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { HelpHint } from '@/components/ui/help-hint'
 import { cn } from '@/lib/utils'
 import { t, type MessageKey } from '@/lib/i18n'
 import { useDerived } from '@/lib/store/derived'
@@ -24,7 +25,10 @@ export function DiagnosticsPanel() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t(locale, 'diagnostics.title')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t(locale, 'diagnostics.title')}</CardTitle>
+          <HelpHint id="diagnostics" side="left" />
+        </div>
         {diagnostics.length > 0 ? (
           <p data-testid="diagnostics-counts" className="font-mono text-sm tabular-nums text-ink-muted">
             {t(locale, 'diagnostics.counts', { errors, warnings })}

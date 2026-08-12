@@ -1,21 +1,25 @@
 'use client'
 
+import { AccountButton } from '@/components/AccountButton'
 import { Board3DPanel } from '@/components/Board3DPanel'
 import { BoardCanvas } from '@/components/BoardCanvas'
 import { BoardSettings } from '@/components/BoardSettings'
 import { ComplexityMeter } from '@/components/ComplexityMeter'
 import { DiagnosticsPanel } from '@/components/DiagnosticsPanel'
 import { ExportPanel } from '@/components/ExportPanel'
+import { FeedbackButton } from '@/components/FeedbackButton'
 import { ForkDialog } from '@/components/ForkDialog'
 import { GeneratorPanel } from '@/components/GeneratorPanel'
 import { HistoryControls } from '@/components/HistoryControls'
 import { LocaleToggle } from '@/components/LocaleToggle'
 import { PanelInspector } from '@/components/PanelInspector'
 import { PhotoImport } from '@/components/PhotoImport'
+import { ProjectsPanel } from '@/components/ProjectsPanel'
 import { RowInspector } from '@/components/RowInspector'
 import { SpeciesPalette } from '@/components/SpeciesPalette'
 import { StudioTabs } from '@/components/StudioTabs'
 import { TemplateGallery } from '@/components/TemplateGallery'
+import { HelpHint } from '@/components/ui/help-hint'
 import { Separator } from '@/components/ui/separator'
 import { t } from '@/lib/i18n'
 import { useDerived } from '@/lib/store/derived'
@@ -24,7 +28,7 @@ import { useStudio, type StudioView } from '@/lib/store/studio'
 import type { UnitSystem } from '@/lib/units'
 import { cn } from '@/lib/utils'
 
-const FULL_WIDTH: readonly StudioView[] = ['templates', 'generate', 'photo']
+const FULL_WIDTH: readonly StudioView[] = ['templates', 'generate', 'photo', 'projects']
 
 export function StudioShell() {
   const locale = useStudio((s) => s.locale)
@@ -73,6 +77,8 @@ export function StudioShell() {
 
         <LocaleToggle locale={locale} onChange={setLocale} />
 
+        <AccountButton />
+
         <Separator orientation="vertical" className="h-6" />
 
         <HistoryControls />
@@ -80,7 +86,15 @@ export function StudioShell() {
 
       <main className="mx-auto flex max-w-[1440px] flex-col gap-6 px-4 py-4">
         {FULL_WIDTH.includes(view) ? (
-          view === 'templates' ? <TemplateGallery /> : view === 'generate' ? <GeneratorPanel /> : <PhotoImport />
+          view === 'templates' ? (
+            <TemplateGallery />
+          ) : view === 'generate' ? (
+            <GeneratorPanel />
+          ) : view === 'photo' ? (
+            <PhotoImport />
+          ) : (
+            <ProjectsPanel />
+          )
         ) : (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,236px)_minmax(0,1fr)_minmax(0,268px)]">
             <div className="flex min-w-0 flex-col gap-4 overflow-auto lg:order-2">
@@ -90,9 +104,15 @@ export function StudioShell() {
                 <>
                   <section
                     aria-label={t(locale, 'board.title')}
-                    className="flex min-w-0 items-center justify-center overflow-auto rounded-lg bg-canvas p-[22px]"
+                    className="flex min-w-0 flex-col gap-2 overflow-auto rounded-lg bg-canvas p-[22px]"
                   >
-                    <BoardCanvas />
+                    <div className="flex items-center gap-1.5 self-start">
+                      <span className="text-[13px] font-medium text-ink-secondary">{t(locale, 'board.title')}</span>
+                      <HelpHint id="editor" side="bottom" />
+                    </div>
+                    <div className="flex min-w-0 flex-1 items-center justify-center">
+                      <BoardCanvas />
+                    </div>
                   </section>
                   <PanelInspector />
                   <RowInspector />
@@ -115,6 +135,8 @@ export function StudioShell() {
 
         <ForkDialog />
       </main>
+
+      <FeedbackButton />
     </div>
   )
 }

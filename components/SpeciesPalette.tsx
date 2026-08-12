@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { HelpHint } from '@/components/ui/help-hint'
 import { t } from '@/lib/i18n'
 import { SPECIES, SPECIES_BY_ID } from '@/lib/species'
 import { useDerived } from '@/lib/store/derived'
@@ -29,7 +30,10 @@ export function SpeciesPalette() {
     <Card>
       <CardHeader>
         <div className="flex items-baseline justify-between">
-          <CardTitle className="text-base">{t(locale, 'palette.title')}</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="text-base">{t(locale, 'palette.title')}</CardTitle>
+            <HelpHint id="palette" side="right" />
+          </div>
           <span className="font-mono text-[11px] tabular-nums text-accent">{usedSpeciesIds.size}</span>
         </div>
       </CardHeader>

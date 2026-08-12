@@ -1,5 +1,6 @@
 'use client'
 
+import { useSession } from '@/components/SessionProvider'
 import { t, type MessageKey } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { useStudio, type StudioView } from '@/lib/store/studio'
@@ -16,10 +17,15 @@ export function StudioTabs() {
   const locale = useStudio((s) => s.locale)
   const view = useStudio((s) => s.view)
   const setView = useStudio((s) => s.setView)
+  const { user, enabled } = useSession()
+
+  // Вкладка облачных проектов существует только для вошедшего пользователя:
+  // гостю и анониму без Supabase она бы вела в тупик с "нужно войти".
+  const tabs = enabled && user ? [...TABS, { view: 'projects' as const, labelKey: 'tabs.projects' as const }] : TABS
 
   return (
     <div role="tablist" aria-label={t(locale, 'aria.tabs')} className="flex flex-wrap gap-1">
-      {TABS.map((tab) => (
+      {tabs.map((tab) => (
         <button
           key={tab.view}
           type="button"
