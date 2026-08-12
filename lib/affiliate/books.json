@@ -18,15 +18,18 @@
       "en": "The one book that explains why an end-grain board behaves unlike any other. Cross-grain shrinkage, seasonal movement, why panels crack. Without it the studio numbers stay numbers without meaning."
     },
     "band": "b25_50",
-    "unverified": true
+    "unverified": false
   },
   {
     "id": "flexner-finishing",
-    "asin": "1565239288",
+    "asin": "1565235665",
     "brand": "Fox Chapel Publishing",
     "author": "Bob Flexner",
     "year": 2010,
-    "title": { "ru": "Как понять отделку дерева", "en": "Understanding Wood Finishing" },
+    "title": {
+      "ru": "Как понять отделку дерева",
+      "en": "Understanding Wood Finishing"
+    },
     "note": {
       "ru": "Разбирает химию покрытий понятным языком, без магии и мифов из мастерских.",
       "en": "Breaks down finish chemistry in plain language, no shop-floor mythology."
@@ -36,15 +39,18 @@
       "en": "Finish is half of how the finished board reads. Flexner lays the chemistry out plainly and covers separately what may go on a surface people eat from."
     },
     "band": "b25_50",
-    "unverified": true
+    "unverified": false
   },
   {
     "id": "korn-basics",
-    "asin": "1561586200",
+    "asin": "156158620X",
     "brand": "The Taunton Press",
     "author": "Peter Korn",
     "year": 2003,
-    "title": { "ru": "Основы столярного дела: азы ремесла", "en": "Woodworking Basics: Mastering the Essentials of Craftsmanship" },
+    "title": {
+      "ru": "Основы столярного дела: азы ремесла",
+      "en": "Woodworking Basics: Mastering the Essentials of Craftsmanship"
+    },
     "note": {
       "ru": "Спокойное пошаговое введение для тех, кто ещё не держал стамеску в руках.",
       "en": "A calm, step-by-step start for anyone who has not yet held a chisel."
@@ -54,15 +60,18 @@
       "en": "A book for anyone who still confuses a chisel with a gouge. Korn explains not recipes but why the hand holds a tool the way it does."
     },
     "band": "b10_25",
-    "unverified": true
+    "unverified": false
   },
   {
     "id": "schwarz-toolchest",
-    "asin": "0982378130",
+    "asin": "0578084139",
     "brand": "Lost Art Press",
     "author": "Christopher Schwarz",
     "year": 2011,
-    "title": { "ru": "Инструментальный сундук анархиста", "en": "The Anarchist's Tool Chest" },
+    "title": {
+      "ru": "Инструментальный сундук анархиста",
+      "en": "The Anarchist's Tool Chest"
+    },
     "note": {
       "ru": "Про минимальный набор инструмента и сундук, в котором он живёт, а не про доски.",
       "en": "About the minimal tool kit and the chest it lives in, not about boards."
@@ -72,15 +81,18 @@
       "en": "Not about boards but about the minimum kit you actually need. It sobers you up before the second thousand dollars goes into steel."
     },
     "band": "b25_50",
-    "unverified": true
+    "unverified": false
   },
   {
     "id": "hylton-cabinetmaking",
     "asin": "1565233697",
-    "brand": "Reader's Digest",
+    "brand": "Fox Chapel Publishing",
     "author": "Bill Hylton",
     "year": 2008,
-    "title": { "ru": "Столярное дело в чертежах", "en": "Illustrated Cabinetmaking" },
+    "title": {
+      "ru": "Столярное дело в чертежах",
+      "en": "Illustrated Cabinetmaking"
+    },
     "note": {
       "ru": "Толстый чертёжный справочник узлов и соединений на все случаи.",
       "en": "A thick illustrated reference of joints and assemblies for every occasion."
@@ -90,15 +102,18 @@
       "en": "A reference of joints and assemblies you keep coming back to for years. Useful not as reading but as a drawing on the bench when you need a specific joint."
     },
     "band": "b25_50",
-    "unverified": true
+    "unverified": false
   },
   {
     "id": "pekovich-why-how",
-    "asin": "1631869310",
+    "asin": "1631869272",
     "brand": "The Taunton Press",
     "author": "Michael Pekovich",
     "year": 2018,
-    "title": { "ru": "Столярное дело: почему и как", "en": "The Why and How of Woodworking" },
+    "title": {
+      "ru": "Столярное дело: почему и как",
+      "en": "The Why and How of Woodworking"
+    },
     "note": {
       "ru": "Про решения дизайна и пропорции, а не только про технику исполнения.",
       "en": "About design decisions and proportion, not just execution technique."
@@ -108,15 +123,18 @@
       "en": "The Fine Woodworking editor writes about decisions, not procedures. After it you understand why a piece looks the way it does, not just how to make it."
     },
     "band": "b25_50",
-    "unverified": true
+    "unverified": false
   },
   {
     "id": "spagnuolo-hybrid",
-    "asin": "1440323844",
-    "brand": "Fox Chapel Publishing",
+    "asin": "1440329605",
+    "brand": "Popular Woodworking Books",
     "author": "Marc Spagnuolo",
     "year": 2013,
-    "title": { "ru": "Гибридное столярное дело", "en": "Hybrid Woodworking" },
+    "title": {
+      "ru": "Гибридное столярное дело",
+      "en": "Hybrid Woodworking"
+    },
     "note": {
       "ru": "О разумном сочетании станка и ручного инструмента в одной мастерской.",
       "en": "About a sensible mix of machine and hand tool work in one shop."
@@ -126,15 +144,18 @@
       "en": "About where a machine saves you a day and where a hand beats it on precision. Useful exactly for someone who already runs the studio and cuts boards regularly."
     },
     "band": "b25_50",
-    "unverified": true
+    "unverified": false
   },
   {
     "id": "jackson-day-manual",
     "asin": "0679766111",
-    "brand": "Dorling Kindersley",
+    "brand": "Knopf",
     "author": "Albert Jackson, David Day",
     "year": 1996,
-    "title": { "ru": "Полное руководство по столярному делу", "en": "The Complete Manual of Woodworking" },
+    "title": {
+      "ru": "Полное руководство по столярному делу",
+      "en": "The Complete Manual of Woodworking"
+    },
     "note": {
       "ru": "Толстый общий справочник от пород дерева до фурнитуры и станков.",
       "en": "A thick general reference from wood species to hardware and machines."
@@ -144,6 +165,6 @@
       "en": "A thick reference for every occasion, from wood species to hardware. You keep it not to read cover to cover but to find one needed fact in a minute."
     },
     "band": "b25_50",
-    "unverified": true
+    "unverified": false
   }
 ]
