@@ -399,6 +399,62 @@ const ru = {
   'affiliate.price.b50_100': '$50-100',
 
   'landing.books.viewAll': 'Вся подборка в студии',
+
+  'pricing.navTitle': 'Тарифы',
+  'pricing.title': 'Бесплатно хватает, Pro снимает потолок',
+  'pricing.subtitle':
+    'Движок, расчёты и экспорт открыты всем. Платите, только если студия начала приносить деньги.',
+  'pricing.free.name': 'Бесплатно',
+  'pricing.free.price': '$0',
+  'pricing.free.note': 'Навсегда, без карты',
+  'pricing.pro.name': 'Pro',
+  'pricing.pro.monthlyPrice': '$7',
+  'pricing.pro.monthlyPeriod': 'в месяц',
+  'pricing.pro.yearlyPrice': '$49',
+  'pricing.pro.yearlyPeriod': 'в год',
+  'pricing.pro.yearlyNote': 'Год стоит как семь месяцев',
+  'pricing.f.editor': 'Редактор, породы, размеры, поворот и отражение',
+  'pricing.f.generate': 'Шаблоны, генераторы, эволюция, узор из фотографии',
+  'pricing.f.calc': '3D-превью, диагностика, материал и себестоимость',
+  'pricing.f.exportBasic': 'Экспорт PNG, SVG и CSV',
+  'pricing.f.pdfFree': 'PDF-инструкция с подписью студии',
+  'pricing.f.pdfPro': 'PDF-инструкция без подписи',
+  'pricing.f.pngPro': 'PNG для печати: 4000 px',
+  'pricing.f.projectsFree': '3 проекта в облаке',
+  'pricing.f.projectsPro': 'Проекты в облаке без ограничения',
+  'pricing.f.local': 'Локальное сохранение и ссылка-шара без ограничений',
+  'pricing.cta.monthly': 'Оформить за $7 в месяц',
+  'pricing.cta.yearly': 'Оформить за $49 в год',
+  'pricing.cta.open': 'Открыть студию',
+  'pricing.cta.needAuth': 'Войти и оформить',
+  'pricing.busy': 'Открываем оплату',
+  'pricing.current': 'Ваш текущий план',
+  'pricing.until': 'Оплачено до {date}',
+  'pricing.canceling': 'Подписка закончится {date} и не продлится',
+  'pricing.manage': 'Управлять подпиской',
+  'pricing.disabled': 'Оплата пока не подключена. Все возможности Pro сейчас открыты всем.',
+  'pricing.upgrade': 'Улучшить',
+  'pricing.errDisabled': 'Оплата пока не подключена.',
+  'pricing.errAuth': 'Сначала войдите: подписку нужно к чему-то привязать.',
+  'pricing.errAlready': 'Подписка уже активна.',
+  'pricing.errInvalid': 'Неизвестный тариф. Обновите страницу.',
+  'pricing.errFailed': 'Не получилось открыть оплату. Попробуйте ещё раз через минуту.',
+
+  'checkout.successTitle': 'Оплата прошла, спасибо',
+  'checkout.successBody': 'Pro включится в течение минуты. Если возможности ещё закрыты, обновите страницу.',
+  'checkout.cancelTitle': 'Оплата отменена',
+  'checkout.cancelBody': 'Ничего не списано, студия работает как прежде.',
+  'checkout.dismiss': 'Закрыть',
+
+  'export.pngHd': 'PNG для печати',
+  'export.pdfPromo': 'Сделано в Endgrain Studio, endgrain.app',
+
+  'projects.errorLimit': 'Бесплатный аккаунт хранит 3 проекта. Откройте тарифы, чтобы снять ограничение.',
+  'projects.limitHint': 'Занято {used} из {limit} мест бесплатного плана',
+
+  'landing.pricing.title': 'Сколько это стоит',
+  'landing.pricing.body':
+    'Инструмент открыт целиком. Pro снимает лимит облачных проектов, убирает подпись с PDF и даёт PNG для печати.',
 } as const
 
 export default ru

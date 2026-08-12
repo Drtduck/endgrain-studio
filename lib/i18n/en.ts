@@ -401,6 +401,62 @@ const en: Record<keyof typeof ru, string> = {
   'affiliate.price.b50_100': '$50-100',
 
   'landing.books.viewAll': 'See the full list in the studio',
+
+  'pricing.navTitle': 'Pricing',
+  'pricing.title': 'Free is enough, Pro removes the ceiling',
+  'pricing.subtitle':
+    'The engine, the maths and the exports are open to everyone. Pay only once the studio starts paying you back.',
+  'pricing.free.name': 'Free',
+  'pricing.free.price': '$0',
+  'pricing.free.note': 'Forever, no card',
+  'pricing.pro.name': 'Pro',
+  'pricing.pro.monthlyPrice': '$7',
+  'pricing.pro.monthlyPeriod': 'per month',
+  'pricing.pro.yearlyPrice': '$49',
+  'pricing.pro.yearlyPeriod': 'per year',
+  'pricing.pro.yearlyNote': 'A year costs what seven months do',
+  'pricing.f.editor': 'Editor, species, sizes, rotate and mirror',
+  'pricing.f.generate': 'Templates, generators, evolution, photo to pattern',
+  'pricing.f.calc': '3D preview, diagnostics, material and cost',
+  'pricing.f.exportBasic': 'PNG, SVG and CSV export',
+  'pricing.f.pdfFree': 'PDF instructions with a studio credit line',
+  'pricing.f.pdfPro': 'PDF instructions without the credit line',
+  'pricing.f.pngPro': 'Print-ready PNG at 4000 px',
+  'pricing.f.projectsFree': '3 cloud projects',
+  'pricing.f.projectsPro': 'Unlimited cloud projects',
+  'pricing.f.local': 'Unlimited local saves and share links',
+  'pricing.cta.monthly': 'Subscribe for $7 a month',
+  'pricing.cta.yearly': 'Subscribe for $49 a year',
+  'pricing.cta.open': 'Open the studio',
+  'pricing.cta.needAuth': 'Sign in and subscribe',
+  'pricing.busy': 'Opening checkout',
+  'pricing.current': 'Your current plan',
+  'pricing.until': 'Paid through {date}',
+  'pricing.canceling': 'The subscription ends {date} and will not renew',
+  'pricing.manage': 'Manage subscription',
+  'pricing.disabled': 'Payments are not connected yet. Every Pro feature is open to everyone right now.',
+  'pricing.upgrade': 'Upgrade',
+  'pricing.errDisabled': 'Payments are not connected yet.',
+  'pricing.errAuth': 'Sign in first: a subscription needs an account to live on.',
+  'pricing.errAlready': 'The subscription is already active.',
+  'pricing.errInvalid': 'Unknown plan. Reload the page.',
+  'pricing.errFailed': 'Could not open checkout. Try again in a minute.',
+
+  'checkout.successTitle': 'Payment went through, thank you',
+  'checkout.successBody': 'Pro will switch on within a minute. If features still look locked, reload the page.',
+  'checkout.cancelTitle': 'Checkout cancelled',
+  'checkout.cancelBody': 'Nothing was charged, the studio works exactly as before.',
+  'checkout.dismiss': 'Dismiss',
+
+  'export.pngHd': 'Print PNG',
+  'export.pdfPromo': 'Made in Endgrain Studio, endgrain.app',
+
+  'projects.errorLimit': 'A free account holds 3 projects. Open the pricing page to lift the limit.',
+  'projects.limitHint': '{used} of {limit} free slots used',
+
+  'landing.pricing.title': 'What it costs',
+  'landing.pricing.body':
+    'The tool is open in full. Pro lifts the cloud project limit, drops the credit line from the PDF and unlocks print-ready PNG.',
 }
 
 export default en

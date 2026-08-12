@@ -21,6 +21,7 @@ import { RowInspector } from '@/components/RowInspector'
 import { SpeciesPalette } from '@/components/SpeciesPalette'
 import { StudioTabs } from '@/components/StudioTabs'
 import { TemplateGallery } from '@/components/TemplateGallery'
+import { UpgradeButton } from '@/components/UpgradeButton'
 import { HelpHint } from '@/components/ui/help-hint'
 import { Separator } from '@/components/ui/separator'
 import { t } from '@/lib/i18n'
@@ -78,6 +79,8 @@ export function StudioShell() {
         <LocaleToggle locale={locale} onChange={setLocale} />
 
         <AccountButton />
+
+        <UpgradeButton />
 
         <Separator orientation="vertical" className="h-6" />
 

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { bitter, golos, jetbrains } from "./fonts";
+import { ProProvider } from "@/components/ProProvider";
 import { SessionProvider } from "@/components/SessionProvider";
+import { isStripeConfigured } from "@/lib/stripe/config";
+import { getProStatus } from "@/lib/stripe/pro";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getCurrentUser } from "@/lib/supabase/session";
 import { getLandingLocale } from "@/lib/landing/locale";
@@ -15,6 +18,9 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const user = await getCurrentUser();
+  // Статус Pro считается на сервере и уезжает пропсом: клиент серверные ключи
+  // Stripe не видит и isStripeConfigured() у себя вызвать не может.
+  const proStatus = await getProStatus();
   // Серверное стартовое значение из cookie eg-locale лендинга; студия дополнительно
   // правит document.documentElement.lang на клиенте (LocaleToggle) при переключении.
   const lang = await getLandingLocale();
@@ -24,7 +30,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${bitter.variable} ${golos.variable} ${jetbrains.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
-        <SessionProvider value={{ user, enabled: isSupabaseConfigured() }}>{children}</SessionProvider>
+        <SessionProvider value={{ user, enabled: isSupabaseConfigured() }}>
+          <ProProvider value={{ status: proStatus, billingEnabled: isStripeConfigured() }}>{children}</ProProvider>
+        </SessionProvider>
       </body>
     </html>
   );

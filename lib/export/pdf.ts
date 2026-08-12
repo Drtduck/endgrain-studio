@@ -22,6 +22,8 @@ export interface PdfInput {
   readonly model: BoardModel
   readonly calc: CalcResult
   readonly locale: Locale
+  /** Без Pro в подвале последней страницы появляется одна промо-строка. */
+  readonly pro: boolean
 }
 
 interface PdfContext {
@@ -56,6 +58,12 @@ export async function buildInstructionPdf(input: PdfInput): Promise<Blob> {
   drawCutMapPage(ctx)
   doc.addPage()
   drawStepsPage(ctx)
+
+  // Мягкий гейт, см. комментарий в ExportPanel. Строка не увечит инструкцию,
+  // она подписывает её: PDF уходит в чужую мастерскую и работает как визитка.
+  if (!input.pro) {
+    text(ctx, t(locale, 'export.pdfPromo'), PAGE.marginMm, PAGE.heightMm - 6, { size: 7, color: '#888888' })
+  }
 
   return doc.output('blob')
 }

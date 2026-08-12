@@ -3,6 +3,8 @@
 import { z } from 'zod'
 import type { Design } from '@/lib/engine'
 import { parseDesign } from '@/lib/persist'
+import { FREE_PROJECT_LIMIT } from '@/lib/stripe/plans'
+import { getProStatus } from '@/lib/stripe/pro'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { getSupabaseServer } from '@/lib/supabase/server'
 import type { ProjectSummary } from '@/lib/supabase/types'
@@ -10,7 +12,7 @@ import type { ProjectSummary } from '@/lib/supabase/types'
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: ProjectsError }
 
 /** Коды, а не готовые фразы: текст выбирает клиент по своей локали. */
-export type ProjectsError = 'unauthenticated' | 'invalid' | 'notFound' | 'failed'
+export type ProjectsError = 'unauthenticated' | 'invalid' | 'notFound' | 'failed' | 'limit'
 
 const nameSchema = z.string().trim().min(1).max(120)
 const idSchema = z.uuid()
@@ -55,6 +57,17 @@ export async function saveProjectAction(name: string, design: unknown): Promise<
   }
 
   const sb = await getSupabaseServer()
+
+  // Единственный гейт Pro, который считается на сервере: из devtools его не обойти.
+  // Без кассы getProStatus() отдаёт pro: true, и лимита не существует вовсе.
+  const { pro } = await getProStatus()
+  if (!pro) {
+    // head: true не тянет строки, RLS ограничивает счёт своими проектами.
+    const { count, error: countError } = await sb.from('projects').select('id', { count: 'exact', head: true })
+    if (countError) return { ok: false, error: 'failed' }
+    if ((count ?? 0) >= FREE_PROJECT_LIMIT) return { ok: false, error: 'limit' }
+  }
+
   // user_id ставит сервер, а не клиент: RLS это тоже проверит, но полагаться
   // на присланное значение нельзя даже под политикой.
   const { data, error } = await sb
