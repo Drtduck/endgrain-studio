@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
 import { CheckoutBanner } from '@/components/CheckoutBanner'
 import { StudioShell } from '@/components/StudioShell'
+import { TabUrlSync } from '@/components/TabUrlSync'
 import { getLandingLocale } from '@/lib/landing/locale'
 
 /**
@@ -18,6 +20,9 @@ export default async function Page(props: PageProps<'/'>) {
   return (
     <>
       {state === null ? null : <CheckoutBanner state={state} locale={locale} />}
+      <Suspense fallback={null}>
+        <TabUrlSync />
+      </Suspense>
       <StudioShell />
     </>
   )

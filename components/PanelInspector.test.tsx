@@ -41,13 +41,21 @@ describe('PanelInspector', () => {
     expect(panelA()?.elements[0]).toMatchObject({ speciesId: 'padauk' })
   })
 
-  it('добавляет и удаляет полосу', () => {
+  it('добавляет и удаляет полосу в конкретной панели (экспертный режим)', () => {
     render(<PanelInspector />)
     useStudio.getState().setActiveSpecies('padauk')
     fireEvent.click(screen.getByTestId('panel-A-add'))
     expect(panelA()?.elements).toHaveLength(3)
     fireEvent.click(screen.getByTestId('strip-A-0-remove'))
     expect(panelA()?.elements).toHaveLength(2)
+  })
+
+  it('главная кнопка «Добавить полосу» добавляет колонку во все используемые панели', () => {
+    render(<PanelInspector />)
+    const panelB = () => useStudio.getState().history.present.panels.find((p) => p.id === 'B')
+    fireEvent.click(screen.getByTestId('panels-add-column'))
+    expect(panelA()?.elements).toHaveLength(3)
+    expect(panelB()?.elements).toHaveLength(3)
   })
 
   it('разрезает полосу по введённому размеру', () => {

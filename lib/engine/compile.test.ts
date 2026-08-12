@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { compile, rowBandsMm } from './compile'
+import { colBandsMm, compile, rowBandsMm } from './compile'
 import { baseDesign, stripsPanel } from './fixtures'
 import { MAX_CELLS } from './types'
 
@@ -61,6 +61,27 @@ describe('compile: flat geometry', () => {
       { id: 'r1', topMm: 0, heightMm: 30 },
       { id: 'r2', topMm: 30, heightMm: 20 },
     ])
+  })
+
+  it('colBandsMm: левая граница/ширина колонок слева направо по самой широкой используемой панели', () => {
+    const d = baseDesign()
+    expect(colBandsMm(d)).toEqual([
+      { leftMm: 0, widthMm: 25 },
+      { leftMm: 25, widthMm: 25 },
+    ])
+  })
+
+  it('colBandsMm: игнорирует панели, на которые не ссылается ни один ряд', () => {
+    const d = baseDesign({
+      panels: [stripsPanel('A', ['walnut', 'maple']), stripsPanel('B', ['walnut', 'maple', 'cherry', 'padauk'])],
+      rows: [{ id: 'r1', panelId: 'A', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+    })
+    expect(colBandsMm(d)).toHaveLength(2)
+  })
+
+  it('colBandsMm: пустой список без используемых панелей', () => {
+    const d = baseDesign({ rows: [] })
+    expect(colBandsMm(d)).toEqual([])
   })
 
   it('caps cell generation at MAX_CELLS and marks the model truncated for a sub-mm sliceRef strip', () => {

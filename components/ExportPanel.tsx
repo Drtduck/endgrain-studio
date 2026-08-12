@@ -12,7 +12,7 @@ import { buildCutPlan, renderBoardSvg, safeFileName } from '@/lib/export'
 import { CSV_BOM, cutPlanToCsv } from '@/lib/export/csv'
 import { downloadText } from '@/lib/export/download'
 import { bothUnits } from '@/lib/export/format'
-import { rowBandsMm } from '@/lib/engine'
+import { colBandsMm, rowBandsMm } from '@/lib/engine'
 import { useDerived } from '@/lib/store/derived'
 import { selectDesign, useStudio } from '@/lib/store/studio'
 import { PNG_MAX_PX_FREE, PNG_MAX_PX_PRO, PNG_SCALE_FREE, PNG_SCALE_PRO } from '@/lib/stripe/limits'
@@ -53,7 +53,13 @@ export function ExportPanel() {
       // без лишнего тика на await import: кнопка отдаёт файл в тот же обработчик клика.
       // png/pdf грузятся по клику: jspdf и канвас-растеризатор в первом бандле страницы делать нечего.
       if (format === 'svg') {
-        const svg = renderBoardSvg(model, { title: design.name, caption, maxPx: 1600, rowLabels: rowBandsMm(design) }).svg
+        const svg = renderBoardSvg(model, {
+          title: design.name,
+          caption,
+          maxPx: 1600,
+          rowLabels: rowBandsMm(design),
+          colLabels: colBandsMm(design),
+        }).svg
         downloadText(svg, safeFileName(design.name, 'svg'), 'image/svg+xml;charset=utf-8')
       } else if (format === 'csv') {
         const csv = cutPlanToCsv(buildCutPlan(design), { locale })

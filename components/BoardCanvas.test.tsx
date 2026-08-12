@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { fireEvent, render } from '@testing-library/react'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import { baseDesign } from '@/lib/engine'
@@ -58,5 +58,46 @@ describe('BoardCanvas', () => {
     const rowCount = useStudio.getState().history.present.rows.length
     const caption = getByTestId('board-caption')
     expect(caption.textContent).toContain(`× ${rowCount} ·`)
+  })
+
+  it('свежая ячейка подсвечена как нетронутая, а после покраски подсветка снимается', () => {
+    const { container } = render(<BoardCanvas />)
+    expect(container.querySelectorAll('[data-testid="cell-untouched"]').length).toBeGreaterThan(0)
+    expect(useStudio.getState().touchedCellIds.has('r1:0')).toBe(false)
+    const rect = container.querySelector('rect[data-cell="r1:0"]') as Element
+    fireEvent.pointerDown(rect, { bubbles: true })
+    expect(useStudio.getState().touchedCellIds.has('r1:0')).toBe(true)
+    expect(container.querySelector('rect[data-cell="r1:0"] + [data-testid="cell-untouched"]')).toBe(null)
+  })
+
+  it('клик по номеру ряда выбирает ряд и скроллит к его карточке в инспекторе', () => {
+    useStudio.getState().resetStudio(makeCheckerboard({ cols: 2, rows: 4 }))
+    const { container } = render(<BoardCanvas />)
+    const rowId = useStudio.getState().history.present.rows[0]?.id
+    expect(rowId).toBeDefined()
+    const target = document.createElement('div')
+    target.setAttribute('data-testid', `row-${rowId}`)
+    const scrollIntoView = vi.fn()
+    target.scrollIntoView = scrollIntoView
+    document.body.appendChild(target)
+    try {
+      const label = container.querySelector(`[data-row="${rowId}"]`) as Element
+      expect(label).not.toBe(null)
+      fireEvent.pointerDown(label, { bubbles: true })
+      expect(useStudio.getState().selectedRowId).toBe(rowId)
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' })
+    } finally {
+      document.body.removeChild(target)
+    }
+  })
+
+  it('Enter на номере ряда работает так же, как клик', () => {
+    useStudio.getState().resetStudio(makeCheckerboard({ cols: 2, rows: 4 }))
+    const { container } = render(<BoardCanvas />)
+    const rowId = useStudio.getState().history.present.rows[1]?.id
+    expect(rowId).toBeDefined()
+    const label = container.querySelector(`[data-row="${rowId}"]`) as Element
+    fireEvent.keyDown(label, { key: 'Enter', bubbles: true })
+    expect(useStudio.getState().selectedRowId).toBe(rowId)
   })
 })

@@ -1,7 +1,21 @@
-import type { NextRequest } from 'next/server'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { COUNTRY_HEADER } from '@/lib/auth/geo'
 import { APP_ORIGIN, LANDING_PATH, SITE_ORIGIN, hostRole } from '@/lib/routing/host'
 import { updateSession } from '@/lib/supabase/proxy'
+
+/**
+ * Vercel сам определяет страну по IP и кладёт её в x-vercel-ip-country. Переносим
+ * значение в собственный заголовок запроса x-egs-country: так до серверных
+ * компонентов (headers() в layout) доезжает наше имя, а не деталь платформы
+ * хостинга, от которой мы не хотим зависеть напрямую в остальном коде.
+ */
+function withCountryHeader(request: NextRequest): NextRequest {
+  const country = request.headers.get('x-vercel-ip-country')
+  if (!country) return request
+  const headers = new Headers(request.headers)
+  headers.set(COUNTRY_HEADER, country)
+  return new NextRequest(request, { headers })
+}
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const role = hostRole(request.headers.get('host'))
@@ -21,7 +35,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(new URL(LANDING_PATH, SITE_ORIGIN), 308)
   }
 
-  return updateSession(request)
+  return updateSession(withCountryHeader(request))
 }
 
 // Матчер исключает статику и картинки: без него proxy отрабатывает даже на

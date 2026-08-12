@@ -1,4 +1,4 @@
-import type { BoardModel, RowBand } from '@/lib/engine'
+import type { BoardModel, ColBand, RowBand } from '@/lib/engine'
 import { boardLayout } from '@/lib/render2d/layout'
 import { speciesHex } from '@/lib/species'
 
@@ -15,6 +15,7 @@ export interface BoardSvgOptions {
   readonly maxPx?: number
   readonly background?: string
   readonly rowLabels?: readonly RowBand[]
+  readonly colLabels?: readonly ColBand[]
 }
 
 export interface RenderedSvg {
@@ -51,12 +52,15 @@ export function renderBoardSvg(model: BoardModel, options: BoardSvgOptions = {})
   const background = options.background ?? '#ffffff'
   const labels = options.rowLabels ?? []
   const hasLabels = labels.length > 0
+  const colLabels = options.colLabels ?? []
+  const hasColLabels = colLabels.length > 0
   const headMm = title === '' ? 0 : TITLE_MM + TEXT_PADDING_MM
   const footMm = caption === '' ? 0 : CAPTION_MM + TEXT_PADDING_MM
 
   const layout = boardLayout(model, {
     ...(options.maxPx === undefined ? {} : { maxPx: options.maxPx }),
     withRowLabels: hasLabels,
+    withColLabels: hasColLabels,
     captionMm: headMm + footMm,
   })
 
@@ -88,6 +92,18 @@ export function renderBoardSvg(model: BoardModel, options: BoardSvgOptions = {})
       const fontMm = Math.min(6, Math.max(3, band.heightMm * 0.4))
       parts.push(
         `<text x="${num(layout.marginMm / 2)}" y="${num(headMm + band.topMm + band.heightMm / 2)}"` +
+          ` text-anchor="middle" dominant-baseline="middle" font-family="sans-serif"` +
+          ` font-size="${num(fontMm)}" fill="#111111">${index + 1}</text>`,
+      )
+    })
+  }
+
+  if (hasColLabels) {
+    colLabels.forEach((band, index) => {
+      const fontMm = Math.min(6, Math.max(3, band.widthMm * 0.4))
+      parts.push(
+        `<text x="${num(layout.marginMm + band.leftMm + band.widthMm / 2)}"` +
+          ` y="${num(headMm + model.lengthMm + layout.colMarginMm / 2)}"` +
           ` text-anchor="middle" dominant-baseline="middle" font-family="sans-serif"` +
           ` font-size="${num(fontMm)}" fill="#111111">${index + 1}</text>`,
       )

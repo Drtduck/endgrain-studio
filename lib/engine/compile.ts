@@ -1,11 +1,28 @@
 import { elementExtentMm, findPanel, isStrip, panelLengthMm, panelWidthMm, slicesOfPanel } from './panels'
-import { GEOM_EPS_MM, MAX_CELLS, type BoardModel, type Cell, type Design, type PanelId, type Row, type RowId, type SliceRef } from './types'
+import {
+  GEOM_EPS_MM,
+  MAX_CELLS,
+  type BoardModel,
+  type Cell,
+  type Design,
+  type Panel,
+  type PanelId,
+  type Row,
+  type RowId,
+  type SliceRef,
+} from './types'
 
 /** Вертикальная полоса одного ряда доски: верхняя граница и высота, мм. Используется для меток рядов в UI. */
 export interface RowBand {
   readonly id: RowId
   readonly topMm: number
   readonly heightMm: number
+}
+
+/** Горизонтальная полоса одной колонки доски: левая граница и ширина, мм. Используется для меток колонок в UI. */
+export interface ColBand {
+  readonly leftMm: number
+  readonly widthMm: number
 }
 
 /**
@@ -21,6 +38,38 @@ export function rowBandsMm(design: Design): RowBand[] {
     if (!panel) continue
     out.push({ id: row.id, topMm: yMm, heightMm: row.thicknessMm })
     yMm += row.thicknessMm
+  }
+  return out
+}
+
+/**
+ * Границы колонок слева направо. Колонки строго определены только когда у всех используемых
+ * рядами панелей одинаковая раскладка (после правки A с addColumn так и есть). Как честный
+ * дефолт для рассинхронизированных случаев берём самую широкую из используемых панелей: так
+ * колонки не проваливаются под правым краем узких панелей.
+ */
+export function colBandsMm(design: Design): ColBand[] {
+  const usedPanelIds = new Set<PanelId>()
+  for (const row of design.rows) {
+    if (findPanel(design, row.panelId)) usedPanelIds.add(row.panelId)
+  }
+  let widest: Panel | undefined
+  let widestWidthMm = -1
+  for (const panel of design.panels) {
+    if (!usedPanelIds.has(panel.id)) continue
+    const widthMm = panelWidthMm(panel)
+    if (widthMm > widestWidthMm) {
+      widestWidthMm = widthMm
+      widest = panel
+    }
+  }
+  if (!widest) return []
+  const out: ColBand[] = []
+  let xMm = 0
+  for (const el of widest.elements) {
+    const widthMm = elementExtentMm(el)
+    out.push({ leftMm: xMm, widthMm })
+    xMm += widthMm
   }
   return out
 }

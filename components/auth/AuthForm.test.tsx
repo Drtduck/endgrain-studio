@@ -1,14 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, waitFor } from '@testing-library/react'
 import { AuthForm } from './AuthForm'
+import { GoogleAuthProvider } from '@/components/GoogleAuthProvider'
 
 const signInWithPassword = vi.fn(async () => ({ error: null }))
 const signUp = vi.fn(async () => ({ data: { session: {} }, error: null }))
+const signInWithOAuth = vi.fn(async () => ({ error: null }))
 const push = vi.fn()
 const refresh = vi.fn()
 
 vi.mock('@/lib/supabase/browser', () => ({
-  getSupabaseBrowser: () => ({ auth: { signInWithPassword, signUp } }),
+  getSupabaseBrowser: () => ({ auth: { signInWithPassword, signUp, signInWithOAuth } }),
 }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh }) }))
 
@@ -23,6 +25,7 @@ describe('AuthForm', () => {
   beforeEach(() => {
     signInWithPassword.mockClear()
     signUp.mockClear()
+    signInWithOAuth.mockClear()
     push.mockClear()
     refresh.mockClear()
   })
@@ -72,5 +75,45 @@ describe('AuthForm', () => {
     const { container } = render(<AuthForm mode="login" locale="en" />)
     const submit = container.querySelector('[data-testid="auth-submit"]')
     expect(submit?.textContent).toBe('Sign in')
+  })
+
+  it('renders the Google button by default (provider default is available)', () => {
+    const { container } = render(<AuthForm mode="login" locale="ru" />)
+    expect(container.querySelector('[data-testid="auth-google"]')).not.toBeNull()
+  })
+
+  it('does not render the Google button when it is hidden by geo', () => {
+    const { container } = render(
+      <GoogleAuthProvider value={false}>
+        <AuthForm mode="login" locale="ru" />
+      </GoogleAuthProvider>
+    )
+    expect(container.querySelector('[data-testid="auth-google"]')).toBeNull()
+  })
+
+  it('starts Google OAuth sign-in with the callback redirect', async () => {
+    const { container } = render(
+      <GoogleAuthProvider value={true}>
+        <AuthForm mode="login" locale="ru" />
+      </GoogleAuthProvider>
+    )
+    const button = container.querySelector('[data-testid="auth-google"]') as HTMLButtonElement
+    fireEvent.click(button)
+    await waitFor(() => expect(signInWithOAuth).toHaveBeenCalledTimes(1))
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=/` },
+    })
+  })
+
+  it('shows an error and stays interactive when Google OAuth fails to start', async () => {
+    signInWithOAuth.mockResolvedValueOnce({ error: { message: 'network error' } } as never)
+    const { container } = render(<AuthForm mode="login" locale="ru" />)
+    const button = container.querySelector('[data-testid="auth-google"]') as HTMLButtonElement
+    fireEvent.click(button)
+    await waitFor(() => expect(container.querySelector('[role="alert"]')).not.toBeNull())
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+      'Не получилось войти через Google. Попробуйте ещё раз'
+    )
   })
 })

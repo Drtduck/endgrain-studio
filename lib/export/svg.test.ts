@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { compile, rowBandsMm } from '@/lib/engine'
+import { colBandsMm, compile, rowBandsMm } from '@/lib/engine'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import { speciesHex } from '@/lib/species'
-import { ROW_LABEL_MARGIN_MM } from '@/lib/render2d/layout'
+import { COL_LABEL_MARGIN_MM, ROW_LABEL_MARGIN_MM } from '@/lib/render2d/layout'
 import { boardSvgString, escapeXml, renderBoardSvg } from './svg'
 
 const design = makeCheckerboard()
@@ -48,6 +48,13 @@ describe('renderBoardSvg', () => {
     const bands = rowBandsMm(design)
     const { svg } = renderBoardSvg(model, { rowLabels: bands })
     expect(svg).toContain(`viewBox="0 0 ${model.widthMm + ROW_LABEL_MARGIN_MM} ${model.lengthMm}"`)
+    expect(svg).toContain(`>${bands.length}<`)
+  })
+
+  it('колонка номеров колонок расширяет высоту и печатает номера под доской', () => {
+    const bands = colBandsMm(design)
+    const { svg } = renderBoardSvg(model, { colLabels: bands })
+    expect(svg).toContain(`viewBox="0 0 ${model.widthMm} ${model.lengthMm + COL_LABEL_MARGIN_MM}"`)
     expect(svg).toContain(`>${bands.length}<`)
   })
 

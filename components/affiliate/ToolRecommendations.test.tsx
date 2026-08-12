@@ -29,6 +29,19 @@ describe('ToolRecommendations', () => {
     }
   })
 
+  it('у каждой карточки есть картинка товара', () => {
+    render(<ToolRecommendations />)
+    const links = screen.getByTestId('tool-recommendations').querySelectorAll('a[data-testid^="recommend-"]')
+    expect(links.length).toBeGreaterThan(0)
+    for (const link of links) {
+      const img = link.querySelector('img')
+      expect(img).not.toBeNull()
+      expect(img?.getAttribute('src')).toMatch(/^https:\/\//)
+      expect(img?.getAttribute('loading')).toBe('lazy')
+      expect(img?.getAttribute('alt')).not.toBe('')
+    }
+  })
+
   it('реагирует на параметры проекта: узкий рейсмус приводит циклю', () => {
     render(<ToolRecommendations />)
     expect(screen.queryByTestId('recommend-scraper-card')).toBeNull()

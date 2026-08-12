@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
-import { compile, rowBandsMm } from '@/lib/engine'
+import { colBandsMm, compile, rowBandsMm } from '@/lib/engine'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import { BoardSvg } from './BoardSvg'
 
@@ -76,5 +76,46 @@ describe('BoardSvg', () => {
     expect(labels[0]?.getAttribute('text-anchor')).toBe('end')
     expect(labels[0]?.getAttribute('fill')).toBe('var(--text-muted)')
     expect(labels[0]?.classList.contains('font-mono')).toBe(true)
+  })
+
+  it('номер ряда доступен кликом и с клавиатуры', () => {
+    const design = makeCheckerboard({ cols: 2, rows: 2 })
+    const model = compile(design)
+    const bands = rowBandsMm(design)
+    const { container } = render(<BoardSvg model={model} locale="ru" rowLabels={bands} />)
+    const first = container.querySelector('[data-testid="row-label"]')
+    expect(first?.getAttribute('data-row')).toBe(bands[0]?.id)
+    expect(first?.getAttribute('role')).toBe('button')
+    expect(first?.getAttribute('tabindex')).toBe('0')
+  })
+
+  it('без colLabels подписей колонок нет', () => {
+    const model = compile(makeCheckerboard({ cols: 2, rows: 2 }))
+    const { container } = render(<BoardSvg model={model} locale="ru" />)
+    expect(container.querySelectorAll('[data-testid="col-label"]')).toHaveLength(0)
+  })
+
+  it('с colLabels рисует один текстовый элемент на колонку слева направо', () => {
+    const design = makeCheckerboard({ cols: 3, rows: 2 })
+    const model = compile(design)
+    const bands = colBandsMm(design)
+    const { container } = render(<BoardSvg model={model} locale="ru" colLabels={bands} />)
+    const labels = container.querySelectorAll('[data-testid="col-label"]')
+    expect(labels).toHaveLength(bands.length)
+    expect(Array.from(labels).map((el) => el.textContent)).toEqual(bands.map((_, i) => String(i + 1)))
+  })
+
+  it('без touchedCellIds подсветки нетронутых ячеек нет', () => {
+    const model = compile(makeCheckerboard({ cols: 2, rows: 2 }))
+    const { container } = render(<BoardSvg model={model} locale="ru" />)
+    expect(container.querySelectorAll('[data-testid="cell-untouched"]')).toHaveLength(0)
+  })
+
+  it('touchedCellIds подсвечивает только нетронутые ячейки', () => {
+    const model = compile(makeCheckerboard({ cols: 2, rows: 2 }))
+    const { container } = render(
+      <BoardSvg model={model} locale="ru" touchedCellIds={new Set(['r0:0'])} />,
+    )
+    expect(container.querySelectorAll('[data-testid="cell-untouched"]')).toHaveLength(model.cells.length - 1)
   })
 })

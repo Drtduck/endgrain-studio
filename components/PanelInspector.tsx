@@ -202,7 +202,7 @@ function PanelCard({ panel, locale, unit, selected }: { panel: Panel; locale: Lo
         data-testid={`panel-${panel.id}-add`}
         onClick={() => addStrip(panel.id, panel.elements.length)}
       >
-        {t(locale, 'panels.addStrip')}
+        {t(locale, 'panels.addStripToPanel', { id: panel.id })}
       </Button>
     </section>
   )
@@ -213,6 +213,7 @@ export function PanelInspector() {
   const unit = useStudio((s) => s.unit)
   const design = useStudio(selectDesign)
   const selectedPanelId = useStudio((s) => s.selectedPanelId)
+  const addColumn = useStudio((s) => s.addColumn)
 
   return (
     <Card>
@@ -223,6 +224,9 @@ export function PanelInspector() {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        <Button size="sm" variant="default" data-testid="panels-add-column" onClick={() => addColumn(null)}>
+          {t(locale, 'panels.addStrip')}
+        </Button>
         {design.panels.map((panel) => (
           <PanelCard key={panel.id} panel={panel} locale={locale} unit={unit} selected={panel.id === selectedPanelId} />
         ))}

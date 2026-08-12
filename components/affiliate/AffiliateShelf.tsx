@@ -1,6 +1,7 @@
 'use client'
 
 import { Wrench } from 'lucide-react'
+import { ProductImage } from '@/components/affiliate/ProductImage'
 import { itemUrl, PRODUCTS } from '@/lib/affiliate'
 import { t } from '@/lib/i18n'
 import { useStudio } from '@/lib/store/studio'
@@ -34,6 +35,7 @@ export function AffiliateShelf() {
                 data-testid={`product-card-${item.id}`}
                 className="flex h-full flex-col gap-1.5 rounded-lg border border-line-subtle bg-surface-raised p-3 shadow-sm transition-[box-shadow,border-color] duration-hover ease-out hover:border-accent-border hover:shadow-md"
               >
+                <ProductImage item={item} alt={`${item.brand} ${item.title[locale]}`} width={48} height={48} />
                 <span className="text-[11px] font-medium tracking-[0.08em] text-ink-muted uppercase">{item.brand}</span>
                 <span className="text-sm font-semibold">{item.title[locale]}</span>
                 <span className="text-[13px] text-ink-secondary">{item.note[locale]}</span>
