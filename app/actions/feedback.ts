@@ -35,9 +35,15 @@ async function createGithubIssue(params: {
   userAgent: string
   email: string | undefined
 }): Promise<string | null> {
+  // route приходит из клиентского window.location - чистим переносы строк,
+  // чтобы им нельзя было сломать title/body issue (инъекция лишних строк).
+  const route = params.route?.replace(/[\r\n]+/g, ' ')
   try {
     const res = await fetch(`https://api.github.com/repos/${GITHUB_FEEDBACK_REPO}/issues`, {
       method: 'POST',
+      // Лимит 5 сек: без него при зависшем GitHub action висит до таймаута
+      // Vercel и fallback в Supabase не успевает сработать.
+      signal: AbortSignal.timeout(5000),
       headers: {
         authorization: `Bearer ${params.token}`,
         accept: 'application/vnd.github+json',
@@ -45,10 +51,10 @@ async function createGithubIssue(params: {
         'x-github-api-version': '2022-11-28',
       },
       body: JSON.stringify({
-        title: buildFeedbackIssueTitle(params.body, params.route),
+        title: buildFeedbackIssueTitle(params.body, route),
         body: buildFeedbackIssueBody({
           body: params.body,
-          route: params.route,
+          route,
           locale: params.locale,
           userAgent: params.userAgent,
           email: params.email,
@@ -61,6 +67,8 @@ async function createGithubIssue(params: {
     const data = (await res.json()) as { html_url?: unknown }
     return typeof data.html_url === 'string' ? data.html_url : null
   } catch {
+    // Сюда же падает AbortError от таймаута - трактуем как обычную сетевую
+    // ошибку и уходим в fallback на Supabase.
     return null
   }
 }

@@ -109,11 +109,28 @@ describe('app/actions/feedback', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toBe('https://api.github.com/repos/Drtduck/endgrain-studio/issues')
+    expect(init.signal).toBeInstanceOf(AbortSignal)
     const body = JSON.parse(init.body as string) as { title: string; body: string; labels: string[] }
     expect(body.labels).toEqual(['feedback'])
     expect(body.title).toContain('текст фидбека')
     expect(body.body).toContain('Route: /board')
     expect(from).not.toHaveBeenCalled()
+  })
+
+  it('route с переносами строк чистится перед вставкой в title/body issue', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ html_url: 'https://github.com/Drtduck/endgrain-studio/issues/2' }),
+    })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    await submitFeedbackAction({ body: 'текст', route: '/board\nEvil-Header: injected\r\n/x' })
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const body = JSON.parse(init.body as string) as { title: string; body: string }
+    expect(body.title).not.toMatch(/[\r\n]/)
+    expect(body.body).toContain('Route: /board Evil-Header: injected /x')
   })
 
   it('без GITHUB_REPORT_TOKEN идёт по старому пути - insert в БД', async () => {
@@ -152,6 +169,22 @@ describe('app/actions/feedback', () => {
     const res = await submitFeedbackAction({ body: 'текст' })
 
     expect(res).toEqual({ ok: true })
+    expect(from).toHaveBeenCalledWith('feedback')
+  })
+
+  it('таймаут (AbortError) до GitHub падает в fallback на insert в БД', async () => {
+    process.env['GITHUB_REPORT_TOKEN'] = 'test-token'
+    fetchMock.mockRejectedValue(new DOMException('The operation was aborted.', 'AbortError'))
+    const insert = vi.fn().mockResolvedValue({ error: null })
+    from.mockReturnValue({ insert })
+    const { submitFeedbackAction } = await import('./feedback')
+
+    const res = await submitFeedbackAction({ body: 'текст' })
+
+    expect(res).toEqual({ ok: true })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(init.signal).toBeInstanceOf(AbortSignal)
     expect(from).toHaveBeenCalledWith('feedback')
   })
 

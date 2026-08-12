@@ -16,7 +16,11 @@ export function buildFeedbackIssueTitle(body: string, route: string | undefined)
   return `${short}${ellipsis}${routePart}`
 }
 
-/** Тело issue: текст фидбека плюс контекст (маршрут, locale, email, User-Agent, время). */
+/**
+ * Тело issue: текст фидбека плюс контекст (маршрут, locale, email, User-Agent, время).
+ * Инвариант: email юзера в теле issue допустим, только пока репозиторий
+ * Drtduck/endgrain-studio приватный. При открытии репо email отсюда убрать.
+ */
 export function buildFeedbackIssueBody(params: {
   body: string
   route: string | undefined
