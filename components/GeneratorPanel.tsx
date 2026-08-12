@@ -5,6 +5,7 @@ import { Star } from 'lucide-react'
 import { BoardSvg } from '@/components/BoardSvg'
 import { ConfirmReplace } from '@/components/ConfirmReplace'
 import { Button } from '@/components/ui/button'
+import { HelpHint } from '@/components/ui/help-hint'
 import { compile, type BoardModel } from '@/lib/engine'
 import {
   FAMILIES,
@@ -83,7 +84,10 @@ export function GeneratorPanel() {
   return (
     <section data-testid="generator-panel" aria-label={t(locale, 'aria.generatorPanel')} className="flex flex-col gap-4">
       <div>
-        <h2 className="font-display text-2xl font-semibold">{t(locale, 'gen.title')}</h2>
+        <div className="flex items-center gap-1.5">
+          <h2 className="font-display text-2xl font-semibold">{t(locale, 'gen.title')}</h2>
+          <HelpHint id="generator" side="bottom" />
+        </div>
         <p className="text-base text-ink-secondary">{t(locale, 'gen.subtitle')}</p>
       </div>
 
@@ -170,14 +174,17 @@ export function GeneratorPanel() {
         <Button data-testid="gen-shuffle" className="w-full sm:flex-1" onClick={() => commit(reshuffle(population))}>
           {t(locale, 'gen.shuffle')}
         </Button>
-        <Button
-          data-testid="gen-evolve"
-          variant="outline"
-          className="w-full sm:w-auto"
-          onClick={() => commit(nextGeneration(population, favouriteIds))}
-        >
-          {t(locale, 'gen.evolve')}
-        </Button>
+        <div className="flex min-w-0 w-full items-center gap-1.5 sm:w-auto">
+          <Button
+            data-testid="gen-evolve"
+            variant="outline"
+            className="min-w-0 flex-1 sm:w-auto sm:flex-none"
+            onClick={() => commit(nextGeneration(population, favouriteIds))}
+          >
+            {t(locale, 'gen.evolve')}
+          </Button>
+          <HelpHint id="evolution" side="top" />
+        </div>
       </div>
 
       <ul

@@ -1,4 +1,5 @@
 import { CardTitle } from '@/components/ui/card'
+import { HelpHint } from '@/components/ui/help-hint'
 import type { BoardModel } from '@/lib/engine'
 import type { CalcResult } from '@/lib/calc'
 import { t, type Locale, type MessageKey } from '@/lib/i18n'
@@ -35,7 +36,10 @@ export function ComplexityMeter({
   return (
     <div className="w-full max-w-sm rounded-lg border border-line-subtle bg-surface p-3.5">
       <div className="mb-3">
-        <CardTitle>{t(locale, 'meter.title')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{t(locale, 'meter.title')}</CardTitle>
+          <HelpHint id="meter" side="left" />
+        </div>
         <p className="mt-1 text-sm text-ink-secondary">
           {t(locale, 'board.size', {
             widthMm: formatMm(model.widthMm, unit, unitLabel, 0),

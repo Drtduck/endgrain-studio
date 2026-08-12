@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { BoardSvg } from '@/components/BoardSvg'
 import { ConfirmReplace } from '@/components/ConfirmReplace'
 import { Badge } from '@/components/ui/badge'
+import { HelpHint } from '@/components/ui/help-hint'
 import { compile, type BoardModel } from '@/lib/engine'
 import { TEMPLATES, TEMPLATE_GROUPS, groupNameKey, type BoardTemplate } from '@/lib/designs/templates'
 import { t } from '@/lib/i18n'
@@ -46,7 +47,10 @@ export function TemplateGallery() {
       className="flex flex-col gap-4"
     >
       <div>
-        <h2 className="font-display text-2xl font-semibold">{t(locale, 'templates.title')}</h2>
+        <div className="flex items-center gap-1.5">
+          <h2 className="font-display text-2xl font-semibold">{t(locale, 'templates.title')}</h2>
+          <HelpHint id="templates" side="bottom" />
+        </div>
         <p className="text-base text-ink-secondary">{t(locale, 'templates.subtitle')}</p>
       </div>
 

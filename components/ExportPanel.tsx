@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { HelpHint } from '@/components/ui/help-hint'
 import { t, type MessageKey } from '@/lib/i18n'
 import { buildCutPlan, renderBoardSvg, safeFileName } from '@/lib/export'
 import { CSV_BOM, cutPlanToCsv } from '@/lib/export/csv'
@@ -71,7 +72,10 @@ export function ExportPanel() {
   return (
     <Card aria-label={t(locale, 'aria.exportPanel')}>
       <CardHeader>
-        <CardTitle className="text-base">{t(locale, 'export.title')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t(locale, 'export.title')}</CardTitle>
+          <HelpHint id="export" side="left" />
+        </div>
         <p className="text-sm text-ink-muted">{t(locale, 'export.hint')}</p>
       </CardHeader>
       <CardContent className="space-y-2">

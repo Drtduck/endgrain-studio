@@ -19,6 +19,7 @@ import { RowInspector } from '@/components/RowInspector'
 import { SpeciesPalette } from '@/components/SpeciesPalette'
 import { StudioTabs } from '@/components/StudioTabs'
 import { TemplateGallery } from '@/components/TemplateGallery'
+import { HelpHint } from '@/components/ui/help-hint'
 import { Separator } from '@/components/ui/separator'
 import { t } from '@/lib/i18n'
 import { useDerived } from '@/lib/store/derived'
@@ -103,9 +104,15 @@ export function StudioShell() {
                 <>
                   <section
                     aria-label={t(locale, 'board.title')}
-                    className="flex min-w-0 items-center justify-center overflow-auto rounded-lg bg-canvas p-[22px]"
+                    className="flex min-w-0 flex-col gap-2 overflow-auto rounded-lg bg-canvas p-[22px]"
                   >
-                    <BoardCanvas />
+                    <div className="flex items-center gap-1.5 self-start">
+                      <span className="text-[13px] font-medium text-ink-secondary">{t(locale, 'board.title')}</span>
+                      <HelpHint id="editor" side="bottom" />
+                    </div>
+                    <div className="flex min-w-0 flex-1 items-center justify-center">
+                      <BoardCanvas />
+                    </div>
                   </section>
                   <PanelInspector />
                   <RowInspector />

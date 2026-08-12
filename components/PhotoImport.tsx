@@ -5,6 +5,7 @@ import { ImagePlus } from 'lucide-react'
 import { BoardSvg } from '@/components/BoardSvg'
 import { ConfirmReplace } from '@/components/ConfirmReplace'
 import { Button } from '@/components/ui/button'
+import { HelpHint } from '@/components/ui/help-hint'
 import { compile } from '@/lib/engine'
 import { t } from '@/lib/i18n'
 import { PHOTO_MAX_COLORS, PHOTO_MIN_COLORS, photoToDesign } from '@/lib/photo'
@@ -66,7 +67,10 @@ export function PhotoImport() {
   return (
     <section data-testid="photo-panel" aria-label={t(locale, 'aria.photoPanel')} className="flex flex-col gap-4">
       <div>
-        <h2 className="font-display text-2xl font-semibold">{t(locale, 'photo.title')}</h2>
+        <div className="flex items-center gap-1.5">
+          <h2 className="font-display text-2xl font-semibold">{t(locale, 'photo.title')}</h2>
+          <HelpHint id="photo" side="bottom" />
+        </div>
         <p className="text-base text-ink-secondary">{t(locale, 'photo.subtitle')}</p>
       </div>
 

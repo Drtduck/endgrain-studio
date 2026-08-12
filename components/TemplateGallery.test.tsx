@@ -14,7 +14,10 @@ describe('TemplateGallery', () => {
     const { container } = render(<TemplateGallery />)
     expect(screen.getByTestId('template-gallery')).toBeDefined()
     for (const tpl of TEMPLATES) expect(screen.getByTestId(`template-${tpl.id}`)).toBeDefined()
-    expect(container.querySelectorAll('[data-testid^="template-"] svg').length).toBe(TEMPLATES.length)
+    // Префикс "template-" ловит и обёртку data-testid="template-gallery": с тех пор как
+    // рядом с заголовком появился HelpHint, его иконка тоже попадает под этот селектор.
+    // Считаем svg только внутри самих карточек шаблонов.
+    expect(container.querySelectorAll('li [data-testid^="template-"] svg').length).toBe(TEMPLATES.length)
   })
 
   it('превью шаблонов не рисуют номера рядов - это только для редактора', () => {

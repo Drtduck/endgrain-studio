@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react'
 import { NumberFieldMm } from '@/components/NumberFieldMm'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { HelpHint } from '@/components/ui/help-hint'
 import type { Design, Row } from '@/lib/engine'
 import { t, type Locale } from '@/lib/i18n'
 import { speciesHex } from '@/lib/species'
@@ -184,7 +185,10 @@ export function RowInspector() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t(locale, 'rows.title')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t(locale, 'rows.title')}</CardTitle>
+          <HelpHint id="rows" side="top" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-2">
         {design.rows.length === 0 ? (

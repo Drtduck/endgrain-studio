@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { MessageSquarePlus } from 'lucide-react'
 import { submitFeedbackAction, type FeedbackResult } from '@/app/actions/feedback'
 import { Button, buttonVariants } from '@/components/ui/button'
+import { HelpHint } from '@/components/ui/help-hint'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import { FEEDBACK_MAX_LENGTH } from '@/lib/feedback'
@@ -58,7 +59,10 @@ export function FeedbackButton() {
       </PopoverTrigger>
       <PopoverContent side="top" align="end" className="w-[320px]">
         <div className="flex flex-col gap-2.5">
-          <h3 className="text-sm font-semibold">{t(locale, 'feedback.title')}</h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-sm font-semibold">{t(locale, 'feedback.title')}</h3>
+            <HelpHint id="feedback" side="left" />
+          </div>
           <p className="text-[13px] leading-normal text-ink-secondary">{t(locale, 'feedback.hint')}</p>
 
           {sent ? (
