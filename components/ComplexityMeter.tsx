@@ -28,7 +28,7 @@ export function ComplexityMeter({
     ['meter.glueUps', String(calc.glueUpCount), ''],
     ['meter.cuts', String(calc.cutCount), ''],
     ['meter.cells', String(model.cells.length), ''],
-    ['meter.boardFeet', calc.totalBoardFeet.toFixed(2), 'bf'],
+    ['meter.boardFeet', calc.totalBoardFeet.toFixed(2), t(locale, 'units.bf')],
     ['meter.waste', calc.wastePct.toFixed(1), '%'],
     ['meter.weight', calc.totalWeightKg.toFixed(2), kgLabel],
   ]

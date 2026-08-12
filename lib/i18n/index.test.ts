@@ -23,6 +23,16 @@ describe('i18n', () => {
     for (const code of codes) expect(ru).toHaveProperty(`diag.${code}`)
   })
 
+  it('печатает единицы пиломатериала по-русски', () => {
+    // Столяр читает инструкцию на своём языке: латинские bf и m в русской строке неуместны.
+    expect(ru['units.bf']).toBe('бд. фут')
+    const line = t('ru', 'meter.speciesRow', { name: 'орех', meters: '1.82', boardFeet: '2.21', costUsd: '$24.57' })
+    expect(line).toContain('1.82 м')
+    expect(line).toContain('2.21 бд. фут')
+    expect(line).not.toMatch(/\bbf\b/)
+    expect(t('en', 'meter.speciesRow', { name: 'walnut', meters: '1.82', boardFeet: '2.21', costUsd: '$24.57' })).toContain('2.21 bf')
+  })
+
   it('interpolates parameters', () => {
     expect(t('ru', 'diag.MIN_STRIP_WIDTH', { widthMm: 3, minMm: 4 })).toContain('3')
     expect(t('ru', 'diag.MIN_STRIP_WIDTH', { widthMm: 3, minMm: 4 })).toContain('4')

@@ -160,7 +160,7 @@ async function drawOverviewPage(ctx: PdfContext): Promise<void> {
     [t(locale, 'meter.glueUps'), String(calc.glueUpCount)],
     [t(locale, 'meter.cuts'), String(calc.cutCount)],
     [t(locale, 'meter.waste'), `${calc.wastePct.toFixed(1)} %`],
-    [t(locale, 'meter.boardFeet'), `${calc.totalBoardFeet.toFixed(2)} bf`],
+    [t(locale, 'meter.boardFeet'), `${calc.totalBoardFeet.toFixed(2)} ${t(locale, 'units.bf')}`],
     [t(locale, 'meter.cost'), usd.format(calc.totalCostUsd)],
     [t(locale, 'meter.weight'), `${calc.totalWeightKg.toFixed(2)} ${t(locale, 'units.kg')}`],
   ])
@@ -173,7 +173,13 @@ async function drawOverviewPage(ctx: PdfContext): Promise<void> {
     doc.rect(PAGE.marginMm, y - 3.2, 4, 4, 'F')
     text(
       ctx,
-      `${speciesName(need.speciesId, locale)}: ${need.linearMeters.toFixed(2)} m, ${need.boardFeet.toFixed(2)} bf, ${usd.format(need.costUsd)}`,
+      // Та же строка, что и в счётчике сложности: единицы живут в i18n, а не в вёрстке PDF.
+      t(locale, 'meter.speciesRow', {
+        name: speciesName(need.speciesId, locale),
+        meters: need.linearMeters.toFixed(2),
+        boardFeet: need.boardFeet.toFixed(2),
+        costUsd: usd.format(need.costUsd),
+      }),
       PAGE.marginMm + 6,
       y,
       { size: 9 },

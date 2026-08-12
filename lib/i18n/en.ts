@@ -21,6 +21,7 @@ const en: Record<keyof typeof ru, string> = {
   'units.mm': 'mm',
   'units.in': 'inches',
   'units.kg': 'kg',
+  'units.bf': 'bf',
   'units.title': 'Units',
   'board.kerf': 'Kerf',
   'board.settings': 'Board settings',
