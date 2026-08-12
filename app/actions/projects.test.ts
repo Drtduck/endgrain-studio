@@ -4,9 +4,16 @@ import { makeCheckerboard } from '@/lib/designs/samples'
 const getUser = vi.fn()
 const from = vi.fn()
 let configured = true
+// Без кассы Stripe гейта не существует и pro всегда true: это состояние по умолчанию,
+// в котором проверяются все старые сценарии.
+let pro = true
 
 vi.mock('@/lib/supabase/config', () => ({
   isSupabaseConfigured: () => configured,
+}))
+
+vi.mock('@/lib/stripe/pro', () => ({
+  getProStatus: async () => ({ pro, reason: pro ? 'no-stripe' : 'free', plan: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -19,6 +26,7 @@ vi.mock('@/lib/supabase/server', () => ({
 describe('app/actions/projects', () => {
   beforeEach(() => {
     configured = true
+    pro = true
     getUser.mockReset()
     from.mockReset()
   })
@@ -79,6 +87,40 @@ describe('app/actions/projects', () => {
     const insertArg = insert.mock.calls[0]?.[0] as { user_id: string; name: string }
     expect(insertArg.user_id).toBe('user-1')
     expect(insertArg.name).toBe('доска')
+  })
+
+  it('без Pro четвёртый проект даёт limit и вставки не происходит', async () => {
+    pro = false
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
+    const countSelect = vi.fn().mockResolvedValue({ count: 3, error: null })
+    const insert = vi.fn().mockReturnThis()
+    from.mockReturnValueOnce({ select: countSelect }).mockReturnValueOnce({ insert })
+
+    const { saveProjectAction } = await import('./projects')
+    const res = await saveProjectAction('доска', makeCheckerboard({ cols: 2, rows: 2 }))
+
+    expect(res).toEqual({ ok: false, error: 'limit' })
+    expect(countSelect).toHaveBeenCalledWith('id', { count: 'exact', head: true })
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('с Pro четвёртый проект сохраняется без проверки лимита', async () => {
+    pro = true
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
+    const insert = vi.fn().mockReturnThis()
+    const select = vi.fn().mockReturnThis()
+    const single = vi.fn().mockResolvedValue({
+      data: { id: 'proj-4', name: 'доска', updated_at: '2026-01-01T00:00:00.000Z' },
+      error: null,
+    })
+    from.mockReturnValue({ insert, select, single })
+
+    const { saveProjectAction } = await import('./projects')
+    const res = await saveProjectAction('доска', makeCheckerboard({ cols: 2, rows: 2 }))
+
+    expect(res.ok).toBe(true)
+    expect(insert).toHaveBeenCalledTimes(1)
+    expect(from).toHaveBeenCalledTimes(1)
   })
 
   it('loadProjectAction с не-uuid даёт invalid', async () => {

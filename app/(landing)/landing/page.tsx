@@ -7,6 +7,7 @@ import { FeatureGrid } from '@/components/landing/FeatureGrid'
 import { HowItWorks } from '@/components/landing/HowItWorks'
 import { ShotStrip } from '@/components/landing/ShotStrip'
 import { BooksTeaser } from '@/components/landing/BooksTeaser'
+import { PricingSection } from '@/components/landing/PricingSection'
 import { SubscribeSection } from '@/components/landing/SubscribeSection'
 import { getLandingLocale } from '@/lib/landing/locale'
 import { t } from '@/lib/i18n'
@@ -54,6 +55,7 @@ export default async function LandingPage() {
         <HowItWorks locale={locale} />
         <ShotStrip locale={locale} />
         <BooksTeaser locale={locale} />
+        <PricingSection locale={locale} />
 
         <section className="bg-app px-6 py-24" data-testid="landing-final-cta">
           <div className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">

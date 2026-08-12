@@ -39,6 +39,21 @@ describe('DiagnosticsPanel', () => {
     expect(screen.getByTestId('diagnostics-list').textContent).toContain('will not hold in a clamp')
   })
 
+  it('называет породы по-человечески, а не ключами справочника', () => {
+    useStudio.getState().resetStudio(
+      baseDesign({
+        species: ['cherry', 'maple'],
+        panels: [stripsPanel('A', ['cherry', 'maple']), stripsPanel('B', ['maple', 'cherry'])],
+      }),
+    )
+    render(<DiagnosticsPanel />)
+    const text = screen.getByTestId('diagnostics-list').textContent ?? ''
+    expect(text).toContain('вишня')
+    expect(text).toContain('клён')
+    expect(text).not.toContain('cherry')
+    expect(text).not.toContain('maple')
+  })
+
   it('обновляется вслед за правкой документа', () => {
     const { rerender } = render(<DiagnosticsPanel />)
     expect(screen.queryByTestId('diagnostics-list')).toBe(null)

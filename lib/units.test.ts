@@ -33,6 +33,9 @@ describe('представление размеров в полях ввода',
   it('печатает дюймы с тремя знаками', () => {
     expect(mmToDisplay(25.4, 'in')).toBe('1')
     expect(mmToDisplay(12.7, 'in')).toBe('0.5')
+    // Столярный шаг 1/16" = 0.0625": три знака держат его без потерь, два - нет.
+    expect(mmToDisplay(inchToMm(1 / 16), 'in')).toBe('0.063')
+    expect(mmToDisplay(240, 'in')).toBe('9.449')
   })
 
   it('читает число в текущих единицах обратно в миллиметры', () => {
@@ -51,7 +54,9 @@ describe('представление размеров в полях ввода',
   it('round-trip не теряет значение в пределах отображаемой точности', () => {
     for (const mm of [4, 25, 30.5, 330, 1200]) {
       expect(displayToMm(mmToDisplay(mm, 'mm'), 'mm')).toBeCloseTo(mm, 2)
-      expect(displayToMm(mmToDisplay(mm, 'in'), 'in')).toBeCloseTo(mm, 1)
+      // Тысячная дюйма - это 0.0254 мм, так что обратный разбор обязан держаться
+      // заметно точнее половины миллиметра.
+      expect(Math.abs(displayToMm(mmToDisplay(mm, 'in'), 'in')! - mm)).toBeLessThan(0.13)
     }
   })
 

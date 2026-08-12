@@ -3,6 +3,7 @@
 import { AccountButton } from '@/components/AccountButton'
 import { AffiliateShelf } from '@/components/affiliate/AffiliateShelf'
 import { LiteratureSection } from '@/components/affiliate/LiteratureSection'
+import { ToolRecommendations } from '@/components/affiliate/ToolRecommendations'
 import { Board3DPanel } from '@/components/Board3DPanel'
 import { BoardCanvas } from '@/components/BoardCanvas'
 import { BoardSettings } from '@/components/BoardSettings'
@@ -17,10 +18,12 @@ import { LocaleToggle } from '@/components/LocaleToggle'
 import { PanelInspector } from '@/components/PanelInspector'
 import { PhotoImport } from '@/components/PhotoImport'
 import { ProjectsPanel } from '@/components/ProjectsPanel'
+import { PromoPanel } from '@/components/promo/PromoPanel'
 import { RowInspector } from '@/components/RowInspector'
 import { SpeciesPalette } from '@/components/SpeciesPalette'
 import { StudioTabs } from '@/components/StudioTabs'
 import { TemplateGallery } from '@/components/TemplateGallery'
+import { UpgradeButton } from '@/components/UpgradeButton'
 import { HelpHint } from '@/components/ui/help-hint'
 import { Separator } from '@/components/ui/separator'
 import { t } from '@/lib/i18n'
@@ -30,7 +33,7 @@ import { useStudio, type StudioView } from '@/lib/store/studio'
 import type { UnitSystem } from '@/lib/units'
 import { cn } from '@/lib/utils'
 
-const FULL_WIDTH: readonly StudioView[] = ['templates', 'generate', 'photo', 'projects', 'books']
+const FULL_WIDTH: readonly StudioView[] = ['templates', 'generate', 'photo', 'projects', 'books', 'promo']
 
 export function StudioShell() {
   const locale = useStudio((s) => s.locale)
@@ -79,6 +82,8 @@ export function StudioShell() {
 
         <AccountButton />
 
+        <UpgradeButton />
+
         <Separator orientation="vertical" className="h-6" />
 
         <HistoryControls />
@@ -94,6 +99,8 @@ export function StudioShell() {
             <PhotoImport />
           ) : view === 'books' ? (
             <LiteratureSection />
+          ) : view === 'promo' ? (
+            <PromoPanel />
           ) : (
             <ProjectsPanel />
           )
@@ -130,6 +137,7 @@ export function StudioShell() {
               <BoardSettings />
               <ComplexityMeter locale={locale} calc={calc} unit={unit} model={model} />
               <ExportPanel />
+              <ToolRecommendations />
               <DiagnosticsPanel />
             </aside>
           </div>

@@ -8,9 +8,11 @@ import {
   saveProjectAction,
   type ProjectsError,
 } from '@/app/actions/projects'
+import { usePro } from '@/components/ProProvider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { t, type MessageKey } from '@/lib/i18n'
+import { FREE_PROJECT_LIMIT } from '@/lib/stripe/limits'
 import { selectDesign, useStudio } from '@/lib/store/studio'
 import type { ProjectSummary } from '@/lib/supabase/types'
 
@@ -19,6 +21,7 @@ const ERROR_KEYS: Readonly<Record<ProjectsError, MessageKey>> = {
   invalid: 'projects.errorInvalid',
   notFound: 'projects.errorNotFound',
   failed: 'projects.errorFailed',
+  limit: 'projects.errorLimit',
 }
 
 export function ProjectsPanel() {
@@ -26,6 +29,7 @@ export function ProjectsPanel() {
   const design = useStudio(selectDesign)
   const loadDesign = useStudio((s) => s.loadDesign)
   const setView = useStudio((s) => s.setView)
+  const { status, billingEnabled } = usePro()
 
   const [items, setItems] = useState<readonly ProjectSummary[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -126,6 +130,12 @@ export function ProjectsPanel() {
             {pending ? t(locale, 'projects.busy') : t(locale, 'projects.save')}
           </Button>
         </div>
+        {/* Счётчик мест показываем, только когда касса работает и лимит реально действует. */}
+        {!status.pro && billingEnabled ? (
+          <p data-testid="projects-limit-hint" className="text-[11px] text-ink-muted">
+            {t(locale, 'projects.limitHint', { used: items.length, limit: FREE_PROJECT_LIMIT })}
+          </p>
+        ) : null}
       </div>
 
       {error ? (

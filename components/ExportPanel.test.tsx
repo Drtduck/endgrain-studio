@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ProProvider } from '@/components/ProProvider'
 import { ExportPanel } from './ExportPanel'
 import { useStudio } from '@/lib/store/studio'
 
@@ -33,11 +34,35 @@ describe('ExportPanel', () => {
     useStudio.getState().resetStudio()
   })
 
-  it('показывает четыре кнопки', () => {
+  it('показывает пять кнопок', () => {
     render(<ExportPanel />)
-    for (const id of ['export-png', 'export-svg', 'export-csv', 'export-pdf']) {
+    for (const id of ['export-png', 'export-png-hd', 'export-svg', 'export-csv', 'export-pdf']) {
       expect(screen.getByTestId(id)).toBeInTheDocument()
     }
+  })
+
+  it('без кассы PNG для печати работает как обычная кнопка: дефолт провайдера открытый', async () => {
+    render(<ExportPanel />)
+    fireEvent.click(screen.getByTestId('export-png-hd'))
+    await waitFor(() => expect(downloadBlob).toHaveBeenCalledTimes(1))
+    expect(svgToPngBlob).toHaveBeenCalledTimes(1)
+  })
+
+  it('без Pro PNG для печати превращается в ссылку на тарифы и не экспортирует', () => {
+    const { container } = render(
+      <ProProvider
+        value={{
+          status: { pro: false, reason: 'free', plan: null, currentPeriodEnd: null, cancelAtPeriodEnd: false },
+          billingEnabled: true,
+        }}
+      >
+        <ExportPanel />
+      </ProProvider>,
+    )
+    const locked = container.querySelector('[data-testid="export-png-hd"]')
+    expect(locked?.getAttribute('href')).toBe('/pricing')
+    fireEvent.click(screen.getByTestId('export-png-hd'))
+    expect(downloadBlob).not.toHaveBeenCalled()
   })
 
   it('SVG скачивается синхронно и с расширением .svg', () => {

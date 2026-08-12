@@ -1,16 +1,53 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { FEEDBACK_ACCEPT_ATTR, FEEDBACK_SCREENSHOT_B64_MAX } from '@/lib/feedback'
 import { FeedbackButton } from './FeedbackButton'
 
 const submitFeedbackAction = vi.fn()
+let supabaseConfigured = true
 
 vi.mock('@/app/actions/feedback', () => ({
   submitFeedbackAction: (...args: unknown[]) => submitFeedbackAction(...args),
 }))
 
+vi.mock('@/lib/supabase/config', () => ({
+  isSupabaseConfigured: () => supabaseConfigured,
+}))
+
+// Роутера в jsdom нет, а трекер переходов читает usePathname.
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/',
+}))
+
+const SHOT_SMALL = 'data:image/jpeg;base64,c2hvdA=='
+let screenshotDataUrl = SHOT_SMALL
+
+// Скриншот снимает html-to-image через динамический импорт. В jsdom рисовать
+// нечем, поэтому подменяем модуль: интересует только то, что клиент дошёл до
+// вызова экшена, а не содержимое кадра.
+vi.mock('html-to-image', () => ({
+  toJpeg: async () => screenshotDataUrl,
+}))
+
+/** Кладёт файл в input[type=file] так, чтобы change его увидел. */
+function selectFile(input: HTMLInputElement, file: File): void {
+  Object.defineProperty(input, 'files', {
+    configurable: true,
+    value: {
+      length: 1,
+      item: (i: number) => (i === 0 ? file : null),
+      0: file,
+    },
+  })
+  fireEvent.change(input)
+}
+
 describe('FeedbackButton', () => {
   beforeEach(() => {
     submitFeedbackAction.mockReset()
+    supabaseConfigured = true
+    screenshotDataUrl = SHOT_SMALL
+    window.sessionStorage.clear()
   })
 
   it('клик по кнопке открывает попап с полем текста', async () => {
@@ -71,5 +108,164 @@ describe('FeedbackButton', () => {
 
     const counter = await screen.findByTestId('feedback-counter')
     expect(counter.textContent ?? '').toContain('6')
+  })
+
+  it('без настроенного Supabase кнопки прикрепления нет', async () => {
+    supabaseConfigured = false
+    render(<FeedbackButton />)
+    fireEvent.click(screen.getByTestId('feedback-button'))
+    await screen.findByTestId('feedback-text')
+    expect(screen.queryByTestId('feedback-attach')).toBe(null)
+  })
+
+  it('с настроенным Supabase кнопка прикрепления есть', async () => {
+    render(<FeedbackButton />)
+    fireEvent.click(screen.getByTestId('feedback-button'))
+    expect(await screen.findByTestId('feedback-attach')).toBeDefined()
+  })
+
+  it('выбранный файл показывается карточкой и убирается крестиком', async () => {
+    render(<FeedbackButton />)
+    fireEvent.click(screen.getByTestId('feedback-button'))
+    const input = (await screen.findByTestId('feedback-file-input')) as HTMLInputElement
+    selectFile(input, new File(['данные'], 'схема.png', { type: 'image/png' }))
+
+    const card = await screen.findByTestId('feedback-attachment')
+    expect(card.textContent ?? '').toContain('схема.png')
+
+    fireEvent.click(screen.getByTestId('feedback-attach-remove'))
+    await waitFor(() => expect(screen.queryByTestId('feedback-attachment')).toBe(null))
+    expect(screen.getByTestId('feedback-attach')).toBeDefined()
+  })
+
+  it('файл тяжелее 2 МБ отбивается на клиенте и не попадает в форму', async () => {
+    render(<FeedbackButton />)
+    fireEvent.click(screen.getByTestId('feedback-button'))
+    const input = (await screen.findByTestId('feedback-file-input')) as HTMLInputElement
+    const heavy = new File(['x'], 'huge.png', { type: 'image/png' })
+    Object.defineProperty(heavy, 'size', { value: 3 * 1024 * 1024 })
+    selectFile(input, heavy)
+
+    const alert = await screen.findByTestId('feedback-attach-error')
+    expect(alert.getAttribute('role')).toBe('alert')
+    expect(screen.queryByTestId('feedback-attachment')).toBe(null)
+  })
+
+  it('отправка везёт вложение, скриншот, viewport и лог действий', async () => {
+    submitFeedbackAction.mockResolvedValue({ ok: true })
+    render(<FeedbackButton />)
+    fireEvent.click(screen.getByTestId('feedback-button'))
+    const input = (await screen.findByTestId('feedback-file-input')) as HTMLInputElement
+    selectFile(input, new File(['данные'], 'схема.png', { type: 'image/png' }))
+    await screen.findByTestId('feedback-attachment')
+
+    fireEvent.change(screen.getByTestId('feedback-text'), { target: { value: 'сломалось' } })
+    fireEvent.click(screen.getByTestId('feedback-submit'))
+
+    await waitFor(() => expect(submitFeedbackAction).toHaveBeenCalledTimes(1))
+    const arg = submitFeedbackAction.mock.calls[0]?.[0] as {
+      attachment?: { name: string; type: string; dataBase64: string }
+      screenshot?: { dataBase64: string }
+      viewport?: string
+      url?: string
+      actions?: unknown[]
+    }
+    expect(arg.attachment?.name).toBe('схема.png')
+    expect(arg.attachment?.type).toBe('image/png')
+    expect((arg.attachment?.dataBase64 ?? '').length > 0).toBe(true)
+    expect(arg.screenshot?.dataBase64).toBe('c2hvdA==')
+    expect(typeof arg.viewport).toBe('string')
+    expect(typeof arg.url).toBe('string')
+    expect(Array.isArray(arg.actions)).toBe(true)
+  })
+
+  it('без Supabase вложение и скриншот в экшен не уезжают', async () => {
+    supabaseConfigured = false
+    submitFeedbackAction.mockResolvedValue({ ok: true })
+    render(<FeedbackButton />)
+    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.change(await screen.findByTestId('feedback-text'), { target: { value: 'текст' } })
+    fireEvent.click(screen.getByTestId('feedback-submit'))
+
+    await waitFor(() => expect(submitFeedbackAction).toHaveBeenCalledTimes(1))
+    const arg = submitFeedbackAction.mock.calls[0]?.[0] as Record<string, unknown>
+    expect(arg['attachment']).toBe(undefined)
+    expect(arg['screenshot']).toBe(undefined)
+  })
+
+  it('исключение из экшена не вешает попап, а показывает ошибку', async () => {
+    submitFeedbackAction.mockRejectedValue(new Error('Body exceeded 5mb limit'))
+    render(<FeedbackButton />)
+    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.change(await screen.findByTestId('feedback-text'), { target: { value: 'текст' } })
+    fireEvent.click(screen.getByTestId('feedback-submit'))
+
+    const alert = await screen.findByTestId('feedback-error')
+    expect(alert.getAttribute('role')).toBe('alert')
+    // Текст остался в поле: терять набранное при аварии сети нельзя.
+    expect((screen.getByTestId('feedback-text') as HTMLTextAreaElement).value).toBe('текст')
+    // И попап не завис в «Отправляем»: кнопка снова доступна.
+    await waitFor(() =>
+      expect(screen.getByTestId('feedback-submit').hasAttribute('disabled')).toBe(false),
+    )
+  })
+
+  it('в url не уезжает хэш с документом студии', async () => {
+    submitFeedbackAction.mockResolvedValue({ ok: true })
+    window.location.hash = '#d=' + 'x'.repeat(500)
+    render(<FeedbackButton />)
+    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.change(await screen.findByTestId('feedback-text'), { target: { value: 'текст' } })
+    fireEvent.click(screen.getByTestId('feedback-submit'))
+
+    await waitFor(() => expect(submitFeedbackAction).toHaveBeenCalledTimes(1))
+    const arg = submitFeedbackAction.mock.calls[0]?.[0] as { url: string; route: string }
+    expect(arg.url.includes('#')).toBe(false)
+    expect(arg.route.includes('#')).toBe(false)
+    window.location.hash = ''
+  })
+
+  it('слишком тяжёлый кадр отбрасывается на клиенте, текст всё равно уходит', async () => {
+    submitFeedbackAction.mockResolvedValue({ ok: true })
+    screenshotDataUrl = 'data:image/jpeg;base64,' + 'a'.repeat(FEEDBACK_SCREENSHOT_B64_MAX + 1)
+    render(<FeedbackButton />)
+    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.change(await screen.findByTestId('feedback-text'), { target: { value: 'текст' } })
+    fireEvent.click(screen.getByTestId('feedback-submit'))
+
+    await waitFor(() => expect(submitFeedbackAction).toHaveBeenCalledTimes(1))
+    const arg = submitFeedbackAction.mock.calls[0]?.[0] as Record<string, unknown>
+    // Сервер отбил бы такой payload целиком, и человек потерял бы текст.
+    expect(arg['screenshot']).toBe(undefined)
+    expect(arg['body']).toBe('текст')
+    expect(await screen.findByTestId('feedback-sent')).toBeDefined()
+  })
+
+  it('в лог действий пишется маршрут вместе с query', async () => {
+    window.history.replaceState({}, '', '/?tab=3d')
+    render(<FeedbackButton />)
+    const raw = window.sessionStorage.getItem('eg-feedback-actions-v1') ?? '[]'
+    const actions = JSON.parse(raw) as { kind: string; label: string }[]
+    expect(actions.some((a) => a.kind === 'route' && a.label === '/?tab=3d')).toBe(true)
+    window.history.replaceState({}, '', '/')
+  })
+
+  it('input file принимает только типы из белого списка', async () => {
+    render(<FeedbackButton />)
+    fireEvent.click(screen.getByTestId('feedback-button'))
+    const input = (await screen.findByTestId('feedback-file-input')) as HTMLInputElement
+    expect(input.getAttribute('accept')).toBe(FEEDBACK_ACCEPT_ATTR)
+    expect(input.getAttribute('accept')?.includes('svg')).toBe(false)
+  })
+
+  it('ошибка attachmentTooBig от сервера показывается отдельным текстом', async () => {
+    submitFeedbackAction.mockResolvedValue({ ok: false, error: 'attachmentTooBig' })
+    render(<FeedbackButton />)
+    fireEvent.click(screen.getByTestId('feedback-button'))
+    fireEvent.change(await screen.findByTestId('feedback-text'), { target: { value: 'текст' } })
+    fireEvent.click(screen.getByTestId('feedback-submit'))
+
+    const alert = await screen.findByTestId('feedback-error')
+    expect(alert.textContent ?? '').toContain('Вложение')
   })
 })

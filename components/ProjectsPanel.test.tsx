@@ -9,6 +9,22 @@ const saveProjectAction = vi.fn()
 const loadProjectAction = vi.fn()
 const deleteProjectAction = vi.fn()
 
+/**
+ * Кнопки списка заблокированы, пока не закрылся startTransition обновления списка.
+ * Под нагрузкой (полный прогон в несколько воркеров) элемент успевает появиться
+ * раньше, чем снимается pending, и клик по disabled уходит в пустоту. Поэтому
+ * ждём именно активную кнопку, а не только её присутствие в DOM.
+ */
+async function enabledButton(container: HTMLElement, testId: string): Promise<HTMLButtonElement> {
+  let button: HTMLButtonElement | null = null
+  await waitFor(() => {
+    button = container.querySelector(`[data-testid="${testId}"]`)
+    expect(button).not.toBe(null)
+    expect(button?.disabled).toBe(false)
+  })
+  return button as unknown as HTMLButtonElement
+}
+
 vi.mock('@/app/actions/projects', () => ({
   listProjectsAction: (...args: unknown[]) => listProjectsAction(...args),
   saveProjectAction: (...args: unknown[]) => saveProjectAction(...args),
@@ -63,12 +79,10 @@ describe('ProjectsPanel', () => {
 
     const { container } = render(<ProjectsPanel />)
     fireEvent.click(container.querySelector('[data-testid="projects-refresh"]') as Element)
-    await waitFor(() =>
-      expect(container.querySelector('[data-testid="project-load-22222222-2222-2222-2222-222222222222"]')).not.toBe(null),
-    )
+    const loadButton = await enabledButton(container, 'project-load-22222222-2222-2222-2222-222222222222')
 
     act(() => { useStudio.getState().setView('projects') })
-    fireEvent.click(container.querySelector('[data-testid="project-load-22222222-2222-2222-2222-222222222222"]') as Element)
+    fireEvent.click(loadButton)
 
     await waitFor(() => expect(loadProjectAction).toHaveBeenCalledWith('22222222-2222-2222-2222-222222222222'))
     await waitFor(() => expect(selectDesign(useStudio.getState()).id).toBe('loaded-design'))
@@ -95,10 +109,7 @@ describe('ProjectsPanel', () => {
 
     const { container } = render(<ProjectsPanel />)
     fireEvent.click(container.querySelector('[data-testid="projects-refresh"]') as Element)
-    const testId = 'project-delete-33333333-3333-3333-3333-333333333333'
-    await waitFor(() => expect(container.querySelector(`[data-testid="${testId}"]`)).not.toBe(null))
-
-    const button = container.querySelector(`[data-testid="${testId}"]`) as HTMLButtonElement
+    const button = await enabledButton(container, 'project-delete-33333333-3333-3333-3333-333333333333')
     fireEvent.click(button)
     expect(deleteProjectAction).not.toHaveBeenCalled()
     expect(button.textContent).toBe('Точно удалить?')

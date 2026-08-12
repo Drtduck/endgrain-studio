@@ -22,11 +22,13 @@ describe('StudioTabs', () => {
     expect(screen.getByTestId('tab-view3d').getAttribute('aria-selected')).toBe('true')
   })
 
-  it('показывает шесть вкладок, включая генератор, фото и литературу', () => {
+  it('показывает семь вкладок, включая генератор, фото, литературу и промо', () => {
     render(<StudioTabs />)
-    for (const view of ['editor', 'templates', 'generate', 'photo', 'view3d', 'books']) {
+    const views = ['editor', 'templates', 'generate', 'photo', 'view3d', 'books', 'promo']
+    for (const view of views) {
       expect(screen.getByTestId(`tab-${view}`)).toBeDefined()
     }
+    expect(screen.getAllByRole('tab')).toHaveLength(views.length)
   })
 
   it('вкладка литературы видна и без входа в аккаунт', () => {

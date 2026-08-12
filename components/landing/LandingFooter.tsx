@@ -10,6 +10,13 @@ export function LandingFooter({ locale }: { locale: Locale }) {
           <a href={APP_ORIGIN} data-testid="landing-footer-open-app" className="font-sans text-sm text-ink-secondary hover:text-ink">
             {t(locale, 'landing.nav.openApp')}
           </a>
+          <a
+            href={`${APP_ORIGIN}/pricing`}
+            data-testid="landing-footer-pricing"
+            className="font-sans text-sm text-ink-secondary hover:text-ink"
+          >
+            {t(locale, 'pricing.navTitle')}
+          </a>
         </div>
 
         <div className="flex flex-col gap-2">

@@ -4,7 +4,8 @@ import { AlertCircle, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { HelpHint } from '@/components/ui/help-hint'
 import { cn } from '@/lib/utils'
-import { t, type MessageKey } from '@/lib/i18n'
+import { t } from '@/lib/i18n'
+import { diagnosticText } from '@/lib/i18n/diagnostics'
 import { useDerived } from '@/lib/store/derived'
 import { useStudio } from '@/lib/store/studio'
 import type { DiagnosticLevel } from '@/lib/engine'
@@ -54,7 +55,7 @@ export function DiagnosticsPanel() {
                 >
                   <Icon className={cn('mt-px size-4 shrink-0', style.icon)} strokeWidth={1.6} />
                   <p className={cn('text-[13px] font-semibold', style.title)}>
-                    {t(locale, d.messageKey as MessageKey, d.params)}
+                    {diagnosticText(d, locale)}
                     {d.target ? (
                       <span className="ml-1 font-normal text-ink-muted">
                         ({t(locale, 'diagnostics.at', { panelId: d.target.panelId ?? '-', rowId: d.target.rowId ?? '-' })})

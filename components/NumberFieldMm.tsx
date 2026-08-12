@@ -50,6 +50,10 @@ export function NumberFieldMm({
   }
 
   const commit = (): void => {
+    // Черновик не менялся - выходим до конвертации. Показ округляет значение, и слепой
+    // прогон «показали -> прочитали обратно» сдвигал бы точные миллиметры документа
+    // на каждом заходе в поле, хотя человек ничего не набирал.
+    if (draft === external) return
     const mm = displayToMm(draft, unit)
     if (mm === null) {
       setDraft(external)
@@ -60,14 +64,28 @@ export function NumberFieldMm({
     setDraft(mmToDisplay(clamped, unit))
   }
 
+  /**
+   * Шаг стрелками мы считаем сами, а браузеру говорим step="any".
+   * Родной step пришлось бы задавать в единицах показа, и тогда любое дробное
+   * значение (240.03 мм после переключения единиц) ловило бы stepMismatch и метку
+   * :invalid, хотя оно совершенно законно. Свой шаг остаётся столярным: 1 мм или 1/16".
+   * Стрелки правят только черновик, как и родные: документ меняется на blur или Enter,
+   * иначе каждое нажатие вставляло бы отдельный шаг в историю undo.
+   */
+  const nudgeDraft = (direction: 1 | -1): void => {
+    const mm = displayToMm(draft, unit)
+    if (mm === null) return
+    setDraft(mmToDisplay(mm + direction * unitStepMm(unit), unit))
+  }
+
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       <label htmlFor={id} className="text-[11px] text-ink-muted">
         {t(locale, labelKey)}
       </label>
       <div
         className={cn(
-          'flex items-center gap-1 rounded-sm border border-line bg-surface-raised px-2 transition-[border-color,box-shadow] duration-hover ease-out hover:border-line-strong focus-within:border-[1.5px] focus-within:border-accent focus-within:shadow-focus has-[:disabled]:border-line-subtle has-[:disabled]:bg-surface-sunken',
+          'flex min-w-0 items-center gap-1 rounded-sm border border-line bg-surface-raised px-2 transition-[border-color,box-shadow] duration-hover ease-out hover:border-line-strong focus-within:border-[1.5px] focus-within:border-accent focus-within:shadow-focus has-[:disabled]:border-line-subtle has-[:disabled]:bg-surface-sunken',
           FIELD_HEIGHT[size]
         )}
       >
@@ -76,7 +94,7 @@ export function NumberFieldMm({
           data-testid={testId ?? id}
           type="number"
           inputMode="decimal"
-          step={unit === 'mm' ? unitStepMm(unit) : 0.0625}
+          step="any"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
@@ -86,11 +104,19 @@ export function NumberFieldMm({
               commit()
             }
             if (e.key === 'Escape') setDraft(external)
+            if (e.key === 'ArrowUp') {
+              e.preventDefault()
+              nudgeDraft(1)
+            }
+            if (e.key === 'ArrowDown') {
+              e.preventDefault()
+              nudgeDraft(-1)
+            }
           }}
-          className="w-full appearance-none border-0 bg-transparent font-mono text-sm tabular-nums text-ink outline-none disabled:text-line-strong [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="w-full min-w-0 appearance-none border-0 bg-transparent font-mono text-sm tabular-nums text-ink outline-none disabled:text-line-strong [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
         {suffix ? (
-          <span aria-hidden className="shrink-0 font-mono text-[11px] text-ink-muted">
+          <span aria-hidden className="shrink-0 whitespace-nowrap font-mono text-[11px] text-ink-muted">
             {suffix}
           </span>
         ) : null}
