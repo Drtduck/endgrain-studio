@@ -46,7 +46,11 @@ function RowCard({
       data-testid={testId}
       onFocus={() => selectRow(row.id)}
       className={cn(
-        'grid grid-cols-[88px_1fr_120px_120px_96px] items-end gap-3 rounded-md border px-2.5 py-2 max-lg:flex max-lg:flex-wrap',
+        // 4 кнопки size-7 с gap-1 требуют 124px: на 96px ряд вылезал за край карточки.
+        // Сетка включается по ширине карточки, а не окна: центральная колонка студии
+        // остаётся узкой примерно до 1300px окна, и viewport-брейкпоинт lg врал.
+        'flex flex-wrap items-end gap-3 rounded-md border px-2.5 py-2',
+        '@min-[760px]/rows:grid @min-[760px]/rows:grid-cols-[88px_1fr_120px_120px_124px]',
         selected ? 'border-accent-border bg-accent-soft' : 'border-line-subtle bg-surface'
       )}
     >
@@ -190,7 +194,7 @@ export function RowInspector() {
           <HelpHint id="rows" side="top" />
         </div>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="@container/rows space-y-2">
         {design.rows.length === 0 ? (
           <p className="text-sm text-ink-muted">{t(locale, 'rows.empty')}</p>
         ) : (

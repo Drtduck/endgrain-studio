@@ -1,4 +1,5 @@
 import { EngineError, type SpeciesId } from '@/lib/engine'
+import type { Locale } from '@/lib/i18n'
 
 export interface Lab {
   readonly L: number
@@ -48,6 +49,16 @@ export function getSpeciesById(id: SpeciesId): Species {
 
 export function speciesHex(id: SpeciesId): string {
   return SPECIES_BY_ID.get(id)?.hex ?? '#cccccc'
+}
+
+/**
+ * Локализованное имя породы для любого текста, который видит человек.
+ * Неизвестный id возвращается как есть: лучше показать сырой ключ, чем пустоту.
+ */
+export function speciesName(speciesId: SpeciesId, locale: Locale): string {
+  const species = SPECIES_BY_ID.get(speciesId)
+  if (!species) return speciesId
+  return locale === 'ru' ? species.nameRu : species.nameEn
 }
 
 /** Карта тангенциальной усушки для validate, который не должен зависеть от справочника. */

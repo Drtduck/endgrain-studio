@@ -61,13 +61,13 @@ export function NumberFieldMm({
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       <label htmlFor={id} className="text-[11px] text-ink-muted">
         {t(locale, labelKey)}
       </label>
       <div
         className={cn(
-          'flex items-center gap-1 rounded-sm border border-line bg-surface-raised px-2 transition-[border-color,box-shadow] duration-hover ease-out hover:border-line-strong focus-within:border-[1.5px] focus-within:border-accent focus-within:shadow-focus has-[:disabled]:border-line-subtle has-[:disabled]:bg-surface-sunken',
+          'flex min-w-0 items-center gap-1 rounded-sm border border-line bg-surface-raised px-2 transition-[border-color,box-shadow] duration-hover ease-out hover:border-line-strong focus-within:border-[1.5px] focus-within:border-accent focus-within:shadow-focus has-[:disabled]:border-line-subtle has-[:disabled]:bg-surface-sunken',
           FIELD_HEIGHT[size]
         )}
       >
@@ -87,10 +87,10 @@ export function NumberFieldMm({
             }
             if (e.key === 'Escape') setDraft(external)
           }}
-          className="w-full appearance-none border-0 bg-transparent font-mono text-sm tabular-nums text-ink outline-none disabled:text-line-strong [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="w-full min-w-0 appearance-none border-0 bg-transparent font-mono text-sm tabular-nums text-ink outline-none disabled:text-line-strong [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
         {suffix ? (
-          <span aria-hidden className="shrink-0 font-mono text-[11px] text-ink-muted">
+          <span aria-hidden className="shrink-0 whitespace-nowrap font-mono text-[11px] text-ink-muted">
             {suffix}
           </span>
         ) : null}

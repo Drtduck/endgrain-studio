@@ -47,10 +47,14 @@ function StripRow({
     )
   }
 
+  // Последняя колонка держит 4 кнопки size-7 с gap-1: 4*28 + 3*4 = 124px (на 96px они
+  // вылезали за скруглённый край карточки). Сетка включается по ширине самой карточки,
+  // а не окна: центральная колонка студии узкая примерно до 1300px окна, и viewport-брейкпоинт
+  // lg успевал включить сетку раньше, чем она помещалась.
   return (
     <li
       data-testid={testId}
-      className="grid grid-cols-[88px_1fr_120px_120px_96px] items-end gap-3 rounded-md border border-line-subtle bg-surface px-2.5 py-2 max-lg:flex max-lg:flex-wrap"
+      className="flex flex-wrap items-end gap-3 rounded-md border border-line-subtle bg-surface px-2.5 py-2 @min-[680px]/panel:grid @min-[680px]/panel:grid-cols-[88px_1fr_120px_120px_124px]"
     >
       <span
         aria-hidden="true"
@@ -159,7 +163,7 @@ function PanelCard({ panel, locale, unit, selected }: { panel: Panel; locale: Lo
       data-testid={`panel-${panel.id}`}
       onFocus={() => selectPanel(panel.id)}
       className={cn(
-        'rounded-lg border p-3',
+        '@container/panel rounded-lg border p-3',
         selected ? 'border-accent-border bg-accent-soft' : 'border-line-subtle bg-surface'
       )}
     >

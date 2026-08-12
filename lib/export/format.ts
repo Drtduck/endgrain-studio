@@ -1,13 +1,8 @@
-import type { SpeciesId } from '@/lib/engine'
 import { t, type Locale } from '@/lib/i18n'
-import { SPECIES_BY_ID } from '@/lib/species'
 import { formatMm, type UnitSystem } from '@/lib/units'
 
-export function speciesName(speciesId: SpeciesId, locale: Locale): string {
-  const species = SPECIES_BY_ID.get(speciesId)
-  if (!species) return speciesId
-  return locale === 'ru' ? species.nameRu : species.nameEn
-}
+// Имя породы живёт в справочнике пород: экспорт и диагностики берут одну и ту же функцию.
+export { speciesName } from '@/lib/species'
 
 export function oneUnit(mm: number, unit: UnitSystem, locale: Locale, digits = 1): string {
   return formatMm(mm, unit, t(locale, 'units.mm'), digits)
