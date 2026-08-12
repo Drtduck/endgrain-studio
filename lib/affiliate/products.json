@@ -17,8 +17,8 @@
     "brand": "Rockler",
     "title": { "ru": "Набор для клея: кисть, лоток, шпатель", "en": "Silicone glue applicator kit, 3-piece" },
     "note": {
-      "ru": "Клеевая кисть не размазывает, а наносит ровный слой без сгустков по краям паза. Лоток снизу ловит капли, стол остаётся чистым.",
-      "en": "The brush lays down an even film instead of smearing lumps into the groove edges. The tray underneath catches drips, so the bench stays clean."
+      "ru": "Клеевая кисть не размазывает, а наносит ровный слой без сгустков по краям паза. Шпатель растягивает клей по широкой пласти за один проход, лоток снизу ловит капли, стол остаётся чистым.",
+      "en": "The brush lays down an even film instead of smearing lumps into the groove edges. The spreader pulls glue across a wide face in one pass, the tray underneath catches drips, so the bench stays clean."
     },
     "band": "b10_25",
     "unverified": false
@@ -77,8 +77,8 @@
     "brand": "Thirteen Chefs",
     "title": { "ru": "Минеральное масло пищевое, 355 мл", "en": "Food grade mineral oil, 12 oz" },
     "note": {
-      "ru": "Пищевое минеральное масло не сохнет и не горкнет. Первая пропитка торцевой доски съедает неприлично много, берите большой флакон.",
-      "en": "Food grade mineral oil never dries and never goes rancid. The first soak on an end-grain board drinks an indecent amount, buy the big bottle."
+      "ru": "Пищевое минеральное масло не сохнет и не горкнет. Первая пропитка торцевой доски съедает неприлично много, берите с запасом.",
+      "en": "Food grade mineral oil never dries and never goes rancid. The first soak on an end-grain board drinks an indecent amount, so buy more than you think you need."
     },
     "band": "under10",
     "unverified": false
@@ -135,9 +135,9 @@
     "id": "feet-rubber",
     "asin": "B07SZ3GVDN",
     "brand": "SoftTouch",
-    "title": { "ru": "Ножки-подпятники самоклеющиеся, набор", "en": "Self-stick bumper feet, set" },
+    "title": { "ru": "Ножки-подпятники самоклеящиеся, набор", "en": "Self-stick bumper feet, set" },
     "note": {
-      "ru": "Готовая доска на столе не должна ездить и не должна царапать столешницу. Самоклеющиеся подпятники решают обе проблемы: снял плёнку и прижал к нижней стороне.",
+      "ru": "Готовая доска на столе не должна ездить и не должна царапать столешницу. Самоклеящиеся подпятники решают обе проблемы: снял плёнку и прижал к нижней стороне.",
       "en": "A finished board on the counter should not slide and should not scratch it. Self-stick bumper feet solve both problems: peel the backing and press them onto the underside."
     },
     "band": "under10",
