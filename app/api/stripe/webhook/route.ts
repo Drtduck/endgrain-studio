@@ -77,8 +77,12 @@ export async function POST(request: Request): Promise<Response> {
       typeof knownStatus === 'string' &&
       LIVE_STATUSES.includes(knownStatus)
     ) {
+      // 500, а не 200: событие может быть created по новой подписке B, обогнавшее
+      // deleted по старой A. Ответить 200 значит потерять его навсегда и оставить
+      // заплатившего человека без Pro. Stripe ретраит около трёх суток, за это
+      // время deleted по A применится, и повтор B пройдёт штатно.
       console.error('stripe webhook: чужая подписка поверх живой', { knownId, incoming: upsert.subscriptionId })
-      return text('foreign subscription', 200)
+      return text('foreign subscription', 500)
     }
 
     const { error } = await sb.from('subscriptions').upsert(

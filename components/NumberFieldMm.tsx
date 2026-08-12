@@ -50,9 +50,9 @@ export function NumberFieldMm({
   }
 
   const commit = (): void => {
-    // Черновик не менялся - выходим до конвертации. Дюймы показываются с округлением
-    // до сотых, и слепой прогон «показали -> прочитали обратно» сдвинул бы точные
-    // миллиметры документа (240 мм -> 9.45" -> 240.03 мм) на каждом заходе в поле.
+    // Черновик не менялся - выходим до конвертации. Показ округляет значение, и слепой
+    // прогон «показали -> прочитали обратно» сдвигал бы точные миллиметры документа
+    // на каждом заходе в поле, хотя человек ничего не набирал.
     if (draft === external) return
     const mm = displayToMm(draft, unit)
     if (mm === null) {
@@ -62,6 +62,20 @@ export function NumberFieldMm({
     const clamped = Math.min(maxMm ?? mm, Math.max(minMm ?? mm, mm))
     onCommitMm(clamped)
     setDraft(mmToDisplay(clamped, unit))
+  }
+
+  /**
+   * Шаг стрелками мы считаем сами, а браузеру говорим step="any".
+   * Родной step пришлось бы задавать в единицах показа, и тогда любое дробное
+   * значение (240.03 мм после переключения единиц) ловило бы stepMismatch и метку
+   * :invalid, хотя оно совершенно законно. Свой шаг остаётся столярным: 1 мм или 1/16".
+   * Стрелки правят только черновик, как и родные: документ меняется на blur или Enter,
+   * иначе каждое нажатие вставляло бы отдельный шаг в историю undo.
+   */
+  const nudgeDraft = (direction: 1 | -1): void => {
+    const mm = displayToMm(draft, unit)
+    if (mm === null) return
+    setDraft(mmToDisplay(mm + direction * unitStepMm(unit), unit))
   }
 
   return (
@@ -80,7 +94,7 @@ export function NumberFieldMm({
           data-testid={testId ?? id}
           type="number"
           inputMode="decimal"
-          step={unit === 'mm' ? unitStepMm(unit) : 0.01}
+          step="any"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
@@ -90,6 +104,14 @@ export function NumberFieldMm({
               commit()
             }
             if (e.key === 'Escape') setDraft(external)
+            if (e.key === 'ArrowUp') {
+              e.preventDefault()
+              nudgeDraft(1)
+            }
+            if (e.key === 'ArrowDown') {
+              e.preventDefault()
+              nudgeDraft(-1)
+            }
           }}
           className="w-full min-w-0 appearance-none border-0 bg-transparent font-mono text-sm tabular-nums text-ink outline-none disabled:text-line-strong [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />

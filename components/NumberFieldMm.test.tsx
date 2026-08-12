@@ -30,17 +30,31 @@ describe('NumberFieldMm', () => {
     expect(onCommitMm.mock.calls[0]?.[0]).toBeCloseTo(50.8, 9)
   })
 
-  it('в дюймах округляет показ до сотых, не трогая миллиметры в документе', () => {
+  it('заход в поле и выход без правки не трогают миллиметры документа', () => {
     const onCommitMm = vi.fn()
     render(<NumberFieldMm {...base} unit="in" valueMm={240} onCommitMm={onCommitMm} />)
     const input = screen.getByLabelText('Толщина пропила') as HTMLInputElement
-    // 240 мм это 9.4488", в поле человек видит 9.45
-    expect(input.value).toBe('9.45')
-    // Заход в поле и выход без правки не имеют права сдвинуть точные 240 мм на 240.03
+    // 240 мм это 9.4488", в поле округлено до 9.449: обратный прогон этого показа
+    // дал бы 240.005 мм, поэтому нетронутый черновик коммитить нельзя
+    expect(input.value).toBe('9.449')
     fireEvent.focus(input)
     fireEvent.blur(input)
     expect(onCommitMm).not.toHaveBeenCalled()
-    expect(input.value).toBe('9.45')
+    expect(input.value).toBe('9.449')
+  })
+
+  it('стрелки двигают черновик столярным шагом и не трогают документ до blur', () => {
+    const onCommitMm = vi.fn()
+    render(<NumberFieldMm {...base} unit="in" valueMm={25.4} onCommitMm={onCommitMm} />)
+    const input = screen.getByLabelText('Толщина пропила') as HTMLInputElement
+    fireEvent.keyDown(input, { key: 'ArrowUp' })
+    // 1" + 1/16" = 1.0625"
+    expect(input.value).toBe('1.063')
+    expect(onCommitMm).not.toHaveBeenCalled()
+    fireEvent.blur(input)
+    // Коммит читает то, что стоит в поле, поэтому значение приходит с точностью показа:
+    // 1.063" это 27.0 мм, а не ровно 26.9875 мм от 1/16"
+    expect(onCommitMm.mock.calls[0]?.[0]).toBeCloseTo(27, 1)
   })
 
   it('в дюймах правка коммитит именно введённое значение', () => {

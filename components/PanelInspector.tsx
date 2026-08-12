@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { HelpHint } from '@/components/ui/help-hint'
 import { MIN_STRIP_WIDTH_MM, isStrip, panelWidthMm, usageCount, type Panel, type PanelElement } from '@/lib/engine'
-import { t, type Locale } from '@/lib/i18n'
+import { t, unitLabel, type Locale } from '@/lib/i18n'
 import { SPECIES, speciesHex } from '@/lib/species'
 import { useDerived } from '@/lib/store/derived'
 import { selectDesign, useStudio } from '@/lib/store/studio'
@@ -36,12 +36,12 @@ function StripRow({
   const testId = `strip-${panelId}-${index}`
 
   if (!isStrip(element)) {
-    const unitLabel = t(locale, unit === 'mm' ? 'units.mm' : 'units.in')
+    const label = unitLabel(locale, unit)
     return (
       <li data-testid={testId} className="rounded-md border border-line-subtle bg-surface px-2.5 py-2 text-sm text-ink-muted">
         {t(locale, 'panels.sliceRef', {
           panelId: element.panelId,
-          thicknessMm: formatMm(element.thicknessMm, unit, unitLabel, 1),
+          thicknessMm: formatMm(element.thicknessMm, unit, label, 1),
         })}
       </li>
     )
@@ -155,7 +155,7 @@ function PanelCard({ panel, locale, unit, selected }: { panel: Panel; locale: Lo
   const addStrip = useStudio((s) => s.addStrip)
   const selectPanel = useStudio((s) => s.selectPanel)
   const { model } = useDerived()
-  const unitLabel = t(locale, unit === 'mm' ? 'units.mm' : 'units.in')
+  const label = unitLabel(locale, unit)
   const lengthMm = model.panelLengthsMm[panel.id] ?? 0
 
   return (
@@ -170,9 +170,9 @@ function PanelCard({ panel, locale, unit, selected }: { panel: Panel; locale: Lo
       <header className="mb-2">
         <h3 className="text-sm font-medium text-ink">{t(locale, 'panels.panel', { id: panel.id })}</h3>
         <p data-testid={`panel-${panel.id}-meta`} className="font-mono text-xs tabular-nums text-ink-muted">
-          {t(locale, 'panels.width', { widthMm: formatMm(panelWidthMm(panel), unit, unitLabel, 1) })}
+          {t(locale, 'panels.width', { widthMm: formatMm(panelWidthMm(panel), unit, label, 1) })}
           {', '}
-          {t(locale, 'panels.length', { lengthMm: formatMm(lengthMm, unit, unitLabel, 1) })}
+          {t(locale, 'panels.length', { lengthMm: formatMm(lengthMm, unit, label, 1) })}
           {', '}
           {t(locale, 'panels.usage', { count: usageCount(design, panel.id) })}
         </p>

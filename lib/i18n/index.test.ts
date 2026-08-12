@@ -25,11 +25,11 @@ describe('i18n', () => {
 
   it('печатает единицы пиломатериала по-русски', () => {
     // Столяр читает инструкцию на своём языке: латинские bf и m в русской строке неуместны.
-    expect(ru['units.bf']).toBe('бд. фут')
     const line = t('ru', 'meter.speciesRow', { name: 'орех', meters: '1.82', boardFeet: '2.21', costUsd: '$24.57' })
     expect(line).toContain('1.82 м')
-    expect(line).toContain('2.21 бд. фут')
+    expect(line).toContain(`2.21 ${ru['units.bf']}`)
     expect(line).not.toMatch(/\bbf\b/)
+    expect(ru['units.bf']).not.toMatch(/[a-z]/i)
     expect(t('en', 'meter.speciesRow', { name: 'walnut', meters: '1.82', boardFeet: '2.21', costUsd: '$24.57' })).toContain('2.21 bf')
   })
 

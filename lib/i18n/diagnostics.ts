@@ -14,8 +14,8 @@ const SPECIES_PARAMS: readonly string[] = ['a', 'b', 'speciesId']
  * а в справочнике имена записаны с заглавной. Опускаем первую букву, остальное не трогаем:
  * «Дуб красный» -> «дуб красный», «Black walnut» -> «black walnut».
  */
-function lowerFirst(text: string): string {
-  return text.slice(0, 1).toLocaleLowerCase() + text.slice(1)
+function lowerFirst(text: string, locale: Locale): string {
+  return text.slice(0, 1).toLocaleLowerCase(locale) + text.slice(1)
 }
 
 /** Копия params, где id пород заменены на локализованные названия. */
@@ -26,7 +26,7 @@ export function localizeDiagnosticParams(
   const out: Record<string, string | number> = { ...params }
   for (const key of SPECIES_PARAMS) {
     const value = out[key]
-    if (typeof value === 'string') out[key] = lowerFirst(speciesName(value, locale))
+    if (typeof value === 'string') out[key] = lowerFirst(speciesName(value, locale), locale)
   }
   return out
 }

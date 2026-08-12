@@ -2,7 +2,7 @@ import { CardTitle } from '@/components/ui/card'
 import { HelpHint } from '@/components/ui/help-hint'
 import type { BoardModel } from '@/lib/engine'
 import type { CalcResult } from '@/lib/calc'
-import { t, type Locale, type MessageKey } from '@/lib/i18n'
+import { t, unitLabel, type Locale, type MessageKey } from '@/lib/i18n'
 import { SPECIES_BY_ID } from '@/lib/species'
 import { formatMm } from '@/lib/units'
 
@@ -19,7 +19,7 @@ export function ComplexityMeter({
   unit: 'mm' | 'in'
   model: BoardModel
 }) {
-  const unitLabel = t(locale, unit === 'mm' ? 'units.mm' : 'units.in')
+  const label = unitLabel(locale, unit)
   const kgLabel = t(locale, 'units.kg')
   // Порог отходов: в макете подсвечена ячейка 18%, но у нас нет отдельной диагностики
   // отходов (calc.wastePct считается, но верхняя граница нигде не задана), поэтому
@@ -42,9 +42,9 @@ export function ComplexityMeter({
         </div>
         <p className="mt-1 text-sm text-ink-secondary">
           {t(locale, 'board.size', {
-            widthMm: formatMm(model.widthMm, unit, unitLabel, 0),
-            lengthMm: formatMm(model.lengthMm, unit, unitLabel, 0),
-            thicknessMm: formatMm(model.thicknessMm, unit, unitLabel, 0),
+            widthMm: formatMm(model.widthMm, unit, label, 0),
+            lengthMm: formatMm(model.lengthMm, unit, label, 0),
+            thicknessMm: formatMm(model.thicknessMm, unit, label, 0),
           })}
         </p>
       </div>

@@ -5,7 +5,7 @@ import { NumberFieldMm } from '@/components/NumberFieldMm'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BOARD_MAX_MM, BOARD_MIN_MM, THICKNESS_MAX_MM, THICKNESS_MIN_MM } from '@/lib/engine'
-import { t } from '@/lib/i18n'
+import { t, unitLabel } from '@/lib/i18n'
 import { shareUrl } from '@/lib/store/persist'
 import { selectDesign, useStudio } from '@/lib/store/studio'
 
@@ -22,10 +22,7 @@ export function BoardSettings() {
   const setPlanerWidthMm = useStudio((s) => s.setPlanerWidthMm)
   const [copied, setCopied] = useState(false)
 
-  // Подпись единиц в поле. В дюймах берём символ ", а не слово «дюймы»: слово съедало
-  // до 30px из и без того узкой колонки сайдбара и обрезало само значение,
-  // а знак дюйма - та же запись, что и во всех остальных местах (formatMm).
-  const unitSuffix = unit === 'mm' ? t(locale, 'units.mm') : '"'
+  const unitSuffix = unitLabel(locale, unit)
 
   const copyLink = (): void => {
     const url = shareUrl(window.location.href, design)

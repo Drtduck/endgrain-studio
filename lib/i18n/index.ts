@@ -17,6 +17,16 @@ export function t(locale: Locale, key: MessageKey, params: Record<string, string
   })
 }
 
+/**
+ * Подпись единиц рядом с числом. Миллиметры берутся из словаря, дюймы всегда пишутся
+ * знаком ": так их печатает formatMm во всём приложении, и слово «дюймы» в подписи поля
+ * съедало бы половину узкой колонки сайдбара. Один хелпер на все вызовы, чтобы
+ * тернарник не расползался по компонентам.
+ */
+export function unitLabel(locale: Locale, unit: 'mm' | 'in'): string {
+  return unit === 'mm' ? t(locale, 'units.mm') : '"'
+}
+
 export interface PluralForms {
   /** Именительный (1), счётная форма (2-4), родительный множественного (5+, 0, 11-14 и т.д.). */
   readonly ru: readonly [one: string, few: string, many: string]
