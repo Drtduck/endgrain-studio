@@ -40,7 +40,8 @@ describe('BoardSettings', () => {
     expect((screen.getByTestId('board-thickness') as HTMLInputElement).value).toBe('40')
     act(() => useStudio.getState().setUnit('in'))
     expect(useStudio.getState().unit).toBe('in')
-    expect((screen.getByTestId('board-thickness') as HTMLInputElement).value).toBe('1.575')
+    // В дюймах поле показывает два знака: 40 мм это 1.5748", в поле 1.57
+    expect((screen.getByTestId('board-thickness') as HTMLInputElement).value).toBe('1.57')
   })
 
   it('ввод в дюймах сохраняется в миллиметрах', () => {

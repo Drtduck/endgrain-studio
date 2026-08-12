@@ -50,6 +50,10 @@ export function NumberFieldMm({
   }
 
   const commit = (): void => {
+    // Черновик не менялся - выходим до конвертации. Дюймы показываются с округлением
+    // до сотых, и слепой прогон «показали -> прочитали обратно» сдвинул бы точные
+    // миллиметры документа (240 мм -> 9.45" -> 240.03 мм) на каждом заходе в поле.
+    if (draft === external) return
     const mm = displayToMm(draft, unit)
     if (mm === null) {
       setDraft(external)
@@ -76,7 +80,7 @@ export function NumberFieldMm({
           data-testid={testId ?? id}
           type="number"
           inputMode="decimal"
-          step={unit === 'mm' ? unitStepMm(unit) : 0.0625}
+          step={unit === 'mm' ? unitStepMm(unit) : 0.01}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}

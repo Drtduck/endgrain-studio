@@ -30,9 +30,12 @@ describe('представление размеров в полях ввода',
     expect(mmToDisplay(30.456, 'mm')).toBe('30.46')
   })
 
-  it('печатает дюймы с тремя знаками', () => {
+  it('печатает дюймы с двумя знаками', () => {
     expect(mmToDisplay(25.4, 'in')).toBe('1')
     expect(mmToDisplay(12.7, 'in')).toBe('0.5')
+    // 240 мм в поле читается как 9.45", а не как 9.449"
+    expect(mmToDisplay(240, 'in')).toBe('9.45')
+    expect(mmToDisplay(3, 'in')).toBe('0.12')
   })
 
   it('читает число в текущих единицах обратно в миллиметры', () => {
@@ -51,7 +54,8 @@ describe('представление размеров в полях ввода',
   it('round-trip не теряет значение в пределах отображаемой точности', () => {
     for (const mm of [4, 25, 30.5, 330, 1200]) {
       expect(displayToMm(mmToDisplay(mm, 'mm'), 'mm')).toBeCloseTo(mm, 2)
-      expect(displayToMm(mmToDisplay(mm, 'in'), 'in')).toBeCloseTo(mm, 1)
+      // Сотая дюйма - это 0.254 мм, поэтому обратный разбор держится в пределах 0.13 мм.
+      expect(displayToMm(mmToDisplay(mm, 'in'), 'in')).toBeCloseTo(mm, 0)
     }
   })
 
