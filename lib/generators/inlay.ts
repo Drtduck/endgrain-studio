@@ -16,6 +16,18 @@ const SPECIES_ORDER = new Map(SPECIES.map((s, index) => [s.id, index]))
 const MIN_BAND_MM = 12
 
 /**
+ * Длина панели MAIN, которую надо получить из среза INNER: сумма (толщина ряда + припуск
+ * на строгание + торцевой припуск) плюс kerf между рядами. Дословно повторяет формулу
+ * panelLengthMm из lib/engine/panels.ts для случая angleDeg=0 (cos 0 = 1, деления нет).
+ */
+function requiredMainLenMm(rowThicknessesMm: readonly number[]): number {
+  if (rowThicknessesMm.length === 0) return 0
+  const cut = sumMm(rowThicknessesMm.map((t) => t + GRID_ALLOWANCE_MM + GRID_TRIM_MM))
+  const kerfSum = GRID_KERF_MM * (rowThicknessesMm.length - 1)
+  return cut + kerfSum
+}
+
+/**
  * Единственное семейство с двумя поколениями склеек: центральная вставка - это срез
  * отдельной панели, вклеенный в наружную. Внутри вставки полосы мельче наружных рядов,
  * поэтому в середине доски появляется мелкий рисунок, недостижимый обычной сеткой.
@@ -60,7 +72,18 @@ export function inlayDesign(genome: Genome): Design {
     })),
   }
 
-  const rows: Row[] = genome.rowHeightsMm.map((thicknessMm, index) => ({
+  // Срез INNER вклеивается колонкой в MAIN и физически обязан быть не короче суммарной
+  // длины рядов MAIN (см. lib/engine/panels.ts: panelLengthMm). Геном (clampGenome) этого
+  // не знает - он гарантирует изготовимость общими правилами семейства, а не длину среза
+  // под конкретную ширину INNER. Поэтому здесь обрезаем хвост рядов, если их суммарная
+  // длина с припусками и kerf превышает то, что реально нарастили в INNER.
+  const innerLenMm = sumMm(innerWidths)
+  const rowHeightsMm = [...genome.rowHeightsMm]
+  while (rowHeightsMm.length > 1 && requiredMainLenMm(rowHeightsMm) > innerLenMm) {
+    rowHeightsMm.pop()
+  }
+
+  const rows: Row[] = rowHeightsMm.map((thicknessMm, index) => ({
     id: `r${index}`,
     panelId: 'MAIN',
     thicknessMm,
@@ -83,7 +106,7 @@ export function inlayDesign(genome: Genome): Design {
     rows,
     board: {
       targetWidthMm: sumMm(outer.elements.map((el) => (el.kind === 'strip' ? el.widthMm : el.thicknessMm))),
-      targetLengthMm: sumMm(genome.rowHeightsMm),
+      targetLengthMm: sumMm(rowHeightsMm),
       thicknessMm: GRID_THICKNESS_MM,
     },
     kerfMm: GRID_KERF_MM,
