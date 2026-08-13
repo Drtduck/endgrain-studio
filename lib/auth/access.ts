@@ -21,6 +21,7 @@ const PUBLIC_PREFIXES: readonly string[] = [
   '/auth',
   '/pricing',
   '/landing',
+  '/legal',
   '/api',
   '/_next',
   '/brand',
