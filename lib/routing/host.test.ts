@@ -2,7 +2,7 @@
 // сравнивала бы значение само с собой.
 // @vitest-environment-options { "url": "http://localhost:3100/" }
 import { describe, expect, it } from 'vitest'
-import { APP_ORIGIN, appOriginForClient, hostRole } from './host'
+import { APP_ORIGIN, appOriginForClient, hostRole, isSitePath } from './host'
 
 describe('hostRole', () => {
   it('распознаёт корневой домен сайта', () => {
@@ -35,6 +35,19 @@ describe('hostRole', () => {
 
   it('подделка домена не проходит: сравнение точное, а не endsWith', () => {
     expect(hostRole('evil-endgrain.app')).toBe('unknown')
+  })
+})
+
+describe('isSitePath', () => {
+  it.each(['/', '/landing', '/blog', '/blog/kerf-i-pripuski', '/blog/tag/раскрой'])(
+    'обслуживается доменом лендинга: %s',
+    (path) => {
+      expect(isSitePath(path)).toBe(true)
+    },
+  )
+
+  it.each(['/pricing', '/register', '/blogx', '/blogging'])('уезжает в студию: %s', (path) => {
+    expect(isSitePath(path)).toBe(false)
   })
 })
 
