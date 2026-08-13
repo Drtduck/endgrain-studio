@@ -1,5 +1,10 @@
 import { readFileSync, statSync } from 'node:fs'
 import { expect, test, type Download, type Page } from '@playwright/test'
+import { presetConsent } from './helpers/consent'
+
+test.beforeEach(async ({ page }) => {
+  await presetConsent(page)
+})
 
 async function openStudio(page: Page): Promise<void> {
   await page.addInitScript(() => window.localStorage.clear())

@@ -1,4 +1,11 @@
 import { expect, test, type Page } from '@playwright/test'
+import { presetConsent } from './helpers/consent'
+
+// Баннер согласия перекрывает нижнюю часть экрана без решения в cookie: предустановка
+// нужна первой, иначе она ломает клики во всех сценариях ниже (см. e2e/helpers/consent.ts).
+test.beforeEach(async ({ page }) => {
+  await presetConsent(page)
+})
 
 /** Стартовый проект - шахматка, панели переиспользуются, поэтому покраска всегда идёт через форк. */
 async function openStudio(page: Page): Promise<void> {

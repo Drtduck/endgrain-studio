@@ -1,4 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
+import { presetConsent } from './helpers/consent'
+
+test.beforeEach(async ({ page }) => {
+  await presetConsent(page)
+})
 
 /**
  * Группа «без ключей» выполняется всегда, в том числе в CI, и это самый ценный
@@ -89,6 +94,17 @@ test.describe('оплата с живыми ключами', () => {
 
     await page.goto('/pricing')
     await page.getByTestId('pricing-buy-monthly').click()
+    // dataLayer ловит checkout_started ещё до редиректа: событие пушится в buy()
+    // синхронно, редирект на hosted checkout идёт следом асинхронно.
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (window.dataLayer ?? []).some(
+            (e: unknown) => (e as { event?: string; plan?: string }).event === 'checkout_started' && (e as { plan?: string }).plan === 'monthly'
+          )
+        )
+      )
+      .toBe(true)
     // Форму Stripe не заполняем: это был бы тест чужой вёрстки. Проверяем ровно то,
     // за что отвечаем сами: сессия создалась и нас на неё увели.
     await page.waitForURL(/checkout\.stripe\.com/, { timeout: 30_000 })
