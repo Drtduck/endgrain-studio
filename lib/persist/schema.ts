@@ -17,6 +17,10 @@ const sliceRefSchema = z.object({
   thicknessMm: mm.positive(),
   angleDeg: mm,
   offsetMm: mm,
+  // Отсутствие флипа в документе эквивалентно false (см. миграцию v2 -> v3): значение
+  // проставляется здесь же, чтобы дальше по коду flip всегда был реальным boolean, а не
+  // boolean | undefined - этого требует exactOptionalPropertyTypes для SliceRef.
+  flip: z.boolean().optional().default(false),
 })
 
 const panelSchema = z.object({
@@ -69,6 +73,10 @@ export const migrations: Readonly<Record<number, (doc: unknown) => unknown>> = {
   // v2 добавил nameKey: старый документ оставляет своё имя как есть. Человек это имя уже
   // видел и, возможно, вводил сам, поэтому молча переименовывать его нельзя.
   1: (doc) => ({ ...(doc as Record<string, unknown>), schemaVersion: 2 }),
+  // v3 добавил угловые резы: flip у SliceRef стал опциональным (отсутствие = false), а
+  // angleDeg в старых документах уже был обязателен и всегда равнялся 0 для прямых резов.
+  // Менять содержимое документа не нужно - только отметку версии.
+  2: (doc) => ({ ...(doc as Record<string, unknown>), schemaVersion: 3 }),
 }
 
 export function migrate(doc: unknown): unknown {

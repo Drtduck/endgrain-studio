@@ -19,7 +19,7 @@ export function toCompact(design: Design): unknown {
     ...panel.elements.map((el) =>
       el.kind === 'strip'
         ? [0, speciesIndex(el.speciesId), el.widthMm]
-        : [1, panelIndex(el.panelId), el.thicknessMm, el.angleDeg, el.offsetMm],
+        : [1, panelIndex(el.panelId), el.thicknessMm, el.angleDeg, el.offsetMm, el.flip ? 1 : 0],
     ),
   ])
 
@@ -67,6 +67,8 @@ export function fromCompact(compact: unknown): Design {
             thicknessMm: e[2] as number,
             angleDeg: e[3] as number,
             offsetMm: e[4] as number,
+            // Компактный массив из пяти элементов - это старая ссылка/localStorage без флипа.
+            flip: e[5] === 1,
           }
     }),
   }))
