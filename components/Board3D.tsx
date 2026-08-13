@@ -98,6 +98,10 @@ function SpeciesMergedMesh({ group }: { group: MergedSpeciesGroup }) {
     return geo
   }, [group])
 
+  // Геометрия пересоздаётся на каждую смену group (useMemo выше), а Three.js не освобождает
+  // GPU-буферы сам - без явного dispose() при каждой смене узора накапливается утечка видеопамяти.
+  useEffect(() => () => geometry.dispose(), [geometry])
+
   return (
     <mesh geometry={geometry} castShadow receiveShadow>
       <meshStandardMaterial roughness={0.72} metalness={0.02} vertexColors />

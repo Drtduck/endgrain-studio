@@ -239,7 +239,8 @@ const en: Record<keyof typeof ru, string> = {
     'Crosscut panel {source} into {thickness} slices and glue them into panel {panel} with a {offset} offset. Flip the slice before gluing',
   'steps.gluePanel': 'Glue up panel {panel} from {count} {countWord}. Panel width {width}',
   'steps.plane': 'Joint and plane panel {panel} to {thickness}',
-  'steps.angledSetup': 'Set the saw to a {angleDeg}° angle for panel {panel}: the first wedge {waste} long goes to waste',
+  'steps.angledSetup':
+    'Set the saw to a {angleDeg}° angle for panel {panel} and cut all pieces at this angle together first: the switch wastes a {waste} wedge',
   'steps.crosscut': 'Crosscut panel {panel} into {count} {countWord}: {list}. Kerf {kerf}',
   'steps.crosscutAngled': 'Crosscut panel {panel} at an angle into {count} {countWord}: {list}. Kerf {kerf}',
   'steps.arrange': 'Lay out {count} rows in order 1 to {count}. Flip: {flip}. Mirror: {mirror}',

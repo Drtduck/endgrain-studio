@@ -1,4 +1,5 @@
 import {
+  angledTransitionWasteMm,
   angledWasteMm2,
   compile,
   isSliceRef,
@@ -8,6 +9,7 @@ import {
   rowBandsMm,
   sliceLengthMm,
   slicesOfPanel,
+  sortedByAngle,
   type Design,
   type Panel,
   type PanelId,
@@ -142,23 +144,6 @@ function pieces(panel: Panel): PanelPiece[] {
   )
 }
 
-/** Градусы в радианы. */
-function toRad(deg: number): number {
-  return (deg * Math.PI) / 180
-}
-
-/**
- * Длина торцевых клиньев вдоль щита, мм: сумма по различным ненулевым углам резов
- * widthMm · |tan φ|. Тот же принцип группировки, что и в lib/engine/panels.panelLengthMm -
- * подряд идущие резы одного угла режутся с одной настройки салазок, клин один на группу.
- */
-function endWasteMm(widthMm: number, angles: readonly number[]): number {
-  const distinct = new Set(angles.filter((a) => a !== 0))
-  let sum = 0
-  for (const angleDeg of distinct) sum += widthMm * Math.abs(Math.tan(toRad(angleDeg)))
-  return sum
-}
-
 /** Локаль нужна только имени документа: остальной план цифровой и от языка не зависит. */
 export function buildCutPlan(design: Design, locale: Locale): CutPlan {
   // Нумерация рядов берётся у rowBandsMm, а не у design.rows: движок пропускает
@@ -188,7 +173,10 @@ export function buildCutPlan(design: Design, locale: Locale): CutPlan {
 
   const panels: PanelCutPlan[] = manufacturingOrder(design).map((panel) => {
     const widthMm = panelWidthMm(panel)
-    const crosscuts: Crosscut[] = slicesOfPanel(design, panel.id).map((slice: PanelSlice) => ({
+    // Резы идут в порядке фактического изготовления: сгруппированы по углу (sortedByAngle -
+    // тот же принцип, что и в panelLengthMm/angledWasteMm2 из lib/engine/panels.ts), иначе
+    // список резов в инструкции противоречил бы шагам angled-setup и цифрам материала.
+    const crosscuts: Crosscut[] = sortedByAngle(slicesOfPanel(design, panel.id)).map((slice: PanelSlice) => ({
       thicknessMm: slice.thicknessMm,
       trimMm: slice.trimMm,
       angleDeg: slice.angleDeg,
@@ -206,7 +194,7 @@ export function buildCutPlan(design: Design, locale: Locale): CutPlan {
       crosscuts,
       hasInlay: panel.elements.some(isSliceRef),
       angledWasteMm2: angledWasteMm2(design, panel.id),
-      endWasteMm: endWasteMm(widthMm, crosscuts.map((c) => c.angleDeg)),
+      endWasteMm: angledTransitionWasteMm(widthMm, crosscuts.map((c) => c.angleDeg)).lengthMm,
     }
   })
 
@@ -295,19 +283,24 @@ export function buildGlueUpSteps(plan: CutPlan, locale: Locale): readonly GlueUp
       thickness: bothUnits(panel.planedThicknessMm, locale),
     }, panel.panelId)
 
-    // Угловые резы этой панели: один шаг angled-setup на каждый различный ненулевой угол,
-    // в порядке первого появления, перед самим шагом поперечного роспуска - салазки
-    // выставляются один раз на группу резов одного угла.
-    const seenAngles = new Set<number>()
-    for (const cut of panel.crosscuts) {
-      if (cut.angleDeg === 0 || seenAngles.has(cut.angleDeg)) continue
-      seenAngles.add(cut.angleDeg)
+    // Угловые резы этой панели: один шаг angled-setup на каждый различный угол в порядке
+    // отсортированной по углу последовательности (panel.crosscuts уже сгруппированы -
+    // сначала все резы одного угла подряд, салазки выставляются один раз на группу).
+    // Клин на переходе к настройке считается тем же принципом, что и angledTransitionWasteMm
+    // в lib/engine/panels.ts: первая настройка в последовательности - один клин W·tan φ,
+    // каждая следующая (в том числе переход обратно к 0°) - вдвое больше, 2·W·tan φ,
+    // потому что клин снимается уже с обеих сторон стыка настроек.
+    const distinctAngles = [...new Set(panel.crosscuts.map((c) => c.angleDeg))]
+    distinctAngles.forEach((angleDeg, index) => {
+      if (angleDeg === 0) return
+      const wedgeMm = panel.widthMm * Math.abs(Math.tan((angleDeg * Math.PI) / 180))
+      const factor = index === 0 ? 1 : 2
       push('angled-setup', 'steps.angledSetup', {
         panel: panel.panelId,
-        angleDeg: cut.angleDeg,
-        waste: bothUnits(panel.widthMm * Math.abs(Math.tan((cut.angleDeg * Math.PI) / 180)), locale),
+        angleDeg,
+        waste: bothUnits(factor * wedgeMm, locale),
       }, panel.panelId)
-    }
+    })
 
     const hasAngled = panel.crosscuts.some((c) => c.angleDeg !== 0)
     push('crosscut', hasAngled ? 'steps.crosscutAngled' : 'steps.crosscut', {

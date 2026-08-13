@@ -41,8 +41,9 @@ test('канон лендинга указывает на корень endgrain.
   await page.goto('/landing')
   const canonical = page.locator('link[rel="canonical"]')
   // Next сам нормализует корневой канон без слеша на конце (result.origin
-  // в resolveAbsoluteUrlWithPathname): sitemap.xml и llms.txt при этом пишут
-  // https://endgrain.app/ со слешем - это две разные, но согласованные формы.
+  // в resolveAbsoluteUrlWithPathname). sitemap.xml (SITE_ORIGIN) и llms.txt (siteUrl())
+  // пишут корень так же, без слеша - все три источника согласованы буквально, не просто
+  // "по смыслу".
   await expect(canonical).toHaveAttribute('href', 'https://endgrain.app')
 })
 

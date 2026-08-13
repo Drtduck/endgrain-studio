@@ -238,7 +238,8 @@ const ru = {
     'Нарезать щит {source} на срезы по {thickness} и вклеить их в щит {panel} со сдвигом {offset}. Срез перевернуть перед вклейкой',
   'steps.gluePanel': 'Склеить щит {panel} из {count} {countWord}. Ширина щита {width}',
   'steps.plane': 'Отфуговать и прострогать щит {panel} в толщину {thickness}',
-  'steps.angledSetup': 'Выставить пилу на угол {angleDeg}° для щита {panel}: первый клин длиной {waste} уходит в отход',
+  'steps.angledSetup':
+    'Выставить пилу на угол {angleDeg}° для щита {panel} и сначала выполнить подряд все резы этого угла: на переходе к настройке в отход уходит клин длиной {waste}',
   'steps.crosscut': 'Распустить щит {panel} поперёк на {count} {countWord}: {list}. Пропил {kerf}',
   'steps.crosscutAngled': 'Распустить щит {panel} поперёк под углом на {count} {countWord}: {list}. Пропил {kerf}',
   'steps.arrange': 'Разложить {count} рядов в порядке с 1 по {count}. Перевернуть: {flip}. Зеркалить: {mirror}',

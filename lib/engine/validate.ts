@@ -1,5 +1,14 @@
 import { compile } from './compile'
-import { angledWasteMm2, elementExtentMm, findPanel, isSliceRef, isStrip, panelLengthMm, panelWidthMm } from './panels'
+import {
+  angledWasteMm2,
+  elementExtentMm,
+  findPanel,
+  isSliceRef,
+  isStrip,
+  panelLengthMm,
+  panelWidthMm,
+  usableSliceLengthMm,
+} from './panels'
 import {
   ANGLE_WASTE_WARN_PCT,
   BOARD_MAX_MM,
@@ -163,16 +172,19 @@ export function validate(design: Design, opts: ValidateOptions = {}): Diagnostic
       // обязан покрывать всю длину panel.id (иначе колонка окажется короче доски). При phi=0 эта
       // проверка существовала неявно (щит просто должен был совпасть по ширине), угол делает
       // срез длиннее (1/cos), так что чаще будет ловить старые документы, а не новые.
+      // Полную диагональ W/cos φ использовать нельзя: параллелограмм-заготовка держит полную
+      // ширину t только на части своей длины, правый край сдвинут относительно левого на t·tan φ
+      // (см. expandSliceRef в compile.ts), поэтому сравнивать нужно usableSliceLengthMm.
       if (angleInRange) {
         const sourceWidthMm = panelWidthMm(inner)
-        const sliceLenMm = sourceWidthMm / Math.cos((el.angleDeg * Math.PI) / 180)
+        const usableLenMm = usableSliceLengthMm(sourceWidthMm, el.thicknessMm, el.angleDeg)
         const requiredLenMm = panelLengthMm(design, panel.id)
-        if (sliceLenMm < requiredLenMm - GEOM_EPS_MM) {
+        if (usableLenMm < requiredLenMm - GEOM_EPS_MM) {
           out.push(
             diag(
               'SLICE_TOO_SHORT',
               'error',
-              { sliceLengthMm: sliceLenMm, requiredMm: requiredLenMm },
+              { sliceLengthMm: usableLenMm, requiredMm: requiredLenMm },
               { panelId: panel.id, elementIndex },
             ),
           )

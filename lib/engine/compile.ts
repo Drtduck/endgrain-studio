@@ -127,8 +127,10 @@ function expandSliceRef(
   const cursorStartMm = rowTopMm - ((((-ref.offsetMm) % cycleMm) + cycleMm) % cycleMm)
 
   if (sSigned === 0) {
-    // Прямой рез: код дословно тот же, что был до угловой поддержки. poly не пишется вовсе,
-    // это и есть физическая гарантия побитовой регрессии при phi = 0.
+    // Прямой рез: код дословно тот же, что был до угловой поддержки, cursorStartMm выше
+    // (сырой ref.offsetMm) используется как есть. При angleDeg = 0 signMultiplier ни на что
+    // не влияет (tan 0 = 0), эффективный offset ниже не считается вовсе - это и есть
+    // физическая гарантия побитовой регрессии при phi = 0 (инвариант 1).
     let cursorMm = cursorStartMm
     for (let k = 0; cursorMm < rowBottomMm - GEOM_EPS_MM; k += 1) {
       if (budget.remaining <= 0) {
@@ -165,12 +167,30 @@ function expandSliceRef(
     return
   }
 
+  // offsetMm в документе выведен генератором для канонической раскладки - без mirror и без
+  // флипа (см. lib/generators/angled.ts chevronColumns: base_{k+1} = base_k + t_k * tan(angleDeg_k)).
+  // row.mirror и флип среза (row.flip XOR ref.flip) каждый по отдельности меняют фактическую
+  // раскладку колонки при рендере, и сырой ref.offsetMm перестаёт совпадать с ней - линия V на
+  // стыке соседних колонок расходится (проверено численно: сцепка держится только когда обе
+  // поправки применяются независимо друг от друга, а не только при развороте знака наклона).
+  // Эффективный offset компенсирует это для рендера, не трогая хранимое значение в документе:
+  // - mirror переставляет порядок колонок в ряду (см. `ordered.reverse()` в compile() выше),
+  //   поэтому эта колонка сцепляется с соседом по ДРУГУЮ сторону - поправка - фазовый сдвиг
+  //   на шаг канонической сцепки в противоположную сторону: + ref.thicknessMm * tan(angleDeg);
+  // - флип разворачивает порядок полос внутри самого среза (`ordered` двумя строками выше),
+  //   поэтому интервал целиком отражается относительно границ ряда (rowTopMm + rowBottomMm),
+  //   а не сдвигается на константу.
+  let effectiveOffsetMm = ref.offsetMm
+  if (row.mirror) effectiveOffsetMm += ref.thicknessMm * Math.tan(toRad(ref.angleDeg))
+  if (flipXor) effectiveOffsetMm = rowTopMm + rowBottomMm - effectiveOffsetMm
+  const angledCursorStartMm = rowTopMm - ((((-effectiveOffsetMm) % cycleMm) + cycleMm) % cycleMm)
+
   // Угловой рез: старт может понадобиться раньше исторического, потому что на правом краю
   // колонки (x = xMm + t) граница сдвинута на t * sSigned относительно левого.
   const shearMm = ref.thicknessMm * Math.abs(sSigned)
   const n = ordered.length
   let k = 0
-  let cursorMm = cursorStartMm
+  let cursorMm = angledCursorStartMm
   while (cursorMm > rowTopMm - shearMm + GEOM_EPS_MM) {
     k -= 1
     const idx = ((k % n) + n) % n

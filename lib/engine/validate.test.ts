@@ -70,11 +70,36 @@ describe('validate', () => {
   })
 
   it('passes a SliceRef at 30 degrees without any diagnostic', () => {
+    // Ширина Q увеличена до 75 мм (3 полосы вместо 2): usableSliceLengthMm = W/cos φ - t·tan φ
+    // строже старой W/cos φ, при 50 мм и t=60 колонка не проходила бы честную проверку.
     const d = baseDesign({
-      panels: [stripsPanel('Q', ['walnut', 'maple'], 25), { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 60, angleDeg: 30, offsetMm: 0 }] }],
+      panels: [
+        stripsPanel('Q', ['walnut', 'maple', 'walnut'], 25),
+        { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 60, angleDeg: 30, offsetMm: 0 }] },
+      ],
       rows: [{ id: 'r1', panelId: 'P', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
     })
     expect(hasErrors(validate(d))).toBe(false)
+  })
+
+  it('усадка SLICE_TOO_SHORT: усечённая формула ловит колонку, которую старая (W/cos φ) пропускала', () => {
+    // Полная диагональ W/cos φ = 50/cos30° ≈ 57.7 мм >= required 38 мм (старая формула пропускала
+    // бы этот случай), но полезная длина W/cos φ - t·tan φ = 57.7 - 60*tan30° ≈ 23.1 мм короче
+    // требуемых 38 мм - правый край колонки сдвинут относительно левого и полную ширину t
+    // заготовка держит не на всей своей диагонали.
+    const d = baseDesign({
+      panels: [
+        stripsPanel('Q', ['walnut', 'maple'], 25),
+        { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 60, angleDeg: 30, offsetMm: 0 }] },
+      ],
+      rows: [{ id: 'r1', panelId: 'P', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+    })
+    const sourceWidthMm = 50
+    const rad = (30 * Math.PI) / 180
+    const fullDiagonalMm = sourceWidthMm / Math.cos(rad)
+    const requiredMm = 38
+    expect(fullDiagonalMm).toBeGreaterThanOrEqual(requiredMm) // старая формула сочла бы срез годным
+    expect(codes(d)).toContain('SLICE_TOO_SHORT')
   })
 
   it('flags a slice shorter than the panel it is glued into', () => {

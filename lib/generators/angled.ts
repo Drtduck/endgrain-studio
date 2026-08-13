@@ -1,6 +1,7 @@
 import {
   DEFAULT_PLANER_WIDTH_MM,
   SCHEMA_VERSION,
+  usableSliceLengthMm,
   type Design,
   type Panel,
   type PanelElement,
@@ -45,11 +46,23 @@ function requiredMainLenMm(rowThicknessesMm: readonly number[]): number {
   return cut + kerfSum
 }
 
-/** Убирает лишние ряды, пока срез INNER под углом phi физически короче требуемой длины MAIN. */
-function trimRowsToFitSlice(rowHeightsMm: readonly number[], innerWidthMm: number, angleAbsDeg: number): number[] {
-  const sliceLenMm = innerWidthMm / Math.cos(toRad(angleAbsDeg))
+/**
+ * Убирает лишние ряды, пока срез INNER под углом phi физически короче требуемой длины MAIN.
+ * Сравнивает с usableSliceLengthMm, а не с сырой диагональю W/cos φ: параллелограмм-заготовка
+ * держит полную ширину колонки только на части своей длины (правый край сдвинут относительно
+ * левого на t·tan φ, см. lib/engine/panels.usableSliceLengthMm и compile.ts expandSliceRef).
+ * Запас без деления на cos ("requiredMm + 20" у tumbling) уже был достаточен раньше, но SLICE_TOO_SHORT
+ * теперь считает честно, поэтому thicknessMm колонки обязателен.
+ */
+function trimRowsToFitSlice(
+  rowHeightsMm: readonly number[],
+  innerWidthMm: number,
+  thicknessMm: number,
+  angleAbsDeg: number,
+): number[] {
+  const usableLenMm = usableSliceLengthMm(innerWidthMm, thicknessMm, angleAbsDeg)
   const out = [...rowHeightsMm]
-  while (out.length > 1 && requiredMainLenMm(out) > sliceLenMm) out.pop()
+  while (out.length > 1 && requiredMainLenMm(out) > usableLenMm) out.pop()
   return out
 }
 
@@ -156,7 +169,7 @@ export function chevronDesign(genome: Genome): Design {
   const inner = innerPanel(a, b)
   const main: Panel = { id: 'MAIN', elements: chevronColumns(n, t, angleAbsDeg) }
   const innerWidthMm = INNER_STRIP_COUNT * INNER_STRIP_WIDTH_MM
-  const rowHeightsMm = trimRowsToFitSlice([...genome.rowHeightsMm], innerWidthMm, angleAbsDeg)
+  const rowHeightsMm = trimRowsToFitSlice([...genome.rowHeightsMm], innerWidthMm, t, angleAbsDeg)
   const rows = straightRows('MAIN', rowHeightsMm)
 
   return boardOf(`gen-chevron-${genome.seed}`, 'gen.designName.chevron', [a, b], [main, inner], rows)
@@ -179,7 +192,7 @@ export function diamondDesign(genome: Genome): Design {
   const mainUp: Panel = { id: 'MAIN', elements: chevronColumns(n, t, angleAbsDeg, 1) }
   const mainDown: Panel = { id: 'MAIN2', elements: chevronColumns(n, t, angleAbsDeg, -1) }
   const innerWidthMm = INNER_STRIP_COUNT * INNER_STRIP_WIDTH_MM
-  const rowHeightsMm = trimRowsToFitSlice([...genome.rowHeightsMm], innerWidthMm, angleAbsDeg)
+  const rowHeightsMm = trimRowsToFitSlice([...genome.rowHeightsMm], innerWidthMm, t, angleAbsDeg)
   const rows = straightRowsAlternating(['MAIN', 'MAIN2'], rowHeightsMm)
 
   return boardOf(`gen-diamond-${genome.seed}`, 'gen.designName.diamond', [a, b], [mainUp, mainDown, inner], rows)
@@ -242,7 +255,7 @@ export function tumblingDesign(genome: Genome): Design {
 
   // Каждая колонка снимается со своей однопородной панели, у SLICE_TOO_SHORT источник тот же
   // sourceWidthMm для всех трёх, поэтому ограничение по длине совпадает с chevron.
-  const rowHeightsMm = trimRowsToFitSlice(rowHeightsMmRaw, sourceWidthMm, angleAbsDeg)
+  const rowHeightsMm = trimRowsToFitSlice(rowHeightsMmRaw, sourceWidthMm, t, angleAbsDeg)
   const rows = straightRowsAlternating(['MAIN', 'MAIN2'], rowHeightsMm)
 
   return boardOf(`gen-tumbling-${genome.seed}`, 'gen.designName.tumbling', [a, b, c], [mainUp, mainDown, ...sources], rows)

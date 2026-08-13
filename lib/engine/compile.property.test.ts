@@ -237,6 +237,44 @@ describe('compile: инварианты угловых резов (фаза 1)',
   }
 
   /**
+   * Повторяет пересчёт эффективного offset из expandSliceRef (compile.ts): row.mirror и flip
+   * переворачивают знак наклона относительно того, для чего выведен ref.offsetMm, поэтому сырой
+   * offset больше не совпадает с фактическим courserStart без этой поправки (см. задачу про
+   * row.mirror/row.flip на угловом узоре). Тест ниже строит "истинное" зеркало не через сырой
+   * ref.offsetMm, а через эффективный - иначе он проверял бы устаревшую (добуговую) формулу.
+   */
+  function effectiveOffsetMm(
+    rawOffsetMm: number,
+    thicknessMm: number,
+    angleDeg: number,
+    rowMirror: boolean,
+    flipXor: boolean,
+    rowTopMm: number,
+    rowBottomMm: number,
+  ): number {
+    let eff = rawOffsetMm
+    if (rowMirror) eff += thicknessMm * Math.tan((angleDeg * Math.PI) / 180)
+    if (flipXor) eff = rowTopMm + rowBottomMm - eff
+    return eff
+  }
+
+  /** Обратная функция к effectiveOffsetMm: по нужному эффективному offset находит сырой. */
+  function rawOffsetMmFor(
+    targetEffectiveOffsetMm: number,
+    thicknessMm: number,
+    angleDeg: number,
+    rowMirror: boolean,
+    flipXor: boolean,
+    rowTopMm: number,
+    rowBottomMm: number,
+  ): number {
+    let eff = targetEffectiveOffsetMm
+    if (flipXor) eff = rowTopMm + rowBottomMm - eff // отражение самообратно
+    if (rowMirror) eff -= thicknessMm * Math.tan((angleDeg * Math.PI) / 180)
+    return eff
+  }
+
+  /**
    * Настоящее зеркальное отражение колонки через её вертикальную ось x = xMm + t/2 переводит
    * наклон phi в -phi и одновременно сдвигает базовую линию тайлинга на +t*sSigned (раздел 0.5
    * плана: граница смещается на t*tan(phi) поперёк колонки). Отражение - изометрия, поэтому
@@ -260,9 +298,24 @@ describe('compile: инварианты угловых резов (фаза 1)',
         fc.pre(cycleMm > 1e-6)
 
         const rowTopMm = 0
-        const cursorStartOrig = rowTopMm - ((((-ref.offsetMm) % cycleMm) + cycleMm) % cycleMm)
+        const rowBottomMm = rowTopMm + row.thicknessMm
+        const effOrig = effectiveOffsetMm(ref.offsetMm, ref.thicknessMm, ref.angleDeg, row.mirror, flipXor, rowTopMm, rowBottomMm)
+        const cursorStartOrig = rowTopMm - ((((-effOrig) % cycleMm) + cycleMm) % cycleMm)
         const targetCursorStart = cursorStartOrig + ref.thicknessMm * sSigned
-        const offsetMirrored = offsetForCursorStart(cycleMm, rowTopMm, targetCursorStart)
+        const targetEffectiveMirrored = offsetForCursorStart(cycleMm, rowTopMm, targetCursorStart)
+        // Колонка-зеркало сохраняет row.mirror/flipXor (тот же ряд), но её собственный наклон
+        // -ref.angleDeg - эффективная поправка mirror зависит от угла САМОЙ колонки, поэтому
+        // сырой offsetMm, который даст нужный эффективный offset, обратно пересчитывается
+        // с -ref.angleDeg, а не с ref.angleDeg.
+        const offsetMirrored = rawOffsetMmFor(
+          targetEffectiveMirrored,
+          ref.thicknessMm,
+          -ref.angleDeg,
+          row.mirror,
+          flipXor,
+          rowTopMm,
+          rowBottomMm,
+        )
 
         const mirrored: Design = {
           ...design,

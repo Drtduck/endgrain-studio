@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
+import { templateById } from '@/lib/designs/templates'
 import { compile } from './compile'
 import { baseDesign, stripsPanel } from './fixtures'
 import { polygonAreaMm2 } from './geometry'
-import type { Cell, Design } from './types'
+import type { BoardModel, Cell, Design } from './types'
 
 const TAN30 = Math.tan((30 * Math.PI) / 180)
 
@@ -62,6 +63,18 @@ describe('compile: угловой SliceRef, точечный кейс с пос�
 })
 
 describe('compile: угловой SliceRef, флип и зеркало', () => {
+  /**
+   * Подпись раскладки: (yMm, heightMm, порода) каждой ячейки, округлённые и отсортированные.
+   * Сравнивать только `speciesId` по порядку ячеек недостаточно - у двух пород чередование
+   * A-B-A совпадает по меткам с B-A-B, сдвинутым на полклетки, поэтому такое сравнение может
+   * случайно не заметить сдвиг границ, который и есть эффект флипа/эффективного offset (см.
+   * компенсацию эффективного offset в expandSliceRef, задача про row.mirror/row.flip).
+   */
+  const layoutSignature = (model: ReturnType<typeof compile>): string[] =>
+    model.cells
+      .map((c) => `${Math.round(c.yMm * 1000) / 1000}:${Math.round(c.heightMm * 1000) / 1000}:${c.speciesId}`)
+      .sort()
+
   it('row.flip XOR ref.flip переворачивает порядок полос', () => {
     const base = compile(angledColumnDesign({ angleDeg: 20, thicknessMm: 15, innerWidths: [10, 8], rowFlip: false }))
     const flipped = compile(angledColumnDesign({ angleDeg: 20, thicknessMm: 15, innerWidths: [10, 8], rowFlip: true }))
@@ -69,8 +82,8 @@ describe('compile: угловой SliceRef, флип и зеркало', () => {
     const doubleFlipped = compile(
       angledColumnDesign({ angleDeg: 20, thicknessMm: 15, innerWidths: [10, 8], rowFlip: true, flip: true }),
     )
-    expect(flipped.cells.map((c) => c.speciesId)).not.toEqual(base.cells.map((c) => c.speciesId))
-    expect(doubleFlipped.cells.map((c) => c.speciesId)).toEqual(base.cells.map((c) => c.speciesId))
+    expect(layoutSignature(flipped)).not.toEqual(layoutSignature(base))
+    expect(layoutSignature(doubleFlipped)).toEqual(layoutSignature(base))
   })
 
   /**
@@ -175,5 +188,134 @@ describe('compile: сцепка соседних угловых колонок (
       }
     }
     expect(matched).toBe(true)
+  })
+})
+
+/**
+ * compile: row.mirror и row.flip на угловом узоре (регрессия ревью). offsetMm SliceRef выведен
+ * генератором для канонической раскладки (row.mirror=false, row.flip=false) - без пересчёта
+ * эффективного offset в expandSliceRef мираж и флип рвут линию V на стыке колонок (обе поправки
+ * см. в compile.ts). Метод замера - тот же, что и в ревью: точечная выборка по (x, y), сравнение
+ * породы в точке базового варианта с породой в отражённой точке мираж-варианта.
+ */
+describe('compile: row.mirror и row.flip на угловом узоре не ломают раскладку (регрессия ревью)', () => {
+  /** Точка внутри полигона (ray casting). Рект-ячейки без poly трактуются как свои 4 угла. */
+  function pointInPoly(poly: readonly (readonly [number, number])[], x: number, y: number): boolean {
+    let inside = false
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i]!
+      const [xj, yj] = poly[j]!
+      const intersects = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi
+      if (intersects) inside = !inside
+    }
+    return inside
+  }
+
+  function cellPoly(cell: Cell): ReadonlyArray<readonly [number, number]> {
+    if (cell.poly) return cell.poly
+    return [
+      [cell.xMm, cell.yMm],
+      [cell.xMm + cell.widthMm, cell.yMm],
+      [cell.xMm + cell.widthMm, cell.yMm + cell.heightMm],
+      [cell.xMm, cell.yMm + cell.heightMm],
+    ]
+  }
+
+  /** Порода в точке (x, y) модели, либо undefined, если ни одна ячейка её не покрывает. */
+  function speciesAt(model: BoardModel, x: number, y: number): string | undefined {
+    for (const cell of model.cells) {
+      if (x < cell.xMm - 1e-6 || x > cell.xMm + cell.widthMm + 1e-6) continue
+      if (y < cell.yMm - 1e-6 || y > cell.yMm + cell.heightMm + 1e-6) continue
+      if (pointInPoly(cellPoly(cell), x, y)) return cell.speciesId
+    }
+    return undefined
+  }
+
+  /**
+   * Точечная сверка: для каждой точки (x, y) на мелкой сетке порода в base(x, y) должна
+   * совпадать с породой в mirrored(widthMm - x, y) - зеркальное отражение по ширине доски.
+   * Шаг сетки взят некруглым (не кратен толщинам колонок/полос), чтобы не попадать ровно
+   * на границы ячеек с обеих сторон разом.
+   */
+  function assertMirrorReflection(design: Design, label: string): void {
+    const mirrored: Design = { ...design, rows: design.rows.map((r) => ({ ...r, mirror: true })) }
+    const base = compile(design)
+    const mirroredModel = compile(mirrored)
+    expect(mirroredModel.widthMm, label).toBeCloseTo(base.widthMm, 6)
+
+    let compared = 0
+    let mismatched = 0
+    const stepMm = 1.37
+    for (let x = stepMm / 2; x < base.widthMm; x += stepMm) {
+      for (let y = stepMm / 2; y < base.lengthMm; y += stepMm) {
+        const baseSpecies = speciesAt(base, x, y)
+        const mirroredSpecies = speciesAt(mirroredModel, base.widthMm - x, y)
+        if (baseSpecies === undefined || mirroredSpecies === undefined) continue
+        compared += 1
+        if (baseSpecies !== mirroredSpecies) mismatched += 1
+      }
+    }
+    expect(compared, `${label}: сетка сэмплирования пуста`).toBeGreaterThan(50)
+    expect(mismatched, `${label}: ${mismatched} из ${compared} точек разошлись по породе`).toBe(0)
+  }
+
+  it('chevron-classic: compile(mirror) точка в точку равен зеркальному отражению compile(base)', () => {
+    assertMirrorReflection(templateById('chevron-classic')!.build(), 'chevron-classic')
+  })
+
+  it('chevron-gentle: compile(mirror) точка в точку равен зеркальному отражению compile(base)', () => {
+    assertMirrorReflection(templateById('chevron-gentle')!.build(), 'chevron-gentle')
+  })
+
+  it('brick-half (прямой узор без углов): контроль 0% расхождений - mirror и раньше работал верно', () => {
+    assertMirrorReflection(templateById('brick-half')!.build(), 'brick-half')
+  })
+
+  /**
+   * row.flip не зеркалит доску целиком (в отличие от row.mirror) - он переворачивает порядок
+   * полос ВНУТРИ каждого среза, оставляя колонки на месте. Инвариант, который обязан
+   * держаться - непрерывность линии V на каждом стыке колонок панели MAIN (тот же метод,
+   * что и в lib/generators/angled.test.ts, но с row.flip=true на каждом ряду).
+   */
+  function assertFlipSeamsContinuous(design: Design, label: string): void {
+    const flipped: Design = { ...design, rows: design.rows.map((r) => ({ ...r, flip: true })) }
+    const model = compile(flipped)
+    const main = flipped.panels.find((p) => p.id === 'MAIN')
+    expect(main, label).toBeDefined()
+    if (!main) return
+
+    let xMm = 0
+    const seams: number[] = []
+    for (const el of main.elements) {
+      xMm += el.kind === 'strip' ? el.widthMm : el.thicknessMm
+      seams.push(xMm)
+    }
+    seams.pop() // последний "стык" - правый край доски
+
+    const boundaryYs = (elementIndex: number, seamXMm: number): number[] => {
+      const ys: number[] = []
+      for (const cell of model.cells) {
+        if (cell.origin.elementIndex !== elementIndex || !cell.poly) continue
+        for (const [x, y] of cell.poly) {
+          if (Math.abs(x - seamXMm) < 1e-6) ys.push(Math.round(y * 1000) / 1000)
+        }
+      }
+      return [...new Set(ys)].sort((a, b) => a - b)
+    }
+
+    seams.forEach((seamXMm, k) => {
+      const left = boundaryYs(k, seamXMm)
+      const right = boundaryYs(k + 1, seamXMm)
+      expect(left.length, `${label}, шов ${k}`).toBeGreaterThan(0)
+      expect(right, `${label}, шов ${k}`).toEqual(left)
+    })
+  }
+
+  it('chevron-classic: row.flip=true не рвёт линию V на стыках колонок', () => {
+    assertFlipSeamsContinuous(templateById('chevron-classic')!.build(), 'chevron-classic')
+  })
+
+  it('chevron-gentle: row.flip=true не рвёт линию V на стыках колонок', () => {
+    assertFlipSeamsContinuous(templateById('chevron-gentle')!.build(), 'chevron-gentle')
   })
 })

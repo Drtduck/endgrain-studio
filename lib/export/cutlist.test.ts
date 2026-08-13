@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { makeCheckerboard } from '@/lib/designs/samples'
-import { angledWasteMm2, baseDesign, compile, panelLengthMm, panelWidthMm, rowBandsMm, sliceLengthMm, slicesOfPanel, type Design } from '@/lib/engine'
+import {
+  angledWasteMm2,
+  baseDesign,
+  compile,
+  panelLengthMm,
+  panelWidthMm,
+  rowBandsMm,
+  sliceLengthMm,
+  slicesOfPanel,
+  type Design,
+} from '@/lib/engine'
 import { t } from '@/lib/i18n'
 import { buildCutPlan, buildGlueUpSteps } from './cutlist'
 
@@ -337,6 +347,81 @@ describe('buildGlueUpSteps: угловой срез', () => {
 
   it('любой шаг, включая angled-setup и crosscutAngled, рендерится без незакрытых плейсхолдеров на обеих локалях', () => {
     const plan = buildCutPlan(angledDesign(30, { flip: true }), 'ru')
+    for (const locale of ['ru', 'en'] as const) {
+      for (const step of buildGlueUpSteps(plan, locale)) {
+        expect(t(locale, step.messageKey, step.params)).not.toMatch(/\{[a-zA-Z]+\}/)
+      }
+    }
+  })
+})
+
+/**
+ * Панель INNER шаблона chevron-classic (lib/designs/templates.ts): 4 среза по 70 мм с щита
+ * шириной 250 мм (10 полос по 25), угол чередуется 45/-45/45/-45. Контрольные цифры - те же,
+ * что и в lib/engine/panels.test.ts (усадка формулы на chevron-classic): endWaste 750 мм,
+ * panelLength(INNER) ≈ 1175.68 мм. cutlist обязан сходиться с движком до девятого знака,
+ * а не пересчитывать отход по-своему.
+ */
+function chevronClassicInnerDesign(): Design {
+  const innerPanel = {
+    id: 'INNER',
+    elements: Array.from({ length: 10 }, (_, i) => ({
+      kind: 'strip' as const,
+      speciesId: i % 2 === 0 ? ('walnut' as const) : ('maple' as const),
+      widthMm: 25,
+    })),
+  }
+  return baseDesign({
+    panels: [
+      innerPanel,
+      {
+        id: 'MAIN',
+        elements: [45, -45, 45, -45].map((angleDeg, index) => ({
+          kind: 'sliceRef' as const,
+          panelId: 'INNER',
+          thicknessMm: 70,
+          angleDeg,
+          offsetMm: index,
+        })),
+      },
+    ],
+    rows: [{ id: 'r1', panelId: 'MAIN', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+    kerfMm: 3,
+    planingAllowanceMm: 3,
+  })
+}
+
+describe('buildCutPlan: несколько различных углов на одной панели (chevron-classic), сверка с panels.ts', () => {
+  it('crosscuts панели INNER отсортированы по углу (группировка: сначала все резы одного угла)', () => {
+    const plan = buildCutPlan(chevronClassicInnerDesign(), 'ru')
+    const innerPlan = plan.panels.find((p) => p.panelId === 'INNER')!
+    const angles = innerPlan.crosscuts.map((c) => c.angleDeg)
+    expect(angles).toEqual([...angles].sort((a, b) => a - b))
+    expect(angles).toEqual([-45, -45, 45, 45])
+  })
+
+  it('endWasteMm панели INNER = 750 мм, совпадает с моделью движка', () => {
+    const design = chevronClassicInnerDesign()
+    const plan = buildCutPlan(design, 'ru')
+    const innerPlan = plan.panels.find((p) => p.panelId === 'INNER')!
+    expect(innerPlan.endWasteMm).toBeCloseTo(750, 6)
+  })
+
+  it('lengthMm и angledWasteMm2 панели INNER сходятся с lib/engine/panels.ts до девятого знака', () => {
+    const design = chevronClassicInnerDesign()
+    const plan = buildCutPlan(design, 'ru')
+    const innerPlan = plan.panels.find((p) => p.panelId === 'INNER')!
+    expect(innerPlan.lengthMm).toBeCloseTo(panelLengthMm(design, 'INNER'), 9)
+    expect(innerPlan.lengthMm).toBeCloseTo(1175.678, 2)
+    expect(innerPlan.angledWasteMm2).toBeCloseTo(angledWasteMm2(design, 'INNER'), 9)
+  })
+
+  it('шаги angled-setup идут по одному на каждый различный угол, в порядке сортировки, без незакрытых плейсхолдеров', () => {
+    const design = chevronClassicInnerDesign()
+    const plan = buildCutPlan(design, 'ru')
+    const steps = buildGlueUpSteps(plan, 'ru')
+    const setupSteps = steps.filter((s) => s.kind === 'angled-setup' && s.panelId === 'INNER')
+    expect(setupSteps.map((s) => s.params.angleDeg)).toEqual([-45, 45])
     for (const locale of ['ru', 'en'] as const) {
       for (const step of buildGlueUpSteps(plan, locale)) {
         expect(t(locale, step.messageKey, step.params)).not.toMatch(/\{[a-zA-Z]+\}/)

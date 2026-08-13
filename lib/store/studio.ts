@@ -384,9 +384,20 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
         if (!Number.isFinite(angleDeg)) return
         const clamped = Math.max(-MAX_SLICE_ANGLE_DEG, Math.min(MAX_SLICE_ANGLE_DEG, angleDeg))
         edit((d) => {
-          const el = d.panels.find((p) => p.id === panelId)?.elements[elementIndex]
-          if (!el || !isSliceRef(el)) return
+          const panel = d.panels.find((p) => p.id === panelId)
+          const el = panel?.elements[elementIndex]
+          if (!panel || !el || !isSliceRef(el)) return
           el.angleDeg = clamped
+          // Сцепка колонок держится на offsetMm последующих SliceRef этой же панели (правило
+          // base_{k+1} = base_k + t_k * tan(phi_k), см. lib/generators/angled.ts chevronColumns):
+          // смена угла ОДНОЙ колонки без пересчёта хвоста цепочки рвёт линию V у соседей.
+          let base = el.offsetMm + el.thicknessMm * Math.tan((el.angleDeg * Math.PI) / 180)
+          for (let i = elementIndex + 1; i < panel.elements.length; i += 1) {
+            const next = panel.elements[i]
+            if (!next || !isSliceRef(next)) continue
+            next.offsetMm = base
+            base += next.thicknessMm * Math.tan((next.angleDeg * Math.PI) / 180)
+          }
         })
       },
 

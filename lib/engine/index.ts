@@ -23,7 +23,10 @@ export {
   slicesOfPanel,
   panelLengthMm,
   sliceLengthMm,
+  usableSliceLengthMm,
   angledWasteMm2,
+  sortedByAngle,
+  angledTransitionWasteMm,
   usageCount,
   nextPanelId,
 } from './panels'

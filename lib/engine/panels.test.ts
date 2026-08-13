@@ -103,7 +103,10 @@ describe('угловая арифметика', () => {
     expect(sliceLengthMm(slice)).toBeCloseTo(2 * 50, 9)
   })
 
-  it('angledWasteMm2 groups by distinct nonzero angle, not by cut count', () => {
+  it('angledWasteMm2 групирует резы по различному углу, но переходы между 2+ углами стоят дороже одного клина', () => {
+    // Резы сортируются по углу (-30 идёт первым): первый переход в сортированной
+    // последовательности - треугольник W^2*|tan|/2, второй (переход к другому углу) - вдвое
+    // дороже, W^2*|tan| (клин снимается уже с обеих сторон стыка настроек).
     const d = baseDesign({
       panels: [stripsPanel('A', ['walnut', 'maple'], 25)],
       rows: [
@@ -113,8 +116,75 @@ describe('угловая арифметика', () => {
       ],
     })
     const W = 50
-    // два различных угла (30 и -30), клин на каждый: W^2 * |tan| / 2
-    const expected = 2 * ((W * W * Math.abs(Math.tan((30 * Math.PI) / 180))) / 2)
+    const wedge = (W * W * Math.abs(Math.tan((30 * Math.PI) / 180))) / 2
+    const expected = wedge /* первый переход, index 0 */ + 2 * wedge /* второй переход, index 1 */
     expect(angledWasteMm2(d, 'A')).toBeCloseTo(expected, 9)
+  })
+
+  it('angledWasteMm2 при единственном ненулевом угле не меняется (регрессия): факторы 1/2 совпадают со старой формулой', () => {
+    const d = baseDesign({
+      panels: [stripsPanel('A', ['walnut', 'maple'], 25)],
+      rows: [
+        { id: 'r1', panelId: 'A', thicknessMm: 20, angleDeg: 30, flip: false, mirror: false, trimMm: 5 },
+        { id: 'r2', panelId: 'A', thicknessMm: 20, angleDeg: 30, flip: false, mirror: false, trimMm: 5 },
+      ],
+    })
+    const W = 50
+    const expected = (W * W * Math.abs(Math.tan((30 * Math.PI) / 180))) / 2
+    expect(angledWasteMm2(d, 'A')).toBeCloseTo(expected, 9)
+  })
+})
+
+describe('усадка формулы на chevron-classic (сид-точный контрольный кейс)', () => {
+  /**
+   * Панель INNER шаблона chevron-classic (lib/designs/templates.ts): 4 среза толщиной 70 мм,
+   * снятых с щита шириной 250 мм (10 полос по 25 мм), угол чередуется 45/-45/45/-45.
+   * kerf = GRID_KERF_MM = 3, планинг = GRID_ALLOWANCE_MM = 3, обрезка среза (SliceRef) = 0.
+   * Точные цифры выведены и перепроверены вручную в ревью задачи, см. PR/коммит.
+   */
+  function chevronClassicInner(): Design {
+    const innerPanel = {
+      id: 'INNER',
+      elements: Array.from({ length: 10 }, (_, i) => ({
+        kind: 'strip' as const,
+        speciesId: i % 2 === 0 ? ('walnut' as const) : ('maple' as const),
+        widthMm: 25,
+      })),
+    }
+    return baseDesign({
+      panels: [
+        innerPanel,
+        {
+          id: 'MAIN',
+          elements: [45, -45, 45, -45].map((angleDeg, index) => ({
+            kind: 'sliceRef' as const,
+            panelId: 'INNER',
+            thicknessMm: 70,
+            angleDeg,
+            offsetMm: index, // офсет тут не участвует в формуле длины/отхода, значение неважно
+          })),
+        },
+      ],
+      rows: [{ id: 'r1', panelId: 'MAIN', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+      kerfMm: 3,
+      planingAllowanceMm: 3,
+    })
+  }
+
+  it('endWaste (длина торцевых клиньев) = 750 мм при группировке резов по углу', () => {
+    const d = chevronClassicInner()
+    // сортировка: -45 первым (index 0, фактор 1) -> W*tan45 = 250; 45 вторым (index 1, фактор 2) -> 2*W*tan45 = 500
+    expect(250 * Math.abs(Math.tan((45 * Math.PI) / 180)) + 2 * 250 * Math.abs(Math.tan((45 * Math.PI) / 180))).toBeCloseTo(750, 9)
+    const slices = slicesOfPanel(d, 'INNER')
+    expect(slices).toHaveLength(4)
+    // Сама формула из panels.ts (через panelLengthMm) должна использовать это же значение отхода.
+    const cut = 4 * (70 + 3 + 0) * Math.SQRT2
+    const kerfSum = 3 * (4 - 1) * Math.SQRT2
+    expect(panelLengthMm(d, 'INNER')).toBeCloseTo(cut + kerfSum + 750, 6)
+  })
+
+  it('panelLengthMm(INNER) ≈ 1175.68 мм (сверено вручную по формуле)', () => {
+    const d = chevronClassicInner()
+    expect(panelLengthMm(d, 'INNER')).toBeCloseTo(1175.678, 2)
   })
 })
