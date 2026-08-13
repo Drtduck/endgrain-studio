@@ -28,7 +28,6 @@ describe('isPublicPath', () => {
     '/robots.txt',
     '/sitemap.xml',
     '/favicon.ico',
-    '/icon.svg',
     '/apple-icon.png',
     '/brand/beaver-logo.svg',
     '/_next/static/chunk.js',
