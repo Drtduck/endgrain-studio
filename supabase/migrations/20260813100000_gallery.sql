@@ -282,3 +282,7 @@ $$;
 
 revoke all on function public.published_project_design(uuid) from public;
 grant execute on function public.published_project_design(uuid) to anon, authenticated;
+
+-- Триггерную функцию нельзя вызвать через PostgREST RPC (returns trigger),
+-- но advisor Supabase ругается на executable-грант: снимаем его явно.
+revoke all on function public.bump_like_count() from public, anon, authenticated;
