@@ -123,9 +123,20 @@ end;
 $$;
 
 /*
- * Списание. Условие where balance_cents >= p_amount внутри update и есть весь смысл:
- * два параллельных запроса не могут оба увидеть 200 центов и оба уйти в генерацию.
- * Пустой returning значит «не хватило денег», и это не то же самое, что ошибка базы.
+ * Списание. Идёт по тому же приёму, что и wallet_topup: первым идёт insert
+ * в ledger с пометкой идемпотентности, и только потом двигается баланс.
+ * Раньше update шёл первым - при повторном вызове с тем же ref (двойной клик,
+ * ретрай после обрыва ответа) баланс списывался второй раз, а on conflict do
+ * nothing на insert прятал только дубль строки в ledger, а не сам двойной
+ * дебет. С insert-первым порядком повтор того же ref конфликтует раньше, чем
+ * баланс тронут, и функция просто возвращает текущий баланс без списания.
+ *
+ * Условие where balance_cents >= p_amount внутри update и есть вся защита от
+ * overdraft: два параллельных запроса с разными ref не могут оба увидеть 200
+ * центов и оба уйти в генерацию. Если денег не хватило, пометка идемпотентности
+ * удаляется - иначе ref навсегда остался бы «уже потрачен» без единого
+ * реального движения денег, и пополнивший баланс человек не смог бы повторить
+ * ту же попытку тем же ref.
  */
 create or replace function public.wallet_spend(
   p_user_id uuid,
@@ -144,18 +155,29 @@ begin
     return null;
   end if;
 
+  begin
+    insert into public.wallet_transactions (user_id, kind, amount_cents, balance_after, ref)
+    values (p_user_id, 'spend', -p_amount, 0, p_ref);
+  exception when unique_violation then
+    select balance_cents into v_balance from public.wallets where user_id = p_user_id;
+    return v_balance;
+  end;
+
   update public.wallets
      set balance_cents = balance_cents - p_amount
    where user_id = p_user_id and balance_cents >= p_amount
   returning balance_cents into v_balance;
 
   if v_balance is null then
+    -- Не хватило денег: пометка идемпотентности не должна пережить неудавшееся
+    -- списание, иначе ref будет «сожжён» без единого движения по кошельку.
+    delete from public.wallet_transactions where kind = 'spend' and ref = p_ref;
     return null;
   end if;
 
-  insert into public.wallet_transactions (user_id, kind, amount_cents, balance_after, ref)
-  values (p_user_id, 'spend', -p_amount, v_balance, p_ref)
-  on conflict (kind, ref) do nothing;
+  update public.wallet_transactions
+     set balance_after = v_balance
+   where kind = 'spend' and ref = p_ref;
 
   return v_balance;
 end;

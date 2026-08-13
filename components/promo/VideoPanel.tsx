@@ -22,8 +22,9 @@ const ERROR_KEYS: Readonly<Record<VideoError, MessageKey>> = {
 
 /**
  * Ролик из узора доски. Ключа FAL нет, поэтому генерация замокана: мок
- * возвращает постер-заглушку и списывает кошелёк ровно так, как списался бы
- * настоящий вызов. Гейт это баланс, не Pro: за ролик уже платят живыми деньгами.
+ * возвращает постер-заглушку бесплатно, кошелёк не трогается. Гейт это баланс,
+ * не Pro: за настоящий ролик уже платят живыми деньгами, требовать сверху Pro
+ * значило бы двойную плату за одно действие.
  */
 export function VideoPanel() {
   const locale = useStudio((s) => s.locale)
@@ -40,7 +41,10 @@ export function VideoPanel() {
     setResult(null)
     try {
       const boardPng = await boardPngDataUrl(model)
-      setResult(await generateVideoAction(seconds, boardPng))
+      // Один ref на попытку, сгенерирован здесь, а не внутри action: клиент
+      // единственный, кто знает, что это один и тот же клик, а не два разных.
+      const ref = crypto.randomUUID()
+      setResult(await generateVideoAction(seconds, boardPng, ref))
     } catch (err) {
       console.error(err)
       setResult({ ok: false, error: 'failed' })

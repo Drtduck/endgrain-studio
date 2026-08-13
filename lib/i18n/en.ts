@@ -760,7 +760,7 @@ const en: Record<keyof typeof ru, string> = {
   'video.busy': 'Generating',
   'video.generate': 'Generate for {cost}',
   'video.subtitle': 'A short product video from your board pattern. Costs {cost}, charged only on success.',
-  'video.mockNote': 'Demo mode: fal.ai key is not set, this is a placeholder frame, not a real video. The wallet was charged exactly as it would be for a real render.',
+  'video.mockNote': 'Demo mode: fal.ai key is not set, this is a placeholder frame, not a real video. The mock is free - your wallet was not charged.',
   'video.error.unauthenticated': 'Sign in to generate a video: it is paid from your wallet.',
   'video.error.insufficient': 'Not enough balance. Top up your wallet in the account panel.',
   'video.error.failed': 'Video generation failed, the charge was refunded.',

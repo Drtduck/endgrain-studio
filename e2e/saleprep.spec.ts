@@ -36,11 +36,13 @@ test('кнопка «Скопировать» кладёт текст в буф�
   expect(clipboardText).toBe(titleValue)
 })
 
-test('видео-панель списывает кошелёк только через мок и без ключа fal.ai', async ({ page }) => {
+// Без ключа fal.ai мок бесплатен (см. app/actions/video.ts): до кошелька дело
+// не доходит вовсе. Живой прогон с настоящим списанием требует Supabase и
+// аккаунта, здесь без ключей проверяем только гейт по входу.
+test('видео-панель недоступна без входа: кошелёк требует пользователя', async ({ page }) => {
   await page.goto('/')
   await page.getByTestId('tab-promo').click()
   await expect(page.getByTestId('promo-video')).toBeVisible()
-  // Без входа в аккаунт кнопка недоступна: кошелёк требует пользователя.
   await expect(page.getByTestId('video-gate')).toBeVisible()
   await expect(page.getByTestId('video-generate')).toBeDisabled()
 })

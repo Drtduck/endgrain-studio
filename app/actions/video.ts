@@ -1,6 +1,7 @@
 'use server'
 
-import { randomUUID } from 'node:crypto'
+import { z } from 'zod'
+import { readWallet } from '@/lib/wallet/server'
 import { getSupabaseService, isSupabaseServiceConfigured } from '@/lib/supabase/service'
 import { getCurrentUser } from '@/lib/supabase/session'
 import { isFalConfigured, requestVideo } from '@/lib/video/fal'
@@ -12,9 +13,11 @@ import { isVideoSeconds, videoCostCents, type VideoSeconds } from '@/lib/video/p
  * Pro значит взять двойную плату за одно действие). Требуется только вход
  * в аккаунт, без него нет и кошелька.
  *
- * Ключа FAL нет (FAL_API_KEY), поэтому генерация замокана: mockVideoJob
- * отдаёт заглушку без единого запроса наружу, а списание проходит только при
- * успехе мока - ровно так, как выглядело бы списание за настоящий ролик.
+ * Ключа FAL нет (см. lib/promo/config.FAL_KEY), поэтому генерация замокана:
+ * mockVideoJob отдаёт заглушку без единого запроса наружу. Демо-режим бесплатен -
+ * isFalConfigured() проверяется РАНЬШЕ wallet_spend, и на мок-ветке кошелёк не
+ * трогается вообще, только читается для отображения актуального баланса.
+ * Списание идёт исключительно на пути настоящей генерации.
  */
 
 export type VideoError = 'unauthenticated' | 'invalid' | 'insufficient' | 'unavailable' | 'failed'
@@ -24,15 +27,28 @@ export type VideoResult =
   | { readonly ok: true; readonly mock: false; readonly videoUrl: string; readonly posterUrl: string; readonly balanceCents: number }
   | { readonly ok: false; readonly error: VideoError }
 
+const refSchema = z.uuid()
+
 /** Заглушка мока: постер и «видео» это один и тот же кадр рендера доски, подписанный как демо. */
 function mockVideoJob(boardPng: string): { readonly videoUrl: string; readonly posterUrl: string } {
   return { videoUrl: boardPng, posterUrl: boardPng }
 }
 
-export async function generateVideoAction(seconds: unknown, boardPng: unknown): Promise<VideoResult> {
+/**
+ * ref это ключ идемпотентности списания и возможного возврата (см.
+ * wallet_spend в supabase/migrations/20260813110000_wallet.sql). Он обязан
+ * приходить от клиента и быть одним и тем же на всю попытку генерации:
+ * VideoPanel генерирует его один раз на клик по кнопке, а не здесь на каждый
+ * вызов action - иначе повторный вызов того же действия (ретрай после обрыва
+ * сети, до того как клиент увидел ответ) получал бы новый ref и списывал
+ * заново, и вся идемпотентность на стороне SQL была бы бесполезна.
+ */
+export async function generateVideoAction(seconds: unknown, boardPng: unknown, ref: unknown): Promise<VideoResult> {
   if (!isVideoSeconds(seconds) || typeof boardPng !== 'string' || boardPng.length === 0) {
     return { ok: false, error: 'invalid' }
   }
+  const parsedRef = refSchema.safeParse(ref)
+  if (!parsedRef.success) return { ok: false, error: 'invalid' }
   const duration: VideoSeconds = seconds
 
   const user = await getCurrentUser()
@@ -40,18 +56,23 @@ export async function generateVideoAction(seconds: unknown, boardPng: unknown): 
 
   if (!isSupabaseServiceConfigured()) return { ok: false, error: 'unavailable' }
 
+  // Демо-режим бесплатен: до кошелька дело не доходит вовсе, только читаем
+  // текущий баланс, чтобы кошелёк на экране не «замер» после мок-генерации.
+  if (!isFalConfigured()) {
+    const mock = mockVideoJob(boardPng)
+    const { balanceCents } = await readWallet(user.id)
+    return { ok: true, mock: true, videoUrl: mock.videoUrl, posterUrl: mock.posterUrl, balanceCents }
+  }
+
   const cost = videoCostCents(duration)
   if (cost === null) return { ok: false, error: 'invalid' }
 
-  // ref это ключ идемпотентности обоих движений (списание и возможный возврат):
-  // двойной клик по кнопке генерации не спишет дважды за одно и то же задание.
-  const ref = randomUUID()
   const sb = getSupabaseService()
 
   const { data: balanceAfterSpend, error: spendError } = await sb.rpc('wallet_spend', {
     p_user_id: user.id,
     p_amount: cost,
-    p_ref: ref,
+    p_ref: parsedRef.data,
   })
   if (spendError) {
     console.error('wallet_spend failed', spendError)
@@ -63,18 +84,13 @@ export async function generateVideoAction(seconds: unknown, boardPng: unknown): 
   }
   const balanceCents = Number(balanceAfterSpend)
 
-  if (!isFalConfigured()) {
-    const mock = mockVideoJob(boardPng)
-    return { ok: true, mock: true, videoUrl: mock.videoUrl, posterUrl: mock.posterUrl, balanceCents }
-  }
-
   const outcome = await requestVideo({ prompt: 'end-grain cutting board product video', seconds: duration, boardPng })
   if (outcome.ok) {
     return { ok: true, mock: false, videoUrl: outcome.videoUrl, posterUrl: outcome.posterUrl, balanceCents }
   }
 
   // Ролик не вышел вовсе: возвращаем списанное тем же ref, что и списание.
-  const { error: refundError } = await sb.rpc('wallet_refund', { p_user_id: user.id, p_amount: cost, p_ref: ref })
+  const { error: refundError } = await sb.rpc('wallet_refund', { p_user_id: user.id, p_amount: cost, p_ref: parsedRef.data })
   if (refundError) console.error('wallet_refund failed', refundError)
   return { ok: false, error: 'failed' }
 }
