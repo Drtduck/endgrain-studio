@@ -17,7 +17,7 @@ vi.mock('@/lib/supabase/browser', () => ({
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }))
 
 const assign = vi.fn()
-vi.mock('@/lib/routing/navigate', () => ({ assignLocation: (url: string) => assign(url) }))
+vi.mock('@/lib/routing/navigate', () => ({ hardNavigate: (url: string) => assign(url) }))
 
 function renderCta(locale: 'ru' | 'en' = 'ru') {
   return render(<AuthCta locale={locale} testId="landing-cta-hero" label="Начать" className="cta" />)
