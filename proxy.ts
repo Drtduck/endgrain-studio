@@ -34,6 +34,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     if (path === '/') return NextResponse.rewrite(new URL(LANDING_PATH, request.url))
     // Блог живёт на этом же домене вместе с лендингом (см. isSitePath).
     if (isSitePath(path)) return NextResponse.next()
+    // API отдаём прямо на корневом домене: MCP-клиент, вбивший endgrain.app/api/mcp,
+    // не обязан следовать 307-редиректу на POST (не все клиенты это делают), а
+    // человек, который набрал этот адрес руками, не должен получить невнятную
+    // ошибку. Роуты те же самые, приложение одно - разводить их незачем.
+    if (path.startsWith('/api/')) return NextResponse.rewrite(new URL(path + request.nextUrl.search, request.url))
     // Всё остальное на корневом домене это студия: отправляем на поддомен,
     // сохраняя путь и query (например ссылку восстановления пароля из письма).
     return NextResponse.redirect(new URL(path + request.nextUrl.search, APP_ORIGIN), 307)
@@ -44,6 +49,14 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   // вторую копию статьи по второму домену.
   if (role === 'app' && (path === LANDING_PATH || isBlogPath(path))) {
     return NextResponse.redirect(new URL(path, SITE_ORIGIN), 308)
+  }
+
+  // API-запросы агентов не несут cookie-сессию Supabase и не могут её нести:
+  // поход в updateSession на каждый вызов это лишние 50-150 мс и лишний запрос
+  // к базе без единой пользы. Проверка ключа (lib/api/auth.ts) не имеет с
+  // сессией ничего общего.
+  if (role === 'app' && (path.startsWith('/api/v1/') || path === '/api/mcp')) {
+    return NextResponse.next()
   }
 
   // Один поход в Supabase на переход: он же продлевает сессию, он же отвечает,

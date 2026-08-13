@@ -20,6 +20,9 @@ importers:
       '@mdx-js/react':
         specifier: ^3.1.1
         version: 3.1.1(@types/react@19.2.18)(react@19.2.8)
+      '@modelcontextprotocol/server':
+        specifier: 2.0.0
+        version: 2.0.0
       '@next/mdx':
         specifier: ^16.3.0
         version: 16.3.0(@mdx-js/loader@3.1.1)(@mdx-js/react@3.1.1(@types/react@19.2.18)(react@19.2.8))
@@ -59,6 +62,9 @@ importers:
       lz-string:
         specifier: ^1.5.0
         version: 1.5.0
+      mcp-handler:
+        specifier: 2.1.0
+        version: 2.1.0(@modelcontextprotocol/server@2.0.0)(next@16.3.0(@babel/core@7.29.7)(@playwright/test@1.62.1)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))
       next:
         specifier: 16.3.0
         version: 16.3.0(@babel/core@7.29.7)(@playwright/test@1.62.1)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -694,6 +700,10 @@ packages:
   '@mediapipe/tasks-vision@0.10.17':
     resolution: {integrity: sha512-CZWV/q6TTe8ta61cZXjfnnHsfWIdFhms03M9T7Cnd5y2mdpylJM0rF1qRq+wsQVRMLz1OYPVEBU9ph2Bx8cxrg==}
 
+  '@modelcontextprotocol/core@2.0.0':
+    resolution: {integrity: sha512-pJCEwGG7Lfr/+PQp9ZTwKXNeO5wzbfKL7H3MYpCorM4oFBoQrdjnBgEoqG+RjhsvS1FKrDbKux+M1HhlnGWqcA==}
+    engines: {node: '>=20'}
+
   '@modelcontextprotocol/sdk@1.30.0':
     resolution: {integrity: sha512-xKd8OIzlqNzcqcNumGAa6g+PW2kjD5vrpcKOnfldAUPP3j7lnqMPwlTXQm8gF+UwH72z0lqaRbjr9hqGz0eITA==}
     engines: {node: '>=18'}
@@ -703,6 +713,10 @@ packages:
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
+
+  '@modelcontextprotocol/server@2.0.0':
+    resolution: {integrity: sha512-YhHWdHfpFMQfd0prsEnxKeS3Qz3ytIGmsS0sth4KDjnacIT7hxk6hXHkJ9KysxlkvTM+WZAtQbbcUhdoP4Hvtw==}
+    engines: {node: '>=20'}
 
   '@monogrid/gainmap-js@3.4.0':
     resolution: {integrity: sha512-2Z0FATFHaoYJ8b+Y4y4Hgfn3FRFwuU5zRrk+9dFWp4uGAdHGqVEdP7HP+gLA3X469KXHmfupJaUbKo1b/aDKIg==}
@@ -3224,6 +3238,17 @@ packages:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
     engines: {node: '>= 0.4'}
 
+  mcp-handler@2.1.0:
+    resolution: {integrity: sha512-mhnUpkgWrXMwwhdbJ5Uq43uUV23Emxfq3fRfsFwt8Kjc35cGUiKuYeX9wjwnvsdTiKsmjXnQ4tO4awWa3ZM4LQ==}
+    engines: {node: '>=20'}
+    hasBin: true
+    peerDependencies:
+      '@modelcontextprotocol/server': ^2.0.0
+      next: '>=13.0.0'
+    peerDependenciesMeta:
+      next:
+        optional: true
+
   mdast-util-find-and-replace@3.0.2:
     resolution: {integrity: sha512-Tmd1Vg/m3Xz43afeNxDIhWRtFZgM2VLyaf4vSTYwudTyeuTneoL3qtWMA5jeLyz/O1vDJmmV4QuScFCA2tBPwg==}
 
@@ -5224,6 +5249,10 @@ snapshots:
 
   '@mediapipe/tasks-vision@0.10.17': {}
 
+  '@modelcontextprotocol/core@2.0.0':
+    dependencies:
+      zod: 4.4.3
+
   '@modelcontextprotocol/sdk@1.30.0(zod@3.25.76)':
     dependencies:
       '@hono/node-server': 2.1.0(hono@4.13.1)
@@ -5245,6 +5274,11 @@ snapshots:
       zod-to-json-schema: 3.25.2(zod@3.25.76)
     transitivePeerDependencies:
       - supports-color
+
+  '@modelcontextprotocol/server@2.0.0':
+    dependencies:
+      '@modelcontextprotocol/core': 2.0.0
+      zod: 4.4.3
 
   '@monogrid/gainmap-js@3.4.0(three@0.185.1)':
     dependencies:
@@ -7725,6 +7759,14 @@ snapshots:
   markdown-table@3.0.4: {}
 
   math-intrinsics@1.1.0: {}
+
+  mcp-handler@2.1.0(@modelcontextprotocol/server@2.0.0)(next@16.3.0(@babel/core@7.29.7)(@playwright/test@1.62.1)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)):
+    dependencies:
+      '@modelcontextprotocol/server': 2.0.0
+      chalk: 5.6.2
+      commander: 11.1.0
+    optionalDependencies:
+      next: 16.3.0(@babel/core@7.29.7)(@playwright/test@1.62.1)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
 
   mdast-util-find-and-replace@3.0.2:
     dependencies:

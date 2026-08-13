@@ -23,12 +23,16 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }))
 
+const updateProject = vi.fn()
+vi.mock('@/lib/api/service', () => ({ updateProject }))
+
 describe('app/actions/projects', () => {
   beforeEach(() => {
     configured = true
     pro = true
     getUser.mockReset()
     from.mockReset()
+    updateProject.mockReset()
   })
 
   it('без пользователя каждая функция даёт unauthenticated и не зовёт from()', async () => {
@@ -141,5 +145,30 @@ describe('app/actions/projects', () => {
     const { loadProjectAction } = await import('./projects')
     const res = await loadProjectAction('11111111-1111-4111-8111-111111111111')
     expect(res).toEqual({ ok: false, error: 'notFound' })
+  })
+
+  it('updateProjectAction без пользователя даёт unauthenticated и не зовёт сервис', async () => {
+    getUser.mockResolvedValue({ data: { user: null } })
+    const { updateProjectAction } = await import('./projects')
+    const res = await updateProjectAction('11111111-1111-1111-1111-111111111111', { name: 'новое' })
+    expect(res).toEqual({ ok: false, error: 'unauthenticated' })
+    expect(updateProject).not.toHaveBeenCalled()
+  })
+
+  it('updateProjectAction передаёт userId из сессии в сервис и возвращает его результат как есть', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
+    updateProject.mockResolvedValue({ ok: true, data: { id: 'proj-1', name: 'новое', updatedAt: '2026-01-01T00:00:00.000Z' } })
+    const { updateProjectAction } = await import('./projects')
+    const res = await updateProjectAction('proj-1', { name: 'новое' })
+    expect(updateProject).toHaveBeenCalledWith('user-1', 'proj-1', { name: 'новое' })
+    expect(res).toEqual({ ok: true, data: { id: 'proj-1', name: 'новое', updatedAt: '2026-01-01T00:00:00.000Z' } })
+  })
+
+  it('updateProjectAction сужает ошибки сервиса, которых у server action быть не может, до failed', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
+    updateProject.mockResolvedValue({ ok: false, error: 'rateLimited' })
+    const { updateProjectAction } = await import('./projects')
+    const res = await updateProjectAction('proj-1', { name: 'новое' })
+    expect(res).toEqual({ ok: false, error: 'failed' })
   })
 })
