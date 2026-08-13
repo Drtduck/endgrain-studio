@@ -21,8 +21,8 @@ export function buildLlmsTxt(posts: readonly PostMeta[]): string {
   const productLines = [
     '## Продукт',
     '',
-    `- [Endgrain Studio](${siteUrl('/')}): что делает инструмент и для кого`,
-    `- [Студия](${appUrl('/')}): редактор узора, расчёты и экспорт`,
+    `- [Endgrain Studio](${siteUrl()}): что делает инструмент и для кого`,
+    `- [Студия](${appUrl()}): редактор узора, расчёты и экспорт`,
     `- [Тарифы](${appUrl('/pricing')}): Free и Pro, что входит в каждый`,
   ].join('\n')
 
