@@ -1,4 +1,6 @@
-export const SCHEMA_VERSION = 2 as const
+import type { Pt } from './geometry'
+
+export const SCHEMA_VERSION = 3 as const
 
 export type SpeciesId = string
 export type PanelId = string
@@ -19,6 +21,8 @@ export interface SliceRef {
   readonly angleDeg: number
   /** Сдвиг рисунка вложенной панели вдоль длины доски, мм. Даёт herringbone и tumbling blocks. */
   readonly offsetMm: number
+  /** Зеркалит порядок полос внутри среза. Даёт чередование для шеврона и ромба. */
+  readonly flip?: boolean
 }
 
 export type PanelElement = Strip | SliceRef
@@ -75,10 +79,18 @@ export interface CellOrigin {
 
 export interface Cell {
   readonly id: string
+  /** Габаритный бокс ячейки. Для прямого реза совпадает с самой ячейкой. */
   readonly xMm: number
   readonly yMm: number
   readonly widthMm: number
   readonly heightMm: number
+  /**
+   * Точная геометрия ячейки под угловым резом, выпуклый многоугольник из 3-6 вершин, обход
+   * по часовой стрелке в экранных координатах. `undefined` значит «ячейка это в точности её
+   * bbox» - это правило, единое для всех потребителей: ветка кода для undefined остаётся
+   * прямоугольной и нетронутой, новая ветка для полигона пишется рядом.
+   */
+  readonly poly?: readonly Pt[]
   readonly speciesId: SpeciesId
   readonly grain: 'end'
   readonly origin: CellOrigin
@@ -107,7 +119,10 @@ export type DiagnosticCode =
   | 'EMPTY_PANEL'
   | 'DIMENSION_SANITY'
   | 'RAGGED_BOARD'
-  | 'ANGLE_UNSUPPORTED'
+  | 'ANGLE_ROW_UNSUPPORTED'
+  | 'ANGLE_RANGE'
+  | 'ANGLE_WASTE'
+  | 'SLICE_TOO_SHORT'
   | 'SHRINKAGE_MISMATCH'
   | 'CELL_BUDGET'
   | 'UNKNOWN_SPECIES'
@@ -132,9 +147,15 @@ export interface PanelSlice {
   readonly thicknessMm: number
   readonly trimMm: number
   readonly angleDeg: number
+  /** Ширина щита, с которого снимается срез, мм. Нужна и панельной арифметике, и cutlist. */
+  readonly sourceWidthMm: number
   readonly consumer: { readonly kind: 'row'; readonly rowId: RowId } | { readonly kind: 'sliceRef'; readonly panelId: PanelId; readonly elementIndex: number }
 }
 
+/** Наибольший допустимый угол реза SliceRef, градусов. Row.angleDeg остаётся заблокирован на 0. */
+export const MAX_SLICE_ANGLE_DEG = 60
+/** Порог отхода на угловые клинья в проценте площади щита, за которым выдаётся ANGLE_WASTE. */
+export const ANGLE_WASTE_WARN_PCT = 25
 export const MIN_STRIP_WIDTH_MM = 4
 export const DEFAULT_PLANER_WIDTH_MM = 330
 export const MIN_PLANING_ALLOWANCE_MM = 3

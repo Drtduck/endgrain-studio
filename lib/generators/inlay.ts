@@ -1,5 +1,6 @@
 import {
   DEFAULT_PLANER_WIDTH_MM,
+  SCHEMA_VERSION,
   type Design,
   type Panel,
   type Row,
@@ -73,7 +74,7 @@ export function inlayDesign(genome: Genome): Design {
   const species = [...used].sort((a, b) => (SPECIES_ORDER.get(a) ?? 0) - (SPECIES_ORDER.get(b) ?? 0))
 
   return {
-    schemaVersion: 2,
+    schemaVersion: SCHEMA_VERSION,
     id: `gen-inlay-${genomeKey(genome).length}-${genome.seed}`,
     name: '',
     nameKey: 'gen.designName.inlay',

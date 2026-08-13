@@ -1,4 +1,4 @@
-import { GEOM_EPS_MM } from './types'
+import { GEOM_EPS_MM, type Cell } from './types'
 
 /** Точка на плоскости, мм. Экранные координаты: x вправо, y вниз. */
 export type Pt = readonly [number, number]
@@ -141,4 +141,13 @@ export function polygonsOverlapMm2(a: readonly Pt[], b: readonly Pt[]): number {
     result = clipHalfPlane(result, pl.a, pl.b, pl.cc)
   }
   return polygonAreaMm2(result)
+}
+
+/**
+ * Единственная точка входа для потребителей `model.cells`: `cell.poly === undefined` значит
+ * «ячейка это в точности её bbox», и здесь это разворачивается в прямоугольник. Угловые
+ * ячейки возвращают свой полигон как есть.
+ */
+export function cellPolygon(cell: Cell): readonly Pt[] {
+  return cell.poly ?? rectPoly(cell.xMm, cell.yMm, cell.widthMm, cell.heightMm)
 }

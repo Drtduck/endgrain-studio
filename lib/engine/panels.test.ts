@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { Design, Panel } from './types'
+import { SCHEMA_VERSION, type Design, type Panel } from './types'
 import { elementExtentMm, getPanel, panelWidthMm, slicesOfPanel, panelLengthMm } from './panels'
 import { EngineError } from './errors'
 
@@ -12,7 +12,7 @@ const panelA: Panel = {
 }
 
 const design: Design = {
-  schemaVersion: 2,
+  schemaVersion: SCHEMA_VERSION,
   id: 'd1',
   name: 'тест',
   species: ['walnut', 'maple'],

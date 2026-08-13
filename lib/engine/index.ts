@@ -2,6 +2,17 @@ export { ENGINE_VERSION } from './version'
 export * from './types'
 export { EngineError, type EngineErrorCode } from './errors'
 export {
+  clipHalfPlane,
+  polygonAreaMm2,
+  polygonBbox,
+  rectPoly,
+  insetConvex,
+  polygonsOverlapMm2,
+  cellPolygon,
+  type Pt,
+  type PolyBbox,
+} from './geometry'
+export {
   isStrip,
   isSliceRef,
   elementExtentMm,

@@ -1,7 +1,7 @@
 import type { Design, Panel, Row, SpeciesId } from '@/lib/engine'
 import type { MessageKey } from '@/lib/i18n'
 import { GRID_ALLOWANCE_MM, GRID_KERF_MM, GRID_THICKNESS_MM, GRID_TRIM_MM, hash2, makeGridDesign, pick, uniform } from './grid'
-import { DEFAULT_PLANER_WIDTH_MM } from '@/lib/engine'
+import { DEFAULT_PLANER_WIDTH_MM, SCHEMA_VERSION } from '@/lib/engine'
 
 export type TemplateGroup = 'checkerboard' | 'brick' | 'stripes' | 'chess' | 'special'
 
@@ -238,7 +238,7 @@ export function makeInlayBand(): Design {
   }))
 
   return {
-    schemaVersion: 2,
+    schemaVersion: SCHEMA_VERSION,
     id: 'inlay-band',
     name: '',
     nameKey: 'tpl.inlay-band',
