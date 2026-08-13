@@ -21,6 +21,8 @@ export interface AiGateView {
   readonly params: Record<string, number>
   /** Показывать ли ссылку на тарифы: она уместна ровно во free-состоянии. */
   readonly showPricing: boolean
+  /** Показывать ли карточку TrialPaywall вместо панели: пробные генерации кончились. */
+  readonly showPaywall: boolean
   readonly access: AiAccess
 }
 
@@ -37,17 +39,23 @@ export function useAiGate(remainingOverride: number | null = null): AiGateView {
   switch (ai.state) {
     case 'mock':
       // Ключей нет, всё на локальных заглушках: замка не за что вешать.
-      return { locked: false, noteKey: null, params, showPricing: false, access: ai }
+      return { locked: false, noteKey: null, params, showPricing: false, showPaywall: false, access: ai }
     case 'unavailable':
-      return { locked: true, noteKey: 'ai.gate.unavailable', params, showPricing: false, access: ai }
+      return { locked: true, noteKey: 'ai.gate.unavailable', params, showPricing: false, showPaywall: false, access: ai }
     case 'anonymous':
-      return { locked: true, noteKey: 'ai.gate.anonymous', params, showPricing: false, access: ai }
+      return { locked: true, noteKey: 'ai.gate.anonymous', params, showPricing: false, showPaywall: false, access: ai }
     case 'free':
-      return { locked: true, noteKey: 'ai.gate.free', params, showPricing: true, access: ai }
+      return { locked: true, noteKey: 'ai.gate.free', params, showPricing: true, showPaywall: false, access: ai }
+    case 'trial':
+      // Не заперто: пробные генерации ещё есть, кнопка активна, счётчик под ней.
+      return { locked: false, noteKey: 'ai.trial.left', params, showPricing: false, showPaywall: false, access: ai }
+    case 'trialSpent':
+      // Заперто, и вместо строки-замка панель рисует TrialPaywall целиком.
+      return { locked: true, noteKey: 'ai.gate.trialSpent', params, showPricing: false, showPaywall: true, access: ai }
     case 'pro':
       return remaining <= 0
-        ? { locked: true, noteKey: 'ai.gate.quota', params, showPricing: false, access: ai }
-        : { locked: false, noteKey: 'ai.quota', params, showPricing: false, access: ai }
+        ? { locked: true, noteKey: 'ai.gate.quota', params, showPricing: false, showPaywall: false, access: ai }
+        : { locked: false, noteKey: 'ai.quota', params, showPricing: false, showPaywall: false, access: ai }
   }
 }
 

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { HelpHint } from '@/components/ui/help-hint'
 import { AiGateNote, useAiGate } from '@/components/promo/AiGate'
 import { PromoMockShot } from '@/components/promo/PromoMockShot'
+import { TrialPaywall } from '@/components/promo/TrialPaywall'
 import { boardPngDataUrl } from '@/components/promo/boardPng'
 import { aiCost } from '@/lib/ai/quota'
 import { safeFileName } from '@/lib/export'
@@ -30,6 +31,10 @@ export function PhotoSeries() {
   // Остаток квоты после последней генерации: сервер возвращает его в ответе.
   const [remaining, setRemaining] = useState<number | null>(null)
   const gate = useAiGate(remaining)
+  // Во free-тире серия режется до одного кадра ещё на сервере: чипы отражают
+  // это здесь, а не только после отказа - выбрать второй кадр вместо первого
+  // можно, набрать оба сразу нельзя.
+  const trialMode = gate.access.state === 'trial'
 
   const cost = aiCost('promoShots', selected.length)
   const imageByKind = new Map<PromoShotKind, string>(
@@ -41,7 +46,11 @@ export function PhotoSeries() {
     result === null || !result.ok ? 'idle' : result.mock ? 'needKey' : 'ready'
 
   const toggle = (kind: PromoShotKind): void => {
-    setSelected((prev) => (prev.includes(kind) ? prev.filter((k) => k !== kind) : [...prev, kind]))
+    setSelected((prev) => {
+      if (prev.includes(kind)) return prev.filter((k) => k !== kind)
+      // Пробный тир: второй отмеченный кадр заменяет первый, а не добавляется к нему.
+      return trialMode ? [kind] : [...prev, kind]
+    })
   }
 
   const run = async (): Promise<void> => {
@@ -100,17 +109,22 @@ export function PhotoSeries() {
         <div className="flex flex-wrap gap-2">
           {PROMO_SHOT_META.map((shot) => {
             const on = selected.includes(shot.kind)
+            // Пробный тир позволяет отметить ровно один кадр: остальные чипы
+            // неактивны, пока текущий выбор не снят.
+            const disabled = trialMode && !on && selected.length > 0
             return (
               <button
                 key={shot.kind}
                 type="button"
                 data-testid={`promo-preset-${shot.kind}`}
                 aria-pressed={on}
+                disabled={disabled}
+                title={disabled ? t(locale, 'ai.trial.oneShot') : undefined}
                 onClick={() => { toggle(shot.kind) }}
                 className={
                   on
                     ? 'flex items-center gap-1.5 rounded-full border border-accent bg-accent/10 px-3 py-1.5 text-[13px] font-semibold text-accent'
-                    : 'flex items-center gap-1.5 rounded-full border border-line-subtle bg-surface-raised px-3 py-1.5 text-[13px] text-ink-secondary hover:border-line'
+                    : 'flex items-center gap-1.5 rounded-full border border-line-subtle bg-surface-raised px-3 py-1.5 text-[13px] text-ink-secondary hover:border-line disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line-subtle'
                 }
               >
                 {on ? <Check aria-hidden className="size-3.5 shrink-0" /> : null}
@@ -126,7 +140,7 @@ export function PhotoSeries() {
         </p>
       </fieldset>
 
-      <AiGateNote gate={gate} locale={locale} testId="promo-gate" />
+      {gate.showPaywall ? <TrialPaywall locale={locale} /> : <AiGateNote gate={gate} locale={locale} testId="promo-gate" />}
 
       {result !== null && !result.ok ? (
         <p
