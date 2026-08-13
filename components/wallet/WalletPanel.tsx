@@ -68,7 +68,7 @@ export function WalletPanel({ locale }: { readonly locale: Locale }) {
         <h3 className="text-sm font-semibold">{t(locale, 'wallet.title')}</h3>
         <div className="flex-1" />
         <span data-testid="wallet-balance" className="font-mono text-base font-semibold tabular-nums">
-          {loaded ? formatCents(wallet.balanceCents, locale) : '—'}
+          {loaded ? formatCents(wallet.balanceCents, locale) : '-'}
         </span>
       </div>
 
