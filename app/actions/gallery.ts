@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { compile } from '@/lib/engine'
+import { getPublishedProjectDesign } from '@/lib/gallery/list'
 import { PRICE_MAX_CENTS, parsePriceInput } from '@/lib/gallery/price'
 import { buildSummary } from '@/lib/gallery/summary'
 import type { GalleryError } from '@/lib/gallery/types'
@@ -200,9 +201,12 @@ export async function copyPublishedAction(publishedId: string): Promise<ActionRe
 
   const sb = await getSupabaseServer()
 
+  // design больше не читается прямым select-ом: колонка закрыта column-grant'ом
+  // в published_projects (миграция 20260813100000), title/price_cents остаются
+  // доступны обычным select-ом под собственной RLS-политикой.
   const { data: published, error: readError } = await sb
     .from('published_projects')
-    .select('title, design, price_cents')
+    .select('title, price_cents')
     .eq('id', publishedId)
     .maybeSingle()
   if (readError) return { ok: false, error: 'failed' }
@@ -217,7 +221,7 @@ export async function copyPublishedAction(publishedId: string): Promise<ActionRe
       .eq('status', 'paid')
       .maybeSingle()
     if (purchaseError) return { ok: false, error: 'failed' }
-    if (!purchase) return { ok: false, error: 'alreadyOwned' }
+    if (!purchase) return { ok: false, error: 'needsPurchase' }
   }
 
   const { pro } = await getProStatus()
@@ -227,12 +231,11 @@ export async function copyPublishedAction(publishedId: string): Promise<ActionRe
     if ((count ?? 0) >= FREE_PROJECT_LIMIT) return { ok: false, error: 'limit' }
   }
 
-  let design
-  try {
-    design = parseDesign(published.design)
-  } catch {
-    return { ok: false, error: 'invalid' }
-  }
+  // Единственный путь к design: published_project_design сама повторяет
+  // проверку price_cents = 0 / покупки / авторства на стороне базы - защита не
+  // держится только на проверке purchase чуть выше в этом же файле.
+  const design = await getPublishedProjectDesign(publishedId)
+  if (design === null) return { ok: false, error: 'needsPurchase' }
 
   const { data: inserted, error: insertError } = await sb
     .from('projects')

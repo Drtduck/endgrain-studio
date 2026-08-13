@@ -1,10 +1,11 @@
-import type { Design } from '@/lib/engine'
-
 /**
- * Чистые типы галереи. GalleryCard несёт design (нужен для SSR-превью SVG
- * прямо в серверном компоненте карточки), поэтому используется только на
- * сервере: клиентские компоненты (LikeButton, CopyToMyProjects) принимают
- * только id и то, что реально показывают в интерфейсе, а не весь снапшот.
+ * Чистые типы галереи. GalleryCard больше не несёт design: колонка design
+ * закрыта column-grant'ом в published_projects (см. миграцию 20260813100000)
+ * от anon и authenticated целиком, а список карточек читается тем же
+ * user-context клиентом, что и всё остальное. Карточке хватает summary для
+ * превью-плейсхолдера; полный design достаётся только через серверную
+ * функцию published_project_design (lib/gallery/list.ts:getPublishedProjectDesign),
+ * с проверкой price_cents = 0, авторства или покупки.
  */
 
 export type GallerySort = 'new' | 'popular'
@@ -18,7 +19,7 @@ export const GALLERY_MAX_PAGE = 10
 /** Выше стольки ячеек карточка рисует упрощённый плейсхолдер, а не полный SVG. */
 export const GALLERY_CELL_LIMIT = 2000
 
-export type GalleryError = 'unauthenticated' | 'invalid' | 'notFound' | 'failed' | 'limit' | 'alreadyOwned'
+export type GalleryError = 'unauthenticated' | 'invalid' | 'notFound' | 'failed' | 'limit' | 'needsPurchase'
 
 export interface GallerySummary {
   readonly widthMm: number
@@ -40,8 +41,6 @@ export interface GalleryCard {
   readonly status: 'public' | 'unlisted' | 'removed'
   readonly summary: GallerySummary
   readonly createdAt: string
-  /** Снапшот документа. Только для серверного рендера превью, на клиента не уезжает. */
-  readonly design: Design
 }
 
 export interface GalleryPage {

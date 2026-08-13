@@ -7,11 +7,10 @@ import { PriceBadge } from '@/components/gallery/PriceBadge'
 import { Button } from '@/components/ui/button'
 import { compile } from '@/lib/engine'
 import { renderBoardSvg } from '@/lib/export'
-import { getPublishedProject, hasLiked } from '@/lib/gallery/list'
+import { getPublishedProject, getPublishedProjectDesign, hasLiked } from '@/lib/gallery/list'
 import { parseSummary, speciesDisplayNames } from '@/lib/gallery/summary'
 import { t } from '@/lib/i18n'
 import { getLandingLocale } from '@/lib/landing/locale'
-import { parseDesign } from '@/lib/persist'
 import { getCurrentUser } from '@/lib/supabase/session'
 
 const PROJECT_PX = 720
@@ -29,11 +28,19 @@ export default async function GalleryProjectPage(props: PageProps<'/gallery/[id]
   if (row === null || row.status === 'removed') notFound()
 
   const summary = parseSummary(row.summary)
+  // Полный design - только отсюда: getPublishedProjectDesign зовёт security
+  // definer функцию published_project_design, которая сама возвращает null для
+  // платной работы без покупки. Анониму и не купившему design никогда не
+  // достаётся, значит и превью для них честно пустое - ровно как раньше вело
+  // себя состояние «без Supabase».
+  const design = await getPublishedProjectDesign(row.id)
   let previewSvg = ''
-  try {
-    previewSvg = renderBoardSvg(compile(parseDesign(row.design)), { maxPx: PROJECT_PX }).svg
-  } catch {
-    previewSvg = ''
+  if (design !== null) {
+    try {
+      previewSvg = renderBoardSvg(compile(design), { maxPx: PROJECT_PX }).svg
+    } catch {
+      previewSvg = ''
+    }
   }
   const species = summary === null ? [] : speciesDisplayNames(summary.species, locale)
   const liked = user === null ? false : await hasLiked(user.id, row.id)

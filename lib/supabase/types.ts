@@ -19,12 +19,16 @@ export interface ProjectSummary {
 }
 
 /** Строка public.published_projects. */
+/**
+ * design сознательно не входит в эту строку: колонка закрыта column-grant'ом
+ * (миграция 20260813100000) от anon и authenticated, обычный select её не
+ * вернёт. Полный design - через getPublishedProjectDesign в lib/gallery/list.ts.
+ */
 export interface PublishedProjectRow {
   readonly id: string
   readonly author_id: string
   readonly source_project_id: string | null
   readonly title: string
-  readonly design: Design
   readonly summary: GallerySummary
   readonly price_cents: number
   readonly currency: string

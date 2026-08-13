@@ -90,6 +90,24 @@ create policy published_delete_own on public.published_projects
 revoke update on public.published_projects from authenticated;
 grant update (title, price_cents, status) on public.published_projects to authenticated;
 
+/*
+ * design это полноценный товар платной публикации, а не деталь оформления:
+ * RLS выше проверяет только строки (видна ли публикация вообще), а не колонки,
+ * поэтому анонимный или чужой authenticated-клиент с обычным ключом мог
+ * запросить design платной работы напрямую через PostgREST/Supabase-клиент,
+ * даже не заходя на страницу и не покупая доску. Прячем колонку тем же
+ * приёмом, что и update строкой выше: полный revoke select, затем явный
+ * список колонок без design.
+ */
+revoke select on public.published_projects from anon, authenticated;
+grant select (
+  id, author_id, source_project_id, title, summary,
+  price_cents, currency, likes_count, saves_count, status,
+  created_at, updated_at
+) on public.published_projects to anon, authenticated;
+-- Единственный путь к самому design теперь - published_project_design() в самом
+-- низу файла: определена после project_purchases, на которую ссылается.
+
 -- Лайки. Составной первичный ключ и есть защита от двойного лайка: повторный
 -- insert падает на конфликте, а не удваивает счётчик.
 create table if not exists public.project_likes (
@@ -217,3 +235,50 @@ $$;
 
 revoke all on function public.bump_save_count(uuid) from public, anon;
 grant execute on function public.bump_save_count(uuid) to authenticated, service_role;
+
+/*
+ * Единственный путь к полному design: бесплатной работе (price_cents = 0),
+ * автору или покупателю. security definer обязателен - design закрыт
+ * column-grant'ом на published_projects от anon и authenticated целиком
+ * (см. выше), обычная функция упала бы на правах ровно как bump_like_count
+ * упала бы без него.
+ */
+create or replace function public.published_project_design(p_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_price  integer;
+  v_author uuid;
+  v_status text;
+  v_design jsonb;
+  v_uid    uuid := auth.uid();
+begin
+  select price_cents, author_id, status, design
+    into v_price, v_author, v_status, v_design
+    from public.published_projects
+   where id = p_id;
+
+  if v_design is null or v_status = 'removed' then
+    return null;
+  end if;
+
+  if v_price = 0 or v_author = v_uid then
+    return v_design;
+  end if;
+
+  if v_uid is not null and exists (
+    select 1 from public.project_purchases
+     where published_id = p_id and buyer_id = v_uid and status = 'paid'
+  ) then
+    return v_design;
+  end if;
+
+  return null;
+end;
+$$;
+
+revoke all on function public.published_project_design(uuid) from public;
+grant execute on function public.published_project_design(uuid) to anon, authenticated;

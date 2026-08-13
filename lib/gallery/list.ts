@@ -1,4 +1,5 @@
 import 'server-only'
+import type { Design } from '@/lib/engine'
 import { parseDesign } from '@/lib/persist'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { getSupabaseServer } from '@/lib/supabase/server'
@@ -7,7 +8,11 @@ import { parseSummary } from './summary'
 import { GALLERY_PAGE_SIZE, type GalleryCard, type GalleryPage, type GallerySort } from './types'
 import { galleryOffset } from './query'
 
-const CARD_COLUMNS = 'id, author_id, title, price_cents, currency, likes_count, saves_count, status, summary, design, created_at'
+// design здесь сознательно не читается: колонка закрыта column-grant'ом в
+// published_projects (миграция 20260813100000) от anon и authenticated, обычный
+// select design через этот же клиент просто не вернул бы значение. Карточке
+// summary хватает; полный design - через getPublishedProjectDesign ниже.
+const CARD_COLUMNS = 'id, author_id, title, price_cents, currency, likes_count, saves_count, status, summary, created_at'
 
 interface CardRow {
   readonly id: unknown
@@ -19,24 +24,17 @@ interface CardRow {
   readonly saves_count: unknown
   readonly status: unknown
   readonly summary: unknown
-  readonly design: unknown
   readonly created_at: unknown
 }
 
 /**
- * Битая строка (не проходит parseSummary или parseDesign) молча выпадает из
- * ленты, а не роняет всю страницу: одна испорченная публикация не должна
- * положить галерею целиком.
+ * Битая строка (не проходит parseSummary) молча выпадает из ленты, а не
+ * роняет всю страницу: одна испорченная публикация не должна положить
+ * галерею целиком.
  */
 function toCard(row: CardRow): GalleryCard | null {
   const summary = parseSummary(row.summary)
   if (summary === null) return null
-  let design
-  try {
-    design = parseDesign(row.design)
-  } catch {
-    return null
-  }
   return {
     id: String(row.id),
     authorId: String(row.author_id),
@@ -47,7 +45,6 @@ function toCard(row: CardRow): GalleryCard | null {
     savesCount: Number(row.saves_count),
     status: row.status as GalleryCard['status'],
     summary,
-    design,
     createdAt: String(row.created_at),
   }
 }
@@ -88,16 +85,43 @@ export async function listGallery(sort: GallerySort, page: number): Promise<Gall
   }
 }
 
-/** Полная запись публикации: страница проекта и превью в полном размере. */
+const PROJECT_COLUMNS =
+  'id, author_id, source_project_id, title, summary, price_cents, currency, likes_count, saves_count, status, created_at, updated_at'
+
+/**
+ * Запись публикации без design (страница проекта, витрина). design не входит
+ * в select('*') - явный список колонок и без него, потому что колонка закрыта
+ * column-grant'ом (см. миграцию 20260813100000): select('*') по нему просто
+ * молча вернул бы строку без этого поля, явный список читается яснее.
+ */
 export async function getPublishedProject(id: string): Promise<PublishedProjectRow | null> {
   if (!isSupabaseConfigured()) return null
   try {
     const sb = await getSupabaseServer()
-    const { data, error } = await sb.from('published_projects').select('*').eq('id', id).maybeSingle()
+    const { data, error } = await sb.from('published_projects').select(PROJECT_COLUMNS).eq('id', id).maybeSingle()
     if (error || !data) return null
-    return data as PublishedProjectRow
+    return data as unknown as PublishedProjectRow
   } catch (err) {
     console.error('getPublishedProject failed', err)
+    return null
+  }
+}
+
+/**
+ * Полный design публикации: единственный путь - security definer функция
+ * published_project_design (та же миграция), которая сама проверяет
+ * price_cents = 0, авторство или оплаченную покупку и возвращает null иначе.
+ * Здесь только парсинг снапшота, чтобы битый JSON не уронил страницу.
+ */
+export async function getPublishedProjectDesign(id: string): Promise<Design | null> {
+  if (!isSupabaseConfigured()) return null
+  try {
+    const sb = await getSupabaseServer()
+    const { data, error } = await sb.rpc('published_project_design', { p_id: id })
+    if (error || data === null || data === undefined) return null
+    return parseDesign(data)
+  } catch (err) {
+    console.error('getPublishedProjectDesign failed', err)
     return null
   }
 }
