@@ -1,8 +1,19 @@
 import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
-import { colBandsMm, compile, rowBandsMm } from '@/lib/engine'
+import { baseDesign, colBandsMm, compile, rowBandsMm, stripsPanel } from '@/lib/engine'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import { BoardSvg } from './BoardSvg'
+
+/** Панель P с одним угловым SliceRef на Q, вклеенным как единственная колонка ряда r1. */
+function angledDesign() {
+  return baseDesign({
+    panels: [
+      stripsPanel('Q', ['walnut', 'maple'], 12),
+      { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 10, angleDeg: 30, offsetMm: 0 }] },
+    ],
+    rows: [{ id: 'r1', panelId: 'P', thicknessMm: 12, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+  })
+}
 
 describe('BoardSvg', () => {
   it('renders one rect per cell with the species colour', () => {
@@ -117,5 +128,41 @@ describe('BoardSvg', () => {
       <BoardSvg model={model} locale="ru" touchedCellIds={new Set(['r0:0'])} />,
     )
     expect(container.querySelectorAll('[data-testid="cell-untouched"]')).toHaveLength(model.cells.length - 1)
+  })
+
+  it('прямой узор рисуется только rect, без единого polygon', () => {
+    const model = compile(makeCheckerboard({ cols: 2, rows: 2 }))
+    const { container } = render(<BoardSvg model={model} locale="ru" />)
+    expect(container.querySelectorAll('rect[data-cell]')).toHaveLength(model.cells.length)
+    expect(container.querySelectorAll('polygon[data-cell]')).toHaveLength(0)
+  })
+
+  it('угловой узор рисует ячейки с poly через polygon, а не rect', () => {
+    const model = compile(angledDesign())
+    expect(model.cells.some((c) => c.poly !== undefined)).toBe(true)
+    const { container } = render(<BoardSvg model={model} locale="ru" />)
+    const polygons = container.querySelectorAll('polygon[data-cell]')
+    const rects = container.querySelectorAll('rect[data-cell]')
+    expect(polygons.length).toBe(model.cells.length)
+    expect(rects.length).toBe(0)
+    for (const p of polygons) {
+      const points = p.getAttribute('points') ?? ''
+      const coords = points.trim().split(/\s+/).filter(Boolean)
+      expect(coords.length).toBeGreaterThanOrEqual(3)
+      for (const pair of coords) {
+        const [x, y] = pair.split(',').map(Number)
+        expect(Number.isFinite(x)).toBe(true)
+        expect(Number.isFinite(y)).toBe(true)
+      }
+    }
+  })
+
+  it('угловая ячейка обводится выделением так же, как прямая', () => {
+    const model = compile(angledDesign())
+    const firstId = model.cells[0]?.id
+    expect(firstId).toBeDefined()
+    const { container } = render(<BoardSvg model={model} locale="ru" selectedCellId={firstId ?? null} />)
+    const polygon = container.querySelector(`polygon[data-cell="${firstId}"]`)
+    expect(polygon?.getAttribute('stroke')).toBe('var(--selection)')
   })
 })

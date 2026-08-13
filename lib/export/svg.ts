@@ -1,4 +1,4 @@
-import type { BoardModel, ColBand, RowBand } from '@/lib/engine'
+import { cellPolygon, type BoardModel, type ColBand, type RowBand } from '@/lib/engine'
 import { boardLayout } from '@/lib/render2d/layout'
 import { speciesHex } from '@/lib/species'
 
@@ -80,6 +80,16 @@ export function renderBoardSvg(model: BoardModel, options: BoardSvgOptions = {})
 
   parts.push(`<g transform="translate(${num(layout.marginMm)} ${num(headMm)})">`)
   for (const cell of model.cells) {
+    if (cell.poly !== undefined) {
+      // Угловая ячейка: точная геометрия полигоном, координаты уже в системе группы.
+      const points = cellPolygon(cell)
+        .map(([x, y]) => `${num(x)},${num(y)}`)
+        .join(' ')
+      parts.push(
+        `<polygon points="${points}" fill="${speciesHex(cell.speciesId)}" stroke="rgba(0,0,0,0.18)" stroke-width="0.4"/>`,
+      )
+      continue
+    }
     parts.push(
       `<rect x="${num(cell.xMm)}" y="${num(cell.yMm)}" width="${num(cell.widthMm)}" height="${num(cell.heightMm)}"` +
         ` fill="${speciesHex(cell.speciesId)}" stroke="rgba(0,0,0,0.18)" stroke-width="0.4"/>`,
