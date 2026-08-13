@@ -7,5 +7,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: SITE_ORIGIN, priority: 1.0 },
     { url: APP_ORIGIN, priority: 0.8 },
     { url: `${APP_ORIGIN}/pricing`, priority: 0.6 },
+    { url: `${APP_ORIGIN}/gallery`, priority: 0.6 },
   ]
 }
