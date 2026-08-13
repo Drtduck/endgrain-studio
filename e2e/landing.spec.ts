@@ -43,7 +43,7 @@ test('витрина показывает фото досок', async ({ page })
   }).toPass()
 })
 
-const CTA_IDS = ['landing-cta-header', 'landing-cta-hero', 'landing-cta-shots', 'landing-cta-final'] as const
+const CTA_IDS = ['landing-cta-header', 'landing-cta-hero', 'landing-cta-final'] as const
 
 test('кнопки открывают окно входа и сохраняют ссылку на страницу регистрации', async ({ page }) => {
   await openLanding(page)
@@ -169,22 +169,27 @@ test('просмотр доступен с клавиатуры', async ({ page 
   }).toPass()
 })
 
-test('кнопка Начать есть в блоке снимков на обоих языках', async ({ page }) => {
+test('кнопка Начать есть в лайтбоксе снимков на обоих языках', async ({ page }) => {
   await openLanding(page, 'ru')
-  const cta = page.getByTestId('landing-cta-shots')
+  await page.getByTestId('landing-shot-trigger-editor').click()
+  const cta = page.getByTestId('landing-shot-dialog-cta-editor')
   await expect(cta).toBeVisible()
   await expect(cta).toHaveText('Начать')
   await expect(cta).toHaveAttribute('href', /app\.endgrain\.app\/register/)
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('landing-shot-dialog')).toHaveCount(0)
 
   await page.getByTestId('landing-locale-en').click()
+  await page.getByTestId('landing-shot-trigger-editor').click()
   await expect(cta).toBeVisible()
   await expect(cta).toHaveText('Start free')
   await expect(cta).toHaveAttribute('href', /app\.endgrain\.app\/register/)
 })
 
-test('окно входа открывается из блока снимков', async ({ page }) => {
+test('окно входа открывается из лайтбокса снимков', async ({ page }) => {
   await openLanding(page, 'ru')
-  await page.getByTestId('landing-cta-shots').click()
+  await page.getByTestId('landing-shot-trigger-editor').click()
+  await page.getByTestId('landing-shot-dialog-cta-editor').click()
   await expect(page.getByTestId('landing-auth-dialog')).toBeVisible()
   await expect(page.getByTestId('auth-email')).toBeVisible()
 })
