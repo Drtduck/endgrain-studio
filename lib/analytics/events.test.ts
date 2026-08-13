@@ -3,6 +3,7 @@ import { track } from './events'
 
 afterEach(() => {
   delete window.dataLayer
+  delete window.gtag
 })
 
 describe('track', () => {
@@ -12,24 +13,36 @@ describe('track', () => {
     expect(Array.isArray(window.dataLayer)).toBe(true)
   })
 
-  it('пушит имя события без параметров', () => {
+  it('без window.gtag кладёт arguments-совместимую запись [event, name, params], а не объект {event}', () => {
     track('pricing_viewed')
-    expect(window.dataLayer).toEqual([{ event: 'pricing_viewed' }])
+    expect(window.dataLayer).toEqual([['event', 'pricing_viewed', {}]])
   })
 
-  it('пушит имя и параметры', () => {
+  it('передаёт параметры третьим элементом', () => {
     track('pdf_exported', { pro: true })
-    expect(window.dataLayer).toEqual([{ event: 'pdf_exported', pro: true }])
+    expect(window.dataLayer).toEqual([['event', 'pdf_exported', { pro: true }]])
     track('checkout_started', { plan: 'yearly' })
     expect(window.dataLayer).toEqual([
-      { event: 'pdf_exported', pro: true },
-      { event: 'checkout_started', plan: 'yearly' },
+      ['event', 'pdf_exported', { pro: true }],
+      ['event', 'checkout_started', { plan: 'yearly' }],
     ])
   })
 
   it('копит несколько событий подряд', () => {
     track('project_saved')
     track('subscription_paid')
-    expect(window.dataLayer).toEqual([{ event: 'project_saved' }, { event: 'subscription_paid' }])
+    expect(window.dataLayer).toEqual([
+      ['event', 'project_saved', {}],
+      ['event', 'subscription_paid', {}],
+    ])
+  })
+
+  it('если window.gtag объявлен (инлайновый скрипт Analytics.tsx уже выполнился) - зовёт его вместо прямого push', () => {
+    const calls: unknown[][] = []
+    window.gtag = (...args: unknown[]) => {
+      calls.push(args)
+    }
+    track('pdf_exported', { pro: false })
+    expect(calls).toEqual([['event', 'pdf_exported', { pro: false }]])
   })
 })

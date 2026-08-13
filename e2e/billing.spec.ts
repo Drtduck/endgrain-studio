@@ -96,11 +96,13 @@ test.describe('оплата с живыми ключами', () => {
     await page.getByTestId('pricing-buy-monthly').click()
     // dataLayer ловит checkout_started ещё до редиректа: событие пушится в buy()
     // синхронно, редирект на hosted checkout идёт следом асинхронно.
+    // gtag.js разбирает dataLayer в arguments-форме (['event', name, params]),
+    // а не как объект {event: name, ...}: см. lib/analytics/gtag.ts.
     await expect
       .poll(() =>
         page.evaluate(() =>
           (window.dataLayer ?? []).some(
-            (e: unknown) => (e as { event?: string; plan?: string }).event === 'checkout_started' && (e as { plan?: string }).plan === 'monthly'
+            (e: unknown) => Array.isArray(e) && e[0] === 'event' && e[1] === 'checkout_started' && (e[2] as { plan?: string } | undefined)?.plan === 'monthly'
           )
         )
       )

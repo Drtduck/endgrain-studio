@@ -5,6 +5,7 @@ import { detectGpc, writeConsent } from '@/lib/consent/client'
 import { type ConsentDecision, type ConsentSource, isDecisionValidFor } from '@/lib/consent/cookie'
 import type { ConsentRegime } from '@/lib/consent/regions'
 import { updatePayload } from '@/lib/analytics/consentMode'
+import { callGtag } from '@/lib/analytics/gtag'
 
 export interface ConsentValue {
   readonly regime: ConsentRegime
@@ -19,11 +20,9 @@ export interface ConsentValue {
 
 const ConsentContext = createContext<ConsentValue | null>(null)
 
-/** Пушит gtag('consent','update', ...) в dataLayer, если gtag уже объявлен инлайновым скриптом. */
+/** Зовёт gtag('consent','update', ...) через общий помощник (lib/analytics/gtag.ts). */
 function pushConsentUpdate(analytics: boolean): void {
-  if (typeof window === 'undefined') return
-  window.dataLayer = window.dataLayer ?? []
-  window.dataLayer.push(['consent', 'update', updatePayload(analytics)])
+  callGtag('consent', 'update', updatePayload(analytics))
 }
 
 /**

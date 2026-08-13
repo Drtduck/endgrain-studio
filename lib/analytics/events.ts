@@ -1,3 +1,5 @@
+import { callGtag } from './gtag'
+
 /**
  * Пять событий продукта, имена в стиле GA4 (snake_case). Карта имя -> параметры
  * держит их вместе, чтобы вызов track() с неверным набором полей падал на
@@ -13,24 +15,18 @@ export interface AnalyticsEventParams {
 
 export type AnalyticsEventName = keyof AnalyticsEventParams
 
-declare global {
-  interface Window {
-    dataLayer?: unknown[]
-  }
-}
-
 /**
- * Всегда пишет в window.dataLayer, создавая массив, если его нет, и больше ничего
- * не делает. Никаких проверок consent внутри: гейтом занимается Consent Mode на
- * стороне Google, дублировать его логику здесь значит завести второй источник
- * правды. Никаких проверок наличия GA: без measurement id массив просто никто не
- * читает. Побочный эффект - события полностью наблюдаемы в e2e без настоящего GA.
+ * Зовёт gtag('event', name, params) через общий помощник (lib/analytics/gtag.ts),
+ * а не пушит объект в dataLayer напрямую: gtag.js разбирает свою очередь в
+ * arguments-форме, объект с полем event для него не событие, а мусор, который
+ * не долетает до GA4. Никаких проверок consent внутри: гейтом занимается
+ * Consent Mode на стороне Google, дублировать его логику здесь значит завести
+ * второй источник правды. Никаких проверок наличия GA: без measurement id
+ * запись просто копится в dataLayer и никто её не читает.
  */
 export function track<Name extends AnalyticsEventName>(
   name: Name,
   ...args: AnalyticsEventParams[Name] extends undefined ? [] : [params: AnalyticsEventParams[Name]]
 ): void {
-  if (typeof window === 'undefined') return
-  window.dataLayer = window.dataLayer ?? []
-  window.dataLayer.push({ event: name, ...(args[0] ?? {}) })
+  callGtag('event', name, args[0] ?? {})
 }

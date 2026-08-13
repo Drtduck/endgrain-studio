@@ -119,7 +119,11 @@ test('экспорт PDF кладёт pdf_exported в dataLayer', async ({ page 
   await openStudio(page)
   await page.getByTestId('consent-accept').click()
   await page.getByTestId('export-pdf').click()
+  // gtag.js разбирает dataLayer в arguments-форме (['event', name, params]),
+  // а не как объект {event: name, ...}: см. lib/analytics/gtag.ts.
   await expect
-    .poll(() => page.evaluate(() => (window.dataLayer ?? []).some((e: unknown) => (e as { event?: string }).event === 'pdf_exported')))
+    .poll(() =>
+      page.evaluate(() => (window.dataLayer ?? []).some((e: unknown) => Array.isArray(e) && e[0] === 'event' && e[1] === 'pdf_exported')),
+    )
     .toBe(true)
 })
