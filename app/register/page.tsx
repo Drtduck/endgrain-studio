@@ -12,18 +12,15 @@ export default function RegisterPage() {
     <AuthCard
       locale={locale}
       titleKey="auth.registerTitle"
-      subtitleKey="auth.registerSubtitle"
       footer={
-        <Link href="/login" data-testid="auth-login-link" className="text-accent hover:underline">
-          {t(locale, 'auth.loginLink')}
-        </Link>
+        <p>
+          {t(locale, 'auth.hasAccountPrompt')}{' '}
+          <Link href="/login" data-testid="auth-login-link" className="font-semibold text-accent hover:underline">
+            {t(locale, 'auth.signIn')}
+          </Link>
+        </p>
       }
     >
-      {/* Гейт на входе требует объяснения: человек пришёл рисовать доску, а его
-          просят завести аккаунт. Говорим честно, что он за это получает. */}
-      <p data-testid="auth-register-why" className="mb-4 text-sm leading-normal text-ink-secondary">
-        {t(locale, 'auth.registerWhy')}
-      </p>
       <AuthForm mode="register" locale={locale} />
     </AuthCard>
   )

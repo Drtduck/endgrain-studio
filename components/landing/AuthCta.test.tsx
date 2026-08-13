@@ -81,6 +81,39 @@ describe('AuthCta', () => {
     await waitFor(() => expect(dialog.textContent ?? '').toContain(t('en', 'auth.loginTitle')))
   })
 
+  it('шапка окна показывает логотип и название продукта, как на отдельной странице', async () => {
+    const dialog = await openDialog('ru')
+    expect(screen.getByTestId('auth-home')).toBeInTheDocument()
+    expect(dialog.textContent ?? '').toContain(t('ru', 'app.title'))
+  })
+
+  it('вводный текст про регистрацию убран, форма начинается сразу с полей', async () => {
+    const dialog = await openDialog('ru')
+    expect(dialog.textContent ?? '').not.toContain('Почта и пароль')
+    expect(dialog.textContent ?? '').not.toContain('Аккаунт нужен')
+    expect(screen.queryByTestId('landing-auth-why')).toBeNull()
+  })
+
+  it('строка переключения режима делит обычный текст и жирную кликабельную ссылку', async () => {
+    // Триггер открывает окно сразу в режиме регистрации, поэтому строка снизу
+    // предлагает переключиться на вход.
+    await openDialog('ru')
+    const switchButton = screen.getByTestId('landing-auth-switch')
+    // Кликабельно только слово-действие, а не вся строка целиком.
+    expect(switchButton.textContent).toBe(t('ru', 'auth.signIn'))
+    expect(switchButton.parentElement?.textContent).toBe(
+      `${t('ru', 'auth.hasAccountPrompt')} ${t('ru', 'auth.signIn')}`
+    )
+
+    fireEvent.click(switchButton)
+    await screen.findByTestId('auth-form-login')
+    const registerSwitch = screen.getByTestId('landing-auth-switch')
+    expect(registerSwitch.textContent).toBe(t('ru', 'auth.registerAction'))
+    expect(registerSwitch.parentElement?.textContent).toBe(
+      `${t('ru', 'auth.noAccountPrompt')} ${t('ru', 'auth.registerAction')}`
+    )
+  })
+
   it('Escape закрывает окно', async () => {
     await openDialog()
     fireEvent.keyDown(document, { key: 'Escape' })

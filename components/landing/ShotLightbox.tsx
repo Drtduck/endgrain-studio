@@ -1,6 +1,7 @@
 'use client'
 
 import { X } from 'lucide-react'
+import { AuthCta } from '@/components/landing/AuthCta'
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { t, type Locale } from '@/lib/i18n'
 
@@ -48,6 +49,16 @@ export function ShotLightbox({ locale, shots }: { locale: Locale; shots: readonl
               data-testid="landing-shot-dialog-image"
               className="h-auto w-full rounded-md border border-line bg-surface-raised"
             />
+
+            {/* Кнопка под картинкой и по центру: не перекрывает ни снимок, ни крестик закрытия. */}
+            <div className="flex justify-center">
+              <AuthCta
+                locale={locale}
+                testId={`landing-shot-dialog-cta-${shot.slug}`}
+                label={t(locale, 'landing.hero.ctaPrimary')}
+                className="inline-flex rounded-md bg-accent px-5 py-3 font-sans text-base font-semibold text-accent-fg shadow-sm transition-colors duration-hover hover:bg-accent-hover"
+              />
+            </div>
           </DialogContent>
         </Dialog>
       ))}

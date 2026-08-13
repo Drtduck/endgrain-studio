@@ -117,7 +117,7 @@ test.describe('без JavaScript', () => {
     const cta = page.getByTestId('landing-cta-hero')
     await expect(cta).toHaveAttribute('href', /app\.endgrain\.app\/register/)
     await page.goto('/register')
-    await expect(page.getByTestId('auth-register-why')).toBeVisible()
+    await expect(page.getByTestId('auth-form-register')).toBeVisible()
   })
 })
 

@@ -18,9 +18,16 @@ export default function LoginPage() {
           <Link href="/forgot-password" data-testid="auth-forgot-link" className="text-accent hover:underline">
             {t(locale, 'auth.forgotLink')}
           </Link>
-          <Link href="/register" data-testid="auth-register-link" className="text-accent hover:underline">
-            {t(locale, 'auth.registerLink')}
-          </Link>
+          <p>
+            {t(locale, 'auth.noAccountPrompt')}{' '}
+            <Link
+              href="/register"
+              data-testid="auth-register-link"
+              className="font-semibold text-accent hover:underline"
+            >
+              {t(locale, 'auth.registerAction')}
+            </Link>
+          </p>
         </>
       }
     >

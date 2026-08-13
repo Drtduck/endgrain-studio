@@ -1,4 +1,3 @@
-import { AuthCta } from '@/components/landing/AuthCta'
 import { ShotLightbox } from '@/components/landing/ShotLightbox'
 import { SHOTS } from '@/lib/landing/shots'
 import { t, type Locale, type MessageKey } from '@/lib/i18n'
@@ -20,13 +19,6 @@ export function ShotStrip({ locale }: { locale: Locale }) {
         <p className="mb-6 max-w-[60ch] text-sm text-ink-secondary">{t(locale, 'landing.shots.hint')}</p>
 
         <ShotLightbox locale={locale} shots={shots} />
-
-        <AuthCta
-          locale={locale}
-          testId="landing-cta-shots"
-          label={t(locale, 'landing.hero.ctaPrimary')}
-          className="mt-8 inline-flex rounded-md bg-accent px-5 py-3 font-sans text-base font-semibold text-accent-fg shadow-sm transition-colors duration-hover hover:bg-accent-hover"
-        />
       </div>
     </section>
   )

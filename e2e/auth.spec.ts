@@ -62,7 +62,7 @@ test.describe('гейт студии', () => {
 
   test('страницы входа и прайс открыты без аккаунта', async ({ page }) => {
     await page.goto('/register')
-    await expect(page.getByTestId('auth-register-why')).toBeVisible()
+    await expect(page.getByTestId('auth-form-register')).toBeVisible()
     await page.goto('/pricing')
     await expect(page).toHaveURL(/\/pricing/)
   })
