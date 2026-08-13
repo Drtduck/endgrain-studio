@@ -1,3 +1,4 @@
+import type { ProviderId } from '@/lib/ai/providers/types'
 import type { AiDenyReason } from '@/lib/ai/quota'
 import type { MessageKey } from '@/lib/i18n'
 
@@ -95,6 +96,8 @@ export type PromoResult =
       readonly images: readonly PromoImage[]
       /** Остаток месячной квоты после этой серии: счётчик на вкладке обновляется без второго запроса. */
       readonly remaining?: number
+      /** Кто нарисовал кадры: gemini, fal (fallback или пробный тир). Панель подписывает результат честно. */
+      readonly provider?: ProviderId
     }
   | { readonly ok: false; readonly error: PromoError }
 

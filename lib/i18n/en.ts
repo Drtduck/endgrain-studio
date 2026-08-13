@@ -505,9 +505,21 @@ const en: Record<keyof typeof ru, string> = {
   'ai.gate.anonymous': 'Sign in first: generation costs money and works for Pro subscribers only.',
   'ai.gate.free': 'Promo tools are part of Pro. The subscription unlocks them and gives you {limit} generations a month.',
   'ai.gate.quota': 'Monthly quota is used up: all {limit} generations are spent. The counter resets on the 1st.',
+  'ai.gate.trialSpent': 'Your trial generations are used up. Upgrade to Pro to render shots from your own board.',
   'ai.gate.unavailable': 'Generation is unavailable right now: the service is not configured. Try later.',
   'ai.gate.pricing': 'See pricing',
   'ai.quota': '{remaining} of {limit} generations left this month',
+
+  'ai.trial.left': '{remaining} of {limit} trial generations left',
+  'ai.trial.note':
+    'A trial shot is rendered by a fast model from the board description. Pro shots are rendered by Gemini from your own render, and you get 30 a month.',
+  'ai.trial.oneShot': 'One shot at a time in trial mode',
+  'ai.paywall.title': 'Your trial generations are used up',
+  'ai.paywall.point1': 'Shots rendered from your own board on Gemini',
+  'ai.paywall.point2': '30 generations a month',
+  'ai.paywall.point3': 'Reference analysis and merch mockups',
+  'ai.paywall.signin': 'Sign in',
+  'ai.paywall.signinNote': "Signing in does not add trial shots: an account is for buying, not for beating the counter.",
 
   'promo.title': 'Photo series for your shop',
   'promo.subtitle':
@@ -526,6 +538,7 @@ const en: Record<keyof typeof ru, string> = {
   'promo.err.notPro': 'Promo shot generation is part of Pro. Subscribe on the pricing page.',
   'promo.err.quota': 'The monthly generation quota is used up. A new batch opens on the 1st of next month.',
   'promo.err.unavailable': 'Generation is unavailable right now: the service is not configured. Try later.',
+  'promo.err.trialSpent': 'Your trial generations are used up. Upgrade to Pro to continue.',
   'promo.mockNote': 'Appears once Gemini is connected',
   'promo.mockBadge': 'placeholder',
   'promo.needKey': 'Real photos arrive once GEMINI_API_KEY is added to the environment. For now this is the shot layout.',

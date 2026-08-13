@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { AiGateNote, useAiGate } from '@/components/promo/AiGate'
 import { PromoMockShot } from '@/components/promo/PromoMockShot'
+import { TrialPaywall } from '@/components/promo/TrialPaywall'
 import { blobToDataUrl, boardPngDataUrl } from '@/components/promo/boardPng'
 import { aiCost } from '@/lib/ai/quota'
 import { safeFileName } from '@/lib/export'
@@ -62,6 +63,7 @@ export function ReferenceShots() {
   const [result, setResult] = useState<PromoResult | null>(null)
   const [remaining, setRemaining] = useState<number | null>(null)
   const gate = useAiGate(remaining)
+  const trialMode = gate.access.state === 'trial'
 
   const cost = aiCost('referenceShots', count)
   const images = result !== null && result.ok && !result.mock ? result.images : []
@@ -194,7 +196,7 @@ export function ReferenceShots() {
         {t(locale, 'ref.disclaimer')}
       </p>
 
-      <AiGateNote gate={gate} locale={locale} testId="ref-gate" />
+      {gate.showPaywall ? <TrialPaywall locale={locale} /> : <AiGateNote gate={gate} locale={locale} testId="ref-gate" />}
 
       {errorKey !== null ? (
         <p
@@ -237,22 +239,28 @@ export function ReferenceShots() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-[13px] font-semibold">{t(locale, 'ref.count')}</span>
             <div className="flex gap-1.5">
-              {Array.from({ length: REFERENCE_MAX_COUNT }, (_, i) => i + 1).map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  aria-pressed={n === count}
-                  data-testid={`ref-count-${n}`}
-                  onClick={() => { setCount(n) }}
-                  className={
-                    n === count
-                      ? 'w-9 rounded-md border border-accent bg-accent/10 py-1.5 text-[13px] font-semibold text-accent'
-                      : 'w-9 rounded-md border border-line-subtle bg-surface-raised py-1.5 text-[13px] text-ink-secondary hover:border-line'
-                  }
-                >
-                  {n}
-                </button>
-              ))}
+              {Array.from({ length: REFERENCE_MAX_COUNT }, (_, i) => i + 1).map((n) => {
+                // Пробный тир: только один кадр за раз, остальные счётчики неактивны.
+                const disabled = trialMode && n !== 1
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    aria-pressed={n === count}
+                    disabled={disabled}
+                    title={disabled ? t(locale, 'ai.trial.oneShot') : undefined}
+                    data-testid={`ref-count-${n}`}
+                    onClick={() => { setCount(n) }}
+                    className={
+                      n === count
+                        ? 'w-9 rounded-md border border-accent bg-accent/10 py-1.5 text-[13px] font-semibold text-accent'
+                        : 'w-9 rounded-md border border-line-subtle bg-surface-raised py-1.5 text-[13px] text-ink-secondary hover:border-line disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line-subtle'
+                    }
+                  >
+                    {n}
+                  </button>
+                )
+              })}
             </div>
             <span data-testid="ref-cost" className="text-[13px] text-ink-secondary">
               {t(locale, 'ref.cost', { count, cost })}

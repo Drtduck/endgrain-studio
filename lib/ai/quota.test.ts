@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { AI_FEATURE_COST, AI_MONTHLY_LIMIT, aiAccess, aiPeriod, aiRemaining } from './quota'
+import {
+  AI_FEATURE_COST,
+  AI_MONTHLY_LIMIT,
+  AI_TRIAL_FEATURES,
+  FREE_TRIAL_IP_LIMIT,
+  FREE_TRIAL_LIMIT,
+  FREE_TRIAL_MAX_UNITS,
+  aiAccess,
+  aiPeriod,
+  aiRemaining,
+} from './quota'
 
 describe('aiPeriod', () => {
   it('даёт календарный месяц в формате YYYY-MM', () => {
@@ -54,12 +64,33 @@ describe('aiRemaining', () => {
 })
 
 describe('aiAccess', () => {
-  it('собирает состояние для интерфейса с остатком', () => {
-    expect(aiAccess('pro', 4)).toEqual({ state: 'pro', limit: 30, used: 4, remaining: 26 })
+  it('собирает состояние для интерфейса с остатком и тиром pro', () => {
+    expect(aiAccess('pro', 4)).toEqual({ state: 'pro', limit: 30, used: 4, remaining: 26, tier: 'pro' })
   })
 
-  it('состояния без счётчика показывают полный лимит', () => {
-    expect(aiAccess('anonymous')).toEqual({ state: 'anonymous', limit: 30, used: 0, remaining: 30 })
+  it('состояния без счётчика показывают полный лимит и тир null', () => {
+    expect(aiAccess('anonymous')).toEqual({ state: 'anonymous', limit: 30, used: 0, remaining: 30, tier: null })
+  })
+
+  it('mock, unavailable и free тоже дают тир null: платить не за что или замок', () => {
+    expect(aiAccess('mock').tier).toBeNull()
+    expect(aiAccess('unavailable').tier).toBeNull()
+    expect(aiAccess('free').tier).toBeNull()
+  })
+
+  it('trial и trialSpent дают тир trial', () => {
+    expect(aiAccess('trial', 1, FREE_TRIAL_LIMIT).tier).toBe('trial')
+    expect(aiAccess('trialSpent', FREE_TRIAL_LIMIT, FREE_TRIAL_LIMIT).tier).toBe('trial')
+  })
+
+  it('пробный остаток считается от FREE_TRIAL_LIMIT, а не от месячного лимита Pro', () => {
+    expect(aiAccess('trial', 1, FREE_TRIAL_LIMIT)).toEqual({
+      state: 'trial',
+      limit: FREE_TRIAL_LIMIT,
+      used: 1,
+      remaining: 2,
+      tier: 'trial',
+    })
   })
 })
 
@@ -68,5 +99,28 @@ describe('AI_FEATURE_COST', () => {
     // Мокапы рисуются локально: гейт на них про правило «это Pro», а не про деньги.
     expect(AI_FEATURE_COST.promoShots).toBe(1)
     expect(AI_FEATURE_COST.merchMockups).toBe(0)
+  })
+})
+
+describe('константы бесплатного тира', () => {
+  it('три попытки на субъект, десять на адрес, один кадр за нажатие', () => {
+    expect(FREE_TRIAL_LIMIT).toBe(3)
+    expect(FREE_TRIAL_IP_LIMIT).toBe(10)
+    expect(FREE_TRIAL_MAX_UNITS).toBe(1)
+  })
+
+  it('лимит по адресу строже персонального втрое: NAT не должен упираться в личный потолок', () => {
+    expect(FREE_TRIAL_IP_LIMIT).toBeGreaterThan(FREE_TRIAL_LIMIT)
+  })
+})
+
+describe('AI_TRIAL_FEATURES', () => {
+  it('только серия фото и серия по референсу входят в пробный тир', () => {
+    expect(AI_TRIAL_FEATURES).toEqual(['promoShots', 'referenceShots'])
+  })
+
+  it('разбор референса и мокапы мерча остаются Pro-фичами', () => {
+    expect(AI_TRIAL_FEATURES).not.toContain('referenceAnalysis')
+    expect(AI_TRIAL_FEATURES).not.toContain('merchMockups')
   })
 })
