@@ -3,27 +3,18 @@
 import { assertAiAllowed, releaseAiQuota } from '@/lib/ai/entitlements'
 import { compile } from '@/lib/engine'
 import { parseDesign } from '@/lib/persist'
-import { GEMINI_API_KEY, isGeminiConfigured } from '@/lib/promo/config'
+import { isGeminiConfigured } from '@/lib/promo/config'
 import { describeBoard } from '@/lib/promo/describe'
-import {
-  LISTING_RESPONSE_SCHEMA,
-  boardSizeInches,
-  demoListing,
-  listingPrompt,
-  parseListing,
-  type SaleListing,
-} from '@/lib/promo/listing'
+import { boardSizeInches, demoListing, listingPrompt, type SaleListing } from '@/lib/promo/listing'
+import { requestListing } from '@/lib/promo/listingRequest'
 import type { AiDenyReason } from '@/lib/ai/quota'
 
 /**
  * Отдельное действие от app/actions/promo.ts: тот файл уже 19 КБ, а карточка
- * товара логически не про фото. Сама модель и приём JSON через responseSchema
- * скопированы буквально с analyzeReferenceAction, кроме vision-части: на вход
- * идёт только текст, картинки нет вовсе, поэтому запрос дешевле и быстрее.
+ * товара логически не про фото. Сетевой ход к модели живёт в
+ * lib/promo/listingRequest.ts (структурный тест network.test.ts), здесь
+ * остаётся оркестрация: парсинг, гейт, квота.
  */
-const GEMINI_MODEL = 'gemini-2.5-flash'
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
-const REQUEST_TIMEOUT_MS = 20_000
 
 export type ListingError = AiDenyReason | 'invalid' | 'failed'
 
@@ -31,18 +22,6 @@ export type ListingResult =
   | { readonly ok: true; readonly mock: true; readonly listing: SaleListing }
   | { readonly ok: true; readonly mock: false; readonly listing: SaleListing; readonly remaining: number }
   | { readonly ok: false; readonly error: ListingError }
-
-interface GeminiResponse {
-  readonly candidates?: readonly { readonly content?: { readonly parts?: readonly { readonly text?: string }[] } }[]
-  readonly error?: { readonly status?: string; readonly code?: number }
-}
-
-function allText(body: GeminiResponse): string {
-  return (body.candidates?.[0]?.content?.parts ?? [])
-    .map((part) => part.text ?? '')
-    .join('')
-    .trim()
-}
 
 /**
  * Гейт: assertAiAllowed('saleListing', 1), ровно как у остальных платных
@@ -69,39 +48,10 @@ export async function generateListingAction(design: unknown): Promise<ListingRes
   const grant = await assertAiAllowed('saleListing', 1)
   if (!grant.ok) return { ok: false, error: grant.reason }
 
-  try {
-    const res = await fetch(GEMINI_URL, {
-      method: 'POST',
-      headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: listingPrompt(description, sizeIn) }] }],
-        generationConfig: { responseMimeType: 'application/json', responseSchema: LISTING_RESPONSE_SCHEMA },
-      }),
-      cache: 'no-store',
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    })
-    if (!res.ok) {
-      let code = ''
-      try {
-        code = ((await res.json()) as GeminiResponse).error?.status ?? ''
-      } catch {
-        code = ''
-      }
-      console.error(`gemini listing: HTTP ${res.status}${code === '' ? '' : ` ${code}`}`)
-      await releaseAiQuota(grant)
-      return { ok: false, error: 'failed' }
-    }
-    const body = (await res.json()) as GeminiResponse
-    const listing = parseListing(allText(body))
-    if (listing === null) {
-      console.error('gemini listing: ответ без карточки')
-      await releaseAiQuota(grant)
-      return { ok: false, error: 'failed' }
-    }
-    return { ok: true, mock: false, listing, remaining: grant.remaining }
-  } catch (err) {
-    console.error(`gemini listing: ${err instanceof Error ? err.name : 'unknown error'}`)
+  const result = await requestListing(listingPrompt(description, sizeIn))
+  if (!result.ok) {
     await releaseAiQuota(grant)
     return { ok: false, error: 'failed' }
   }
+  return { ok: true, mock: false, listing: result.listing, remaining: grant.remaining }
 }
