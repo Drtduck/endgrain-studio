@@ -17,3 +17,8 @@ export function oneUnit(mm: number, unit: UnitSystem, locale: Locale, digits = 1
 export function bothUnits(mm: number, locale: Locale, digits = 1): string {
   return `${formatMm(mm, 'mm', t(locale, 'units.mm'), digits)} (${formatMm(mm, 'in', '', 2)})`
 }
+
+/** Площадь в мм², для отхода на угловые резы: тут не нужны дюймы, это техническая строка цеха. */
+export function areaMm2(value: number, locale: Locale, digits = 0): string {
+  return `${value.toFixed(digits)} ${t(locale, 'units.mm2')}`
+}
