@@ -51,20 +51,30 @@ drop policy if exists api_keys_select_own on public.api_keys;
 create policy api_keys_select_own on public.api_keys
   for select to authenticated using (user_id = (select auth.uid()));
 
--- Отзыв ключа это единственная запись, доступная из браузера, и она безопасна:
--- ничего не включает, только выключает.
 drop policy if exists api_keys_delete_own on public.api_keys;
-create policy api_keys_delete_own on public.api_keys
-  for delete to authenticated using (user_id = (select auth.uid()));
 
--- Политик insert и update нет сознательно: строку заводит сервер под service-role
--- ключом, потому что только он умеет посчитать sha256 и проверить лимит на
--- количество ключей.
+-- Удаления из браузера нет сознательно: DELETE стирает строку целиком, а с ней
+-- и историю api_usage (on delete cascade). Отзыв уже есть как update revoked_at
+-- под service-role (app/actions/apiKeys.ts:revokeApiKeyAction) - строка остаётся,
+-- ключ просто перестаёт работать. Политика api_keys_delete_own позволяла бы
+-- удалить ключ и тут же создать новый под тем же лимитом API_KEYS_PER_USER,
+-- не оставляя следа о том, что старый вообще исчерпал дневную квоту.
+
+-- Политик insert, update и delete нет сознательно: строку заводит и правит
+-- только сервер под service-role ключом, потому что только он умеет посчитать
+-- sha256 и проверить лимиты.
 
 -- Хеш без соли от 32 байт энтропии не брутфорсится, но отдавать его в браузер
--- незачем ни при какой выборке, а select * из клиентского кода однажды напишут.
--- Все выборки в коде и так перечисляют колонки явно.
-revoke select (key_hash) on public.api_keys from authenticated;
+-- незачем ни при какой выборке. Раньше здесь стоял `revoke select (key_hash)
+-- from authenticated` - column-level revoke, который в Postgres НЕ отменяет
+-- уже существующий табличный select (Supabase выдаёт его по умолчанию через
+-- alter default privileges): табличный и колоночный гранты живут раздельно,
+-- и key_hash оставался читаемым через select * как ни в чём не бывало.
+-- Рабочий приём - тот же, что у design в published_projects (миграция
+-- 20260813100000): сначала полный revoke select с самой таблицы, потом явный
+-- список разрешённых колонок без key_hash.
+revoke select on public.api_keys from authenticated;
+grant select (id, user_id, name, prefix, scopes, tier, last_used_at, revoked_at, created_at, updated_at) on public.api_keys to authenticated;
 
 -- Метеринг агрегированный, по ключу и календарному дню UTC: строка на запрос
 -- стоила бы записи в базу на каждый вызов и дала бы данные, которыми MVP не пользуется.
@@ -101,9 +111,20 @@ create policy api_usage_select_own on public.api_usage
 -- Политик записи нет: пишет только функция ниже под service-role.
 
 /*
- * Атомарное списание лимита. Копия проверенного приёма из consume_ai_quota:
- * проверка лимита и инкремент под одной блокировкой строки, поэтому два
- * параллельных запроса не могут оба увидеть used = 49 и уйти на 51.
+ * Атомарное списание лимита. Лимит считается по user_id за день - суммой
+ * used по ВСЕМ ключам аккаунта, а не по одному ключу. Раньше конфликт был
+ * (key_id, day): свежий ключ начинал день с used = 0, и человек, упёршийся в
+ * дневной лимит, обходил его, просто создав новый ключ - лимит на аккаунт был
+ * лимитом на ключ по факту. Строка в api_usage по-прежнему одна на (key_id, day)
+ * - это нужно для честного usedToday на конкретном ключе в UI
+ * (app/actions/apiKeys.ts:listApiKeysAction), но сам ПОТОЛОК проверяется по
+ * сумме всех строк пользователя за день.
+ *
+ * pg_advisory_xact_lock сериализует конкурентные списания одного пользователя
+ * за один день: без него первый вызов дня для двух разных ключей мог бы не
+ * увидеть строк друг друга (блокировать через "for update" пока нечего) и оба
+ * пройти лимит. Лочится на весь остаток транзакции и снимается автоматически.
+ *
  * Возврат null значит «лимит выбран». Отдельной release_api_quota нет: HTTP-запрос
  * уже сделан, возвращать нечего.
  */
@@ -120,20 +141,28 @@ security definer
 set search_path = public
 as $$
 declare
-  v_used integer;
+  v_total_before integer;
 begin
   if p_cost is null or p_cost <= 0 or p_limit is null or p_cost > p_limit then
+    return null;
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(p_user_id::text || ':' || p_day, 0));
+
+  select coalesce(sum(used), 0) into v_total_before
+    from public.api_usage
+   where user_id = p_user_id and day = p_day;
+
+  if v_total_before + p_cost > p_limit then
     return null;
   end if;
 
   insert into public.api_usage as u (key_id, user_id, day, used)
   values (p_key_id, p_user_id, p_day, p_cost)
   on conflict (key_id, day) do update
-    set used = u.used + p_cost
-    where u.used + p_cost <= p_limit
-  returning u.used into v_used;
+    set used = u.used + p_cost;
 
-  return v_used;
+  return v_total_before + p_cost;
 end;
 $$;
 
