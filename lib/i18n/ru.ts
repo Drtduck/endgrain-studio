@@ -627,6 +627,25 @@ const ru = {
   'help.promo.title': 'Промо-материалы',
   'help.promo.body':
     'Серия фото собирается из рендера вашей доски: он уходит на сервер вместе с описанием узора и пород. Каждый отмеченный кадр стоит единицу месячной квоты, поэтому набор сцен выбираете вы. Съёмка по референсу сначала показывает разбор чужого кадра и только потом рисует. Мерч отправляет тот же рендер в Printful и возвращает настоящие мокапы. Без ключей все панели показывают компоновку, чтобы было видно, что получится.',
+
+  'blog.navTitle': 'Блог',
+  'blog.feed.title': 'Блог Endgrain Studio',
+  'blog.feed.description': 'Производственные заметки для столяра: раскрой, материалы, инструкции.',
+  'blog.feed.readMore': 'Читать статью',
+  'blog.feed.openStudio': 'Открыть студию',
+  'blog.post.published': 'Опубликовано {date}',
+  'blog.post.updated': 'Обновлено {date}',
+  'blog.post.readingMinutes': 'Чтение: {minutes} мин',
+  'blog.post.backToBlog': 'Все статьи блога',
+  'blog.post.foreignLanguage': 'На другом языке',
+  'blog.post.ogLabel': 'Блог · Endgrain Studio',
+  'blog.post.notFound': 'Такой статьи нет.',
+  'blog.breadcrumb.home': 'Endgrain Studio',
+  'blog.breadcrumb.blog': 'Блог',
+  'blog.tag.title': 'Тег: {tag}',
+  'blog.tag.description': 'Статьи с тегом «{tag}». Полный список - в блоге.',
+  'blog.tag.back': 'Все статьи',
+  'blog.tag.empty': 'Пока нет статей с этим тегом.',
 } as const
 
 export default ru

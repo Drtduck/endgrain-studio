@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { t, type Locale } from '@/lib/i18n'
 import { APP_ORIGIN } from '@/lib/routing/host'
 
@@ -17,6 +18,9 @@ export function LandingFooter({ locale }: { locale: Locale }) {
           >
             {t(locale, 'pricing.navTitle')}
           </a>
+          <Link href="/blog" data-testid="landing-footer-blog" className="font-sans text-sm text-ink-secondary hover:text-ink">
+            {t(locale, 'blog.navTitle')}
+          </Link>
         </div>
 
         <div className="flex flex-col gap-2">

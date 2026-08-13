@@ -2,15 +2,23 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { CheckoutBanner } from '@/components/CheckoutBanner'
 import { PricingPlans } from '@/components/pricing/PricingPlans'
+import { JsonLd } from '@/components/seo/JsonLd'
 import { t } from '@/lib/i18n'
 import { getLandingLocale } from '@/lib/landing/locale'
+import { pricingJsonLd } from '@/lib/seo/jsonld'
+import { appUrl, pageMetadata } from '@/lib/seo/metadata'
 import { STRIPE_PORTAL_URL, isStripeConfigured } from '@/lib/stripe/config'
 import { getProStatus } from '@/lib/stripe/pro'
 import { getCurrentUser } from '@/lib/supabase/session'
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLandingLocale()
-  return { title: t(locale, 'pricing.navTitle'), description: t(locale, 'pricing.subtitle') }
+  return pageMetadata({
+    title: t(locale, 'pricing.navTitle'),
+    description: t(locale, 'pricing.subtitle'),
+    canonical: appUrl('/pricing'),
+    locale,
+  })
 }
 
 /**
@@ -29,6 +37,7 @@ export default async function PricingPage(props: PageProps<'/pricing'>) {
 
   return (
     <main className="min-h-screen bg-app px-4 py-10">
+      <JsonLd data={pricingJsonLd()} />
       {state === null ? null : <CheckoutBanner state={state} locale={locale} />}
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <div className="flex flex-col gap-1">

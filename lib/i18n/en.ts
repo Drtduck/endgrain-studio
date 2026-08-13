@@ -627,6 +627,25 @@ const en: Record<keyof typeof ru, string> = {
   'help.promo.title': 'Promo material',
   'help.promo.body':
     'The photo series is built from a render of your board: it travels to the server together with a description of the pattern and species. Every ticked shot costs one unit of the monthly quota, so you pick the set of scenes. Reference shooting first shows the breakdown of the uploaded photo and only then draws. Merch sends the same render to Printful and returns real mockups. Without keys all panels show the layout so you can see what you would get.',
+
+  'blog.navTitle': 'Blog',
+  'blog.feed.title': 'Endgrain Studio Blog',
+  'blog.feed.description': 'Shop notes for woodworkers: milling, materials, instructions.',
+  'blog.feed.readMore': 'Read the article',
+  'blog.feed.openStudio': 'Open the studio',
+  'blog.post.published': 'Published {date}',
+  'blog.post.updated': 'Updated {date}',
+  'blog.post.readingMinutes': 'Reading time: {minutes} min',
+  'blog.post.backToBlog': 'All blog posts',
+  'blog.post.foreignLanguage': 'In another language',
+  'blog.post.ogLabel': 'Blog - Endgrain Studio',
+  'blog.post.notFound': 'This article does not exist.',
+  'blog.breadcrumb.home': 'Endgrain Studio',
+  'blog.breadcrumb.blog': 'Blog',
+  'blog.tag.title': 'Tag: {tag}',
+  'blog.tag.description': 'Articles tagged "{tag}". See the full list in the blog.',
+  'blog.tag.back': 'All articles',
+  'blog.tag.empty': 'No articles with this tag yet.',
 }
 
 export default en
