@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import { presetConsent } from './helpers/consent'
+
+test.beforeEach(async ({ page }) => {
+  await presetConsent(page)
+})
 
 // Требует живого Supabase (см. README, раздел "Переменные окружения"). После прогона
 // с E2E_AUTH=1 удалите тестового пользователя, созданного сценарием регистрации,
@@ -13,6 +18,7 @@ test.describe('аккаунт', () => {
     await page.goto('/register')
     await page.getByTestId('auth-email').fill(email)
     await page.getByTestId('auth-password').fill('очень-длинный-пароль-1')
+    await page.getByTestId('auth-consent').check()
     await page.getByTestId('auth-submit').click()
     // Либо сразу в студию (подтверждение почты выключено), либо экран «письмо отправлено».
     await expect(

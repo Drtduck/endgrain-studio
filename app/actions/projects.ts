@@ -108,5 +108,28 @@ export async function deleteProjectAction(id: string): Promise<ActionResult<null
   return { ok: true, data: null }
 }
 
-// Точка расширения фазы 8: обновление существующей записи ("Сохранить" поверх,
-// а не всегда новая строка). В фазу 7 не входит сознательно.
+/**
+ * «Сохранить поверх» вместо всегда новой строки. Тонкая обёртка над
+ * сервисным слоем (lib/api/service.ts:updateProject), которым пользуется и
+ * REST API: одна реализация вместо двух копий одной и той же логики.
+ * Сервис работает под service-role с явным .eq('user_id', ...), а не под
+ * cookie-сессией с RLS, поэтому unauthenticated здесь проверяется раньше вызова.
+ */
+export async function updateProjectAction(
+  id: string,
+  patch: { readonly name?: string; readonly design?: unknown },
+): Promise<ActionResult<ProjectSummary>> {
+  const user = await requireUser()
+  if (!user) return { ok: false, error: 'unauthenticated' }
+
+  const { updateProject } = await import('@/lib/api/service')
+  const result = await updateProject(user.id, id, patch)
+  if (result.ok) return result
+  // ServiceError шире ProjectsError на четыре кода (forbidden/rateLimited/unavailable
+  // - в это никогда не попадёт server action, у него нет ни скоупов, ни квоты API).
+  // failed - честный дефолт для непредвиденной ветки, а не заглушка «на всякий случай».
+  const error: ProjectsError = result.error === 'invalid' || result.error === 'notFound' || result.error === 'failed'
+    ? result.error
+    : 'failed'
+  return { ok: false, error }
+}

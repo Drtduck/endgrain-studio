@@ -1,9 +1,10 @@
 'use server'
 
 import { headers } from 'next/headers'
-import { assertAiAllowed, isAiDemoMode, releaseAiQuota, type AiGrant } from '@/lib/ai/entitlements'
+import { assertAiAllowed, getAiAccess, isAiDemoMode, releaseAiQuota, type AiGrant } from '@/lib/ai/entitlements'
+import { FREE_TRIAL_MAX_UNITS } from '@/lib/ai/quota'
+import { resolveImageProvider } from '@/lib/ai/providers'
 import {
-  GEMINI_API_KEY,
   PRINTFUL_API_KEY,
   PRINTFUL_STORE_ID,
   isGeminiConfigured,
@@ -20,112 +21,20 @@ import {
   type PromoShotKind,
 } from '@/lib/promo/types'
 import { shotPrompt } from '@/lib/promo/prompts'
-import {
-  ANALYSIS_PROMPT,
-  ANALYSIS_RESPONSE_SCHEMA,
-  normalizeStyle,
-  parseStyleAnalysis,
-  referencePrompt,
-  type StyleAnalysis,
-} from '@/lib/promo/reference'
+import { normalizeStyle, referencePrompt, type StyleAnalysis } from '@/lib/promo/reference'
 import { merchSchema, promoShotsSchema, referenceAnalyzeSchema, referenceShotsSchema } from '@/lib/promo/schema'
 import { generateMockup, type PrintfulAuth, type PrintfulError } from '@/lib/promo/printful'
 import { removeArtwork, uploadArtwork } from '@/lib/promo/storage'
 import { PER_IP_PER_HOUR, PER_IP_PER_HOUR_ANON, clientIp, promoLimiter } from '@/lib/promo/rateLimit'
+import { analyzeReferenceImage } from '@/lib/promo/visionAnalyze'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { getCurrentUser } from '@/lib/supabase/session'
-
-const GEMINI_MODEL = 'gemini-2.5-flash-image'
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
-
-/**
- * Разбор референса это текстовая задача с картинкой на входе, рисовать тут
- * нечего, поэтому модель другая: обычная flash с vision. Она и дешевле, и
- * умеет responseSchema, чего image-модель не умеет вовсе.
- */
-const GEMINI_VISION_MODEL = 'gemini-2.5-flash'
-const GEMINI_VISION_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_VISION_MODEL}:generateContent`
-
-/** Картинка иногда рисуется долго, но висеть до бесконечности запрос не имеет права. */
-const REQUEST_TIMEOUT_MS = 30_000
-
-/** Разбор кадра это несколько сотен токенов текста: столько ждать незачем. */
-const VISION_TIMEOUT_MS = 20_000
-
-interface GeminiPart {
-  readonly text?: string
-  readonly inlineData?: { readonly mimeType?: string; readonly data?: string }
-  readonly inline_data?: { readonly mime_type?: string; readonly data?: string }
-}
-interface GeminiResponse {
-  readonly candidates?: readonly { readonly content?: { readonly parts?: readonly GeminiPart[] } }[]
-  readonly error?: { readonly status?: string; readonly code?: number }
-}
-
-/** Первая картинка из ответа. Gemini кладёт рядом с ней текст, его молча выбрасываем. */
-function firstImage(body: GeminiResponse): string | null {
-  const parts = body.candidates?.[0]?.content?.parts ?? []
-  for (const part of parts) {
-    const data = part.inlineData?.data ?? part.inline_data?.data
-    const mime = part.inlineData?.mimeType ?? part.inline_data?.mime_type ?? 'image/png'
-    if (typeof data === 'string' && data.length > 0) return `data:${mime};base64,${data}`
-  }
-  return null
-}
-
-/** Весь текст ответа одной строкой: JSON модель иногда режет на несколько частей. */
-function allText(body: GeminiResponse): string {
-  return (body.candidates?.[0]?.content?.parts ?? [])
-    .map((part) => part.text ?? '')
-    .join('')
-    .trim()
-}
 
 /** base64 из data-url. Сам data-url уже проверен zod-схемой на магию файла. */
 function payload(dataUrl: string): { readonly mimeType: string; readonly data: string } {
   const comma = dataUrl.indexOf(',')
   const mimeType = dataUrl.slice(5, dataUrl.indexOf(';'))
   return { mimeType, data: dataUrl.slice(comma + 1) }
-}
-
-/** Что вышло с одним кадром: картинка, отказ модели по своим правилам или сбой. */
-type ShotOutcome = { readonly kind: 'image'; readonly image: PromoImage } | 'blocked' | 'failed'
-
-async function requestShot(kind: PromoShotKind, prompt: string, base64: string): Promise<ShotOutcome> {
-  try {
-    const res = await fetch(GEMINI_URL, {
-      method: 'POST',
-      headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          { role: 'user', parts: [{ text: prompt }, { inlineData: { mimeType: 'image/png', data: base64 } }] },
-        ],
-      }),
-      cache: 'no-store',
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    })
-    if (!res.ok) {
-      // В лог уходит только статус и код ошибки: ни тела ответа, ни тем более ключа.
-      let code = ''
-      try {
-        code = ((await res.json()) as GeminiResponse).error?.status ?? ''
-      } catch {
-        code = ''
-      }
-      console.error(`gemini ${kind}: HTTP ${res.status}${code === '' ? '' : ` ${code}`}`)
-      return 'failed'
-    }
-    const body = (await res.json()) as GeminiResponse
-    const dataUrl = firstImage(body)
-    if (dataUrl !== null) return { kind: 'image', image: { kind, dataUrl } }
-    // 200 без единого кандидата это отказ модели по своим правилам, а не сбой связи.
-    console.error(`gemini ${kind}: ответ без картинки`)
-    return (body.candidates?.length ?? 0) === 0 ? 'blocked' : 'failed'
-  } catch (err) {
-    // Таймаут, обрыв сети или битый JSON: кадр теряем, серию нет.
-    console.error(`gemini ${kind}: ${err instanceof Error ? err.name : 'unknown error'}`)
-    return 'failed'
-  }
 }
 
 /** Первый рубеж всех платных действий: счётчик по адресу, до похода в базу. */
@@ -142,36 +51,66 @@ async function passRateLimit(): Promise<boolean> {
   return verdict === 'ok'
 }
 
-/** Серия кадров одним заходом: параллельные запросы, общий разбор исходов. */
+/**
+ * Серия кадров одним заходом: параллельные запросы через провайдерскую
+ * абстракцию, общий разбор исходов. Провайдер выбирается по тиру гранта:
+ * Pro рисует хорошей моделью (с fallback на fal, если оба ключа заведены),
+ * пробный тир - дешёвой. Если для тира провайдера почему-то нет (защита от
+ * рассинхрона конфигурации), серия не состоялась и резерв возвращается.
+ */
 async function runSeries(
   jobs: readonly { readonly kind: PromoShotKind; readonly prompt: string }[],
   base64: string,
   grant: AiGrant,
 ): Promise<PromoResult> {
+  const provider = resolveImageProvider(grant.tier === 'pro' ? 'good' : 'cheap')
+  if (provider === null) {
+    await releaseAiQuota(grant)
+    return { ok: false, error: 'unavailable' }
+  }
+
   // Кадры параллельно: последовательно двенадцать штук это минуты ожидания на
   // пустом экране. Каждый ловит свои ошибки сам, поэтому один обрыв не
   // выбрасывает одиннадцать оплаченных.
-  const outcomes = await Promise.all(jobs.map((job) => requestShot(job.kind, job.prompt, base64)))
+  const outcomes = await Promise.all(
+    jobs.map((job) => provider.generate({ prompt: job.prompt, referencePngBase64: base64 })),
+  )
 
-  const images = outcomes.flatMap((outcome) => (typeof outcome === 'string' ? [] : [outcome.image]))
-  if (images.length > 0) return { ok: true, mock: false, images, remaining: grant.remaining }
+  const images: PromoImage[] = []
+  for (const [index, outcome] of outcomes.entries()) {
+    if (outcome.kind === 'image') images.push({ kind: jobs[index]!.kind, dataUrl: outcome.dataUrl })
+  }
+  if (images.length > 0) {
+    // Кадры серии могут разойтись по провайдеру, если сработал fallback:
+    // подпись берём с первого вышедшего кадра, панели этого достаточно.
+    const usedProvider = outcomes.find((outcome) => outcome.kind === 'image')
+    return {
+      ok: true,
+      mock: false,
+      images,
+      remaining: grant.remaining,
+      ...(usedProvider?.kind === 'image' ? { provider: usedProvider.provider } : {}),
+    }
+  }
 
   // Ни одного кадра: серия не состоялась, значит и списывать не за что.
   await releaseAiQuota(grant)
-  return { ok: false, error: outcomes.every((outcome) => outcome === 'blocked') ? 'blocked' : 'failed' }
+  return { ok: false, error: outcomes.every((outcome) => outcome.kind === 'blocked') ? 'blocked' : 'failed' }
 }
 
 /**
- * Серия продуктовых кадров через Gemini (модель gemini-2.5-flash-image, она же Nano Banana).
- * Ключ читается только здесь, на сервере: в клиентский бандл он не попадает никогда.
- * Без ключа возвращаем mock: true, и вкладка рисует собственные заглушки поверх рендера доски.
+ * Серия продуктовых кадров через провайдерскую абстракцию (Pro - Gemini
+ * gemini-2.5-flash-image с fallback на fal, пробный тир - fal flux/schnell).
+ * Ключи читаются только на сервере: в клиентский бандл они не попадают никогда.
+ * Без ни одного ключа возвращаем mock: true, и вкладка рисует собственные
+ * заглушки поверх рендера доски.
  *
  * Пресетов двенадцать, но генерируются только отмеченные: каждый кадр стоит
  * единицу квоты, и решать, за что платить, должен человек, а не набор по умолчанию.
  *
  * Два рубежа, и оба обязательны. Первый - счётчик из lib/promo/rateLimit: он в памяти
  * процесса, стоит ноль и режет флуд до похода в базу. Второй - assertAiAllowed: сессия,
- * Pro и месячная квота в Postgres, то есть единственная защита, которую нельзя ни
+ * Pro/пробный тир и квота в Postgres, то есть единственная защита, которую нельзя ни
  * подделать заголовком, ни обнулить перезапуском инстанса.
  *
  * maxDuration для этого действия задан на странице, которая его вызывает (app/page.tsx):
@@ -184,19 +123,26 @@ export async function generatePromoShotsAction(input: unknown): Promise<PromoRes
   // Повторы в наборе оплачивались бы дважды за одну и ту же картинку.
   const kinds = [...new Set(parsed.data.kinds)]
 
-  // Ключа нет: наружу никто не идёт, платить не за что, поэтому и квоту не трогаем.
-  if (!isGeminiConfigured()) return { ok: true, mock: true, kinds }
+  // Ни одного ключа: наружу никто не идёт, платить не за что, поэтому и квоту не трогаем.
+  if (isAiDemoMode()) return { ok: true, mock: true, kinds }
 
   if (!(await passRateLimit())) return { ok: false, error: 'rateLimited' }
 
+  // Во free-тире серия режется до одного кадра ещё здесь: assertAiAllowed
+  // отказал бы целиком, увидев units > FREE_TRIAL_MAX_UNITS, а честнее
+  // сгенерировать один кадр из отмеченных, чем не сгенерировать ни одного.
+  // getAiAccess ничего не резервирует, это чистое чтение состояния.
+  const access = await getAiAccess()
+  const cappedKinds = access.tier === 'trial' ? kinds.slice(0, FREE_TRIAL_MAX_UNITS) : kinds
+
   // Квота резервируется здесь, до обращения к модели: иначе параллельные запросы
   // прочитали бы один и тот же остаток и все прошли бы. Возврат внутри runSeries.
-  const grant = await assertAiAllowed('promoShots', kinds.length)
+  const grant = await assertAiAllowed('promoShots', cappedKinds.length)
   if (!grant.ok) return { ok: false, error: grant.reason }
 
   const base64 = payload(parsed.data.boardPng).data
   return runSeries(
-    kinds.map((kind) => ({ kind, prompt: shotPrompt(kind, parsed.data.description) })),
+    cappedKinds.map((kind) => ({ kind, prompt: shotPrompt(kind, parsed.data.description) })),
     base64,
     grant,
   )
@@ -239,42 +185,11 @@ export async function analyzeReferenceAction(input: unknown): Promise<ReferenceA
   if (!grant.ok) return { ok: false, error: grant.reason }
 
   const image = payload(parsed.data.referenceImage)
-  try {
-    const res = await fetch(GEMINI_VISION_URL, {
-      method: 'POST',
-      headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: ANALYSIS_PROMPT }, { inlineData: image }] }],
-        generationConfig: { responseMimeType: 'application/json', responseSchema: ANALYSIS_RESPONSE_SCHEMA },
-      }),
-      cache: 'no-store',
-      signal: AbortSignal.timeout(VISION_TIMEOUT_MS),
-    })
-    if (!res.ok) {
-      let code = ''
-      try {
-        code = ((await res.json()) as GeminiResponse).error?.status ?? ''
-      } catch {
-        code = ''
-      }
-      console.error(`gemini reference: HTTP ${res.status}${code === '' ? '' : ` ${code}`}`)
-      await releaseAiQuota(grant)
-      return { ok: false, error: 'failed' }
-    }
-    const body = (await res.json()) as GeminiResponse
-    const style = parseStyleAnalysis(allText(body))
-    if (style === null) {
-      // Ответ без разбора: чаще всего модель отказалась смотреть на картинку.
-      console.error('gemini reference: ответ без разбора')
-      await releaseAiQuota(grant)
-      return { ok: false, error: (body.candidates?.length ?? 0) === 0 ? 'blocked' : 'failed' }
-    }
-    return { ok: true, mock: false, style, remaining: grant.remaining }
-  } catch (err) {
-    console.error(`gemini reference: ${err instanceof Error ? err.name : 'unknown error'}`)
-    await releaseAiQuota(grant)
-    return { ok: false, error: 'failed' }
-  }
+  const outcome = await analyzeReferenceImage(image)
+  if (outcome.kind === 'style') return { ok: true, mock: false, style: outcome.style, remaining: grant.remaining }
+
+  await releaseAiQuota(grant)
+  return { ok: false, error: outcome.kind === 'blocked' ? 'blocked' : 'failed' }
 }
 
 /**
@@ -287,17 +202,22 @@ export async function generateReferenceShotsAction(input: unknown): Promise<Prom
   if (!parsed.success) return { ok: false, error: 'invalid' }
 
   const kinds = PROMO_DEFAULT_SHOTS.slice(0, parsed.data.count)
-  if (!isGeminiConfigured()) return { ok: true, mock: true, kinds }
+  if (isAiDemoMode()) return { ok: true, mock: true, kinds }
 
   if (!(await passRateLimit())) return { ok: false, error: 'rateLimited' }
 
-  const grant = await assertAiAllowed('referenceShots', parsed.data.count)
+  // Тот же приём, что у серии по пресетам: во free-тире режем до одного кадра
+  // до похода в assertAiAllowed, а не полагаемся на его отказ.
+  const access = await getAiAccess()
+  const cappedKinds = access.tier === 'trial' ? kinds.slice(0, FREE_TRIAL_MAX_UNITS) : kinds
+
+  const grant = await assertAiAllowed('referenceShots', cappedKinds.length)
   if (!grant.ok) return { ok: false, error: grant.reason }
 
   const style = normalizeStyle(parsed.data.style)
   const base64 = payload(parsed.data.boardPng).data
   return runSeries(
-    kinds.map((kind, index) => ({ kind, prompt: referencePrompt(style, parsed.data.description, index) })),
+    cappedKinds.map((kind, index) => ({ kind, prompt: referencePrompt(style, parsed.data.description, index) })),
     base64,
     grant,
   )

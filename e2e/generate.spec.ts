@@ -1,4 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
+import { presetConsent } from './helpers/consent'
+
+test.beforeEach(async ({ page }) => {
+  await presetConsent(page)
+})
 
 async function openGenerator(page: Page): Promise<void> {
   await page.addInitScript(() => window.localStorage.clear())

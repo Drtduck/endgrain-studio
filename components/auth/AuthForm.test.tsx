@@ -21,6 +21,11 @@ function fillCredentials(container: HTMLElement, email: string, password: string
   fireEvent.change(passwordInput as HTMLInputElement, { target: { value: password } })
 }
 
+function checkConsent(container: HTMLElement): void {
+  const checkbox = container.querySelector('[data-testid="auth-consent"]')
+  fireEvent.click(checkbox as HTMLInputElement)
+}
+
 describe('AuthForm', () => {
   beforeEach(() => {
     signInWithPassword.mockClear()
@@ -66,10 +71,26 @@ describe('AuthForm', () => {
     signUp.mockResolvedValueOnce({ data: { session: null }, error: null } as never)
     const { container } = render(<AuthForm mode="register" locale="ru" />)
     fillCredentials(container, 'a@example.com', 'password123')
+    checkConsent(container)
     const form = container.querySelector('[data-testid="auth-form-register"]') as HTMLFormElement
     fireEvent.submit(form)
     await waitFor(() => expect(container.querySelector('[data-testid="auth-confirm-sent"]')).toBeDefined())
     expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('регистрация без галочки согласия не вызывает signUp и показывает ошибку', async () => {
+    const { container } = render(<AuthForm mode="register" locale="ru" />)
+    fillCredentials(container, 'a@example.com', 'password123')
+    const form = container.querySelector('[data-testid="auth-form-register"]') as HTMLFormElement
+    fireEvent.submit(form)
+    expect(signUp).not.toHaveBeenCalled()
+    const alert = container.querySelector('[role="alert"]')
+    expect(alert?.textContent).toBe('Отметьте согласие на обработку персональных данных, чтобы продолжить')
+  })
+
+  it('в режиме login чекбокса согласия нет', () => {
+    const { container } = render(<AuthForm mode="login" locale="ru" />)
+    expect(container.querySelector('[data-testid="auth-consent"]')).toBeNull()
   })
 
   it('renders the English submit label for the en locale', () => {
@@ -127,6 +148,7 @@ describe('AuthForm', () => {
     window.history.replaceState({}, '', '/register?next=%2F%3Ftab%3Dprojects')
     const { container } = render(<AuthForm mode="register" locale="ru" />)
     fillCredentials(container, 'a@example.com', 'password123')
+    checkConsent(container)
     fireEvent.submit(container.querySelector('[data-testid="auth-form-register"]') as HTMLFormElement)
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/?tab=projects'))
     expect(signUp).toHaveBeenCalledWith({
@@ -134,6 +156,11 @@ describe('AuthForm', () => {
       password: 'password123',
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/?tab=projects')}`,
+        data: {
+          pd_consent_version: 1,
+          pd_consent_at: expect.any(String),
+          pd_consent_locale: 'ru',
+        },
       },
     })
   })
@@ -160,12 +187,20 @@ describe('AuthForm', () => {
       <AuthForm mode="register" locale="ru" redirectOrigin="https://app.endgrain.app" />
     )
     fillCredentials(container, 'a@example.com', 'password123')
+    checkConsent(container)
     fireEvent.submit(container.querySelector('[data-testid="auth-form-register"]') as HTMLFormElement)
     await waitFor(() => expect(signUp).toHaveBeenCalledTimes(1))
     expect(signUp).toHaveBeenCalledWith({
       email: 'a@example.com',
       password: 'password123',
-      options: { emailRedirectTo: 'https://app.endgrain.app/auth/callback?next=%2F' },
+      options: {
+        emailRedirectTo: 'https://app.endgrain.app/auth/callback?next=%2F',
+        data: {
+          pd_consent_version: 1,
+          pd_consent_at: expect.any(String),
+          pd_consent_locale: 'ru',
+        },
+      },
     })
   })
 

@@ -1,4 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
+import { presetConsent } from './helpers/consent'
+
+test.beforeEach(async ({ page }) => {
+  await presetConsent(page)
+})
 
 // Сценарии описывают поведение без ключей: панели показывают заглушки и честно называют
 // недостающую переменную. С настоящим ключом в окружении генерация платная и ответ другой,

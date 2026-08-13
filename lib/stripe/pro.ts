@@ -111,6 +111,26 @@ async function readSubscriptionRow(userId: string): Promise<SubscriptionRecord |
   }
 }
 
+/**
+ * Вариант getProStatus от userId, а не от cookie-сессии: нужен сервисному
+ * слою API (lib/api/service.ts), где пользователь известен из проверенного
+ * ключа, а не из браузерной сессии. Без memoизации: React cache() дедуплицирует
+ * в рамках одного рендера/запроса, а этот путь дёргается из route handler'ов
+ * и MCP-инструментов, где такого контекста может не быть. Allowlist по email
+ * сюда сознательно не перенесён - у сервисного слоя email вызывающего нет,
+ * а конкурсный обход это ручной адрес жюри в браузере, не агентский доступ.
+ */
+export async function proStatusForUser(userId: string): Promise<ProStatus> {
+  if (flags.pro || isProUnlockedForAll()) return UNLOCKED
+  if (!isSupabaseConfigured()) return FREE
+  try {
+    return resolveProStatus(await readSubscriptionRow(userId), Date.now())
+  } catch (err) {
+    console.error('proStatusForUser failed', err)
+    return FREE
+  }
+}
+
 /** Мемоизация на один серверный рендер, как getCurrentUser в lib/supabase/session.ts. */
 export const getProStatus: () => Promise<ProStatus> = cache(async (): Promise<ProStatus> => {
   // Аварийный рубильник выигрывает у всего, в том числе у настроенного Stripe:
@@ -126,7 +146,7 @@ export const getProStatus: () => Promise<ProStatus> = cache(async (): Promise<Pr
     // Конкурсный обход: жюри и автор получают Pro без карты, но по адресу из
     // серверного списка, а не по факту незаведённых ключей Stripe.
     if (isAllowlistedEmail(user.email)) return ALLOWLISTED
-    return resolveProStatus(await readSubscriptionRow(user.id), Date.now())
+    return proStatusForUser(user.id)
   } catch (err) {
     // Лежащая база не должна ронять рендер студии, ровно как в getCurrentUser.
     console.error('getProStatus failed', err)

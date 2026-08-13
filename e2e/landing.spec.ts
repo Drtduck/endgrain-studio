@@ -1,4 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
+import { presetConsent } from './helpers/consent'
+
+test.beforeEach(async ({ page }) => {
+  await presetConsent(page)
+})
 
 async function openLanding(page: Page, locale: 'ru' | 'en' = 'ru'): Promise<void> {
   await page.context().addCookies([{ name: 'eg-locale', value: locale, url: 'http://127.0.0.1:3100' }])
@@ -194,15 +199,21 @@ test('окно входа открывается из лайтбокса сни�
   await expect(page.getByTestId('auth-email')).toBeVisible()
 })
 
-test('подвал несёт дисклеймер Amazon и строку про приватность', async ({ page }) => {
+test('подвал несёт дисклеймер Amazon и ссылки на правовые документы', async ({ page }) => {
   await openLanding(page)
   const footer = page.getByTestId('landing-footer')
   await expect(footer).toContainText('Amazon')
-  await expect(footer).toContainText(/не передаём почту/i)
+  await expect(footer.getByTestId('landing-footer-privacy')).toBeVisible()
+  await expect(footer.getByTestId('landing-footer-consent-settings')).toBeVisible()
 })
 
-test('форма подписки валидирует адрес и честно сообщает, что почта не подключена', async ({ page }) => {
+test('форма подписки требует согласие и валидирует адрес', async ({ page }) => {
   await openLanding(page)
+  await page.getByTestId('subscribe-email').fill('stas@example.com')
+  await page.getByTestId('subscribe-submit').click()
+  await expect(page.getByTestId('subscribe-error')).toBeVisible()
+
+  await page.getByTestId('subscribe-consent').check()
   await page.getByTestId('subscribe-email').fill('не-почта')
   await page.getByTestId('subscribe-submit').click()
   await expect(page.getByTestId('subscribe-error')).toBeVisible()

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { t, type Locale } from '@/lib/i18n'
 import { APP_ORIGIN } from '@/lib/routing/host'
 
@@ -17,6 +18,9 @@ export function LandingFooter({ locale }: { locale: Locale }) {
           >
             {t(locale, 'pricing.navTitle')}
           </a>
+          <Link href="/blog" data-testid="landing-footer-blog" className="font-sans text-sm text-ink-secondary hover:text-ink">
+            {t(locale, 'blog.navTitle')}
+          </Link>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -33,7 +37,34 @@ export function LandingFooter({ locale }: { locale: Locale }) {
         <div className="flex flex-col gap-2">
           <span className="font-display text-sm font-semibold">{t(locale, 'landing.footer.legal.title')}</span>
           <p className="font-sans text-xs text-ink-secondary">{t(locale, 'landing.footer.legal.amazonDisclaimer')}</p>
-          <p className="font-sans text-xs text-ink-secondary">{t(locale, 'landing.footer.legal.privacy')}</p>
+          <a
+            href={`${APP_ORIGIN}/legal/privacy`}
+            data-testid="landing-footer-privacy"
+            className="font-sans text-xs text-ink-secondary hover:text-ink"
+          >
+            {t(locale, 'landing.footer.legal.privacyLink')}
+          </a>
+          <a
+            href={`${APP_ORIGIN}/legal/personal-data`}
+            data-testid="landing-footer-personal-data"
+            className="font-sans text-xs text-ink-secondary hover:text-ink"
+          >
+            {t(locale, 'landing.footer.legal.personalDataLink')}
+          </a>
+          <a
+            href={`${APP_ORIGIN}/legal/consent`}
+            data-testid="landing-footer-consent-doc"
+            className="font-sans text-xs text-ink-secondary hover:text-ink"
+          >
+            {t(locale, 'landing.footer.legal.consentDocLink')}
+          </a>
+          <a
+            href={`${APP_ORIGIN}/legal/privacy`}
+            data-testid="landing-footer-consent-settings"
+            className="font-sans text-xs text-ink-secondary hover:text-ink"
+          >
+            {t(locale, 'landing.footer.legal.cookieSettings')}
+          </a>
         </div>
       </div>
 

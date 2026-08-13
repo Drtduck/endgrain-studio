@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { Check } from 'lucide-react'
 import { createCheckoutAction } from '@/app/actions/billing'
 import { Button } from '@/components/ui/button'
+import { track } from '@/lib/analytics/events'
 import { t, type Locale, type MessageKey } from '@/lib/i18n'
 import { APP_ORIGIN } from '@/lib/routing/host'
 import type { CheckoutError } from '@/lib/stripe/billing'
@@ -39,6 +40,9 @@ const FREE_FEATURES: readonly MessageKey[] = [
   'pricing.f.pdfFree',
   'pricing.f.projectsFree',
   'pricing.f.local',
+  // API доступен на бесплатном тарифе всем - это главный аргумент выкатывать
+  // его сейчас, а не только вместе с оплатой Developer (раздел 9.1 спеки).
+  'pricing.f.apiFree',
 ]
 
 // Pro не повторяет список бесплатного тарифа: одна строка «всё из бесплатного» плюс то, за что платят.
@@ -47,6 +51,16 @@ const PRO_FEATURES: readonly MessageKey[] = [
   'pricing.f.pdfPro',
   'pricing.f.pngPro',
   'pricing.f.projectsPro',
+]
+
+// Developer выкатывается без кассы (раздел 9.1/9.3): статус «скоро», кнопки
+// оплаты нет вовсе, цены нет вовсе - названная и потом изменённая цена стоит
+// дороже, чем не названная.
+const DEVELOPER_FEATURES: readonly MessageKey[] = [
+  'developer.f.requests',
+  'developer.f.keys',
+  'developer.f.mcp',
+  'developer.f.support',
 ]
 
 function formatDate(iso: string, locale: Locale): string {
@@ -79,6 +93,7 @@ export function PricingPlans(props: PricingPlansProps) {
 
   const buy = (plan: PlanId): void => {
     setError(null)
+    track('checkout_started', { plan })
     startTransition(async () => {
       const res = await createCheckoutAction(plan)
       if (res.ok) window.location.assign(res.url)
@@ -90,7 +105,7 @@ export function PricingPlans(props: PricingPlansProps) {
 
   return (
     <div data-testid="pricing-plans" className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         <section
           data-testid="pricing-free"
           className="flex flex-col gap-3 rounded-lg border border-line-subtle bg-surface-raised p-5"
@@ -176,6 +191,24 @@ export function PricingPlans(props: PricingPlansProps) {
               </>
             )}
           </div>
+        </section>
+
+        <section
+          data-testid="pricing-developer"
+          className="flex flex-col gap-3 rounded-lg border border-line-subtle bg-surface-raised p-5"
+        >
+          <div className="flex flex-col gap-0.5">
+            <span className="font-display text-lg font-semibold text-ink">{t(locale, 'developer.name')}</span>
+            <span data-testid="pricing-developer-status" className="font-mono text-2xl tabular-nums text-ink-secondary">
+              {t(locale, 'developer.status')}
+            </span>
+          </div>
+          <FeatureList locale={locale} keys={DEVELOPER_FEATURES} />
+          <p className="mt-1 rounded-md border border-line bg-surface px-3 py-[11px] text-[13px] text-ink-secondary">
+            <a href="mailto:hello@endgrain.app" className="text-accent hover:underline">
+              {t(locale, 'developer.emailNote')}
+            </a>
+          </p>
         </section>
       </div>
 

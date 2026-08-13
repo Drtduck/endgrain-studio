@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import createMDX from "@next/mdx";
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -11,4 +12,15 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// pageExtensions не трогаем: статьи не лежат страницами в app/, их грузит
+// динамический импорт по slug из app/(landing)/blog/[slug]/page.tsx. Плагины
+// заданы строками, потому что Turbopack не умеет передавать функции через
+// границу JS/Rust (rehype-autolink-headings поэтому не используется).
+const withMDX = createMDX({
+  options: {
+    remarkPlugins: ["remark-gfm"],
+    rehypePlugins: ["rehype-slug"],
+  },
+});
+
+export default withMDX(nextConfig);
