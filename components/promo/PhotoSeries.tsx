@@ -140,7 +140,11 @@ export function PhotoSeries() {
         </p>
       </fieldset>
 
-      {gate.showPaywall ? <TrialPaywall locale={locale} /> : <AiGateNote gate={gate} locale={locale} testId="promo-gate" />}
+      {gate.showPaywall ? (
+        <TrialPaywall locale={locale} />
+      ) : (
+        <AiGateNote gate={gate} locale={locale} testId={trialMode ? 'promo-trial-note' : 'promo-gate'} />
+      )}
 
       {result !== null && !result.ok ? (
         <p
