@@ -74,11 +74,12 @@ describe('AuthCta', () => {
     expect((screen.getByTestId('auth-email') as HTMLInputElement).value).toBe('')
   })
 
-  it('заголовок окна следует за режимом и локалью', async () => {
+  it('заголовок окна остаётся названием продукта при смене режима', async () => {
     const dialog = await openDialog('en')
-    expect(dialog.textContent ?? '').toContain(t('en', 'auth.registerTitle'))
+    expect(dialog.textContent ?? '').toContain(t('en', 'app.title'))
     fireEvent.click(screen.getByTestId('landing-auth-switch'))
-    await waitFor(() => expect(dialog.textContent ?? '').toContain(t('en', 'auth.loginTitle')))
+    await screen.findByTestId('auth-form-login')
+    await waitFor(() => expect(dialog.textContent ?? '').toContain(t('en', 'app.title')))
   })
 
   it('шапка окна показывает логотип и название продукта, как на отдельной странице', async () => {
@@ -122,6 +123,9 @@ describe('AuthCta', () => {
 
   it('ссылка на сброс пароля абсолютная и ведёт на домен приложения', async () => {
     await openDialog()
+    // Ссылка на сброс живёт в форме входа, поэтому окно сначала переключаем в этот режим.
+    fireEvent.click(screen.getByTestId('landing-auth-switch'))
+    await screen.findByTestId('auth-form-login')
     // С лендинга endgrain.app обе ссылки обязаны уводить на соседний домен студии.
     expect(window.location.origin).toBe('https://endgrain.app')
     expect(screen.getByTestId('landing-auth-forgot')).toHaveAttribute(

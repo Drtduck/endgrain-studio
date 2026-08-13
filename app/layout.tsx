@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLandingLocale();
   return {
     metadataBase: new URL(APP_ORIGIN),
-    title: { default: "Endgrain Studio", template: "%s · Endgrain Studio" },
+    title: { default: "Endgrain App", template: "%s · Endgrain App" },
     description: t(locale, "meta.description"),
   };
 }

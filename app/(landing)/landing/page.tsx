@@ -26,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       type: 'website',
       url: SITE_ORIGIN,
-      siteName: 'Endgrain Studio',
+      siteName: 'Endgrain App',
       title,
       description,
       locale: locale === 'ru' ? 'ru_RU' : 'en_US',

@@ -31,8 +31,7 @@ export default function ForgotPasswordPage() {
   return (
     <AuthCard
       locale={locale}
-      titleKey="auth.forgotTitle"
-      subtitleKey="auth.forgotSubtitle"
+      noteKey="auth.forgotSubtitle"
       footer={
         <Link href="/login" data-testid="auth-login-link" className="text-accent hover:underline">
           {t(locale, 'auth.backToLogin')}

@@ -101,7 +101,7 @@ test('вычисленные стили: токены дизайн-систем�
   expect(bodyFontFamily).toContain('Golos')
 
   const headerTitleFontFamily = await header
-    .getByText('Endgrain Studio', { exact: true })
+    .getByText('Endgrain App', { exact: true })
     .evaluate((el) => getComputedStyle(el).fontFamily)
   expect(headerTitleFontFamily).toContain('Bitter')
 })
