@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { t, type MessageKey } from '@/lib/i18n'
 import { useDerived } from '@/lib/store/derived'
 import { useStudio } from '@/lib/store/studio'
+import { cn } from '@/lib/utils'
 import { VIDEO_ALLOWED_SECONDS, videoCostCents, type VideoSeconds } from '@/lib/video/pricing'
 import { formatCents } from '@/lib/wallet/format'
 
@@ -69,11 +70,10 @@ export function VideoPanel() {
               type="button"
               data-testid={`video-seconds-${s}`}
               onClick={() => setSeconds(s)}
-              className={
-                s === seconds
-                  ? 'rounded-sm bg-surface-raised px-2.5 py-1 font-mono text-xs shadow-sm'
-                  : 'rounded-sm px-2.5 py-1 font-mono text-xs text-ink-secondary'
-              }
+              className={cn(
+                'rounded-sm px-2.5 py-1 font-mono text-xs font-semibold transition-colors duration-hover',
+                s === seconds ? 'bg-surface-raised shadow-sm' : 'text-ink-secondary',
+              )}
             >
               {s}s
             </button>
@@ -113,6 +113,8 @@ export function VideoPanel() {
               {t(locale, 'video.mockNote')}
             </p>
           ) : null}
+          {/* posterUrl это data: URI из мока (boardPngDataUrl), next/image его не оптимизирует - обычный img, как в MerchMockups/PhotoSeries. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={result.posterUrl} alt={t(locale, 'video.title')} className="max-w-xs rounded-md border border-line-subtle" />
           <p data-testid="video-balance" className="text-[13px] text-ink-secondary">
             {t(locale, 'wallet.title')}: {formatCents(result.balanceCents, locale)}

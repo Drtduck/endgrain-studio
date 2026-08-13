@@ -7,6 +7,7 @@ import { listGallery } from '@/lib/gallery/list'
 import { GALLERY_SORTS } from '@/lib/gallery/types'
 import { t } from '@/lib/i18n'
 import { getLandingLocale } from '@/lib/landing/locale'
+import { cn } from '@/lib/utils'
 
 // Кэш на минуту: лайк и публикация зовут revalidatePath('/gallery') сами,
 // а анонимный трафик не должен пересчитывать список на каждый заход.
@@ -40,11 +41,10 @@ export default async function GalleryPage(props: PageProps<'/gallery'>) {
               key={s}
               href={`/gallery?sort=${s}`}
               data-testid={`gallery-sort-${s}`}
-              className={
-                s === sort
-                  ? 'rounded-sm bg-surface-raised px-3 py-1.5 text-sm font-semibold shadow-sm'
-                  : 'rounded-sm px-3 py-1.5 text-sm text-ink-secondary'
-              }
+              className={cn(
+                'rounded-sm px-3 py-1.5 text-sm font-semibold transition-colors duration-hover',
+                s === sort ? 'bg-surface-raised shadow-sm' : 'text-ink-secondary',
+              )}
             >
               {t(locale, s === 'new' ? 'gallery.sortNew' : 'gallery.sortPopular')}
             </Link>
