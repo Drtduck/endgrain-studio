@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { AuthCta } from '@/components/landing/AuthCta'
 import { LandingLocaleToggle } from '@/components/landing/LandingLocaleToggle'
 import { t, type Locale } from '@/lib/i18n'
@@ -17,6 +18,14 @@ export function LandingHeader({ locale }: { locale: Locale }) {
       </div>
 
       <div className="flex-1" />
+
+      <Link
+        href="/blog"
+        data-testid="landing-header-blog"
+        className="font-sans text-sm text-ink-secondary hover:text-ink"
+      >
+        {t(locale, 'blog.navTitle')}
+      </Link>
 
       <LandingLocaleToggle locale={locale} />
 

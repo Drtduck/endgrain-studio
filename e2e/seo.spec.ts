@@ -56,3 +56,13 @@ test('подвал лендинга ссылается на блог', async ({ 
   await page.goto('/landing')
   await expect(page.getByTestId('landing-footer-blog')).toHaveAttribute('href', '/blog')
 })
+
+test('шапка лендинга ссылается на блог', async ({ page }) => {
+  await page.goto('/landing')
+  await expect(page.getByTestId('landing-header-blog')).toHaveAttribute('href', '/blog')
+})
+
+test('шапка студии ссылается на блог лендинга', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByTestId('app-blog-link')).toHaveAttribute('href', 'https://endgrain.app/blog')
+})

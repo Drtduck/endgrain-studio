@@ -27,6 +27,7 @@ import { UpgradeButton } from '@/components/UpgradeButton'
 import { HelpHint } from '@/components/ui/help-hint'
 import { Separator } from '@/components/ui/separator'
 import { t } from '@/lib/i18n'
+import { SITE_ORIGIN } from '@/lib/routing/host'
 import { useDerived } from '@/lib/store/derived'
 import { rememberLocale } from '@/lib/store/locale'
 import { useStudioPersistence } from '@/lib/store/persist'
@@ -55,6 +56,14 @@ export function StudioShell() {
           <img src="/brand/beaver-mark.png" alt="" width={24} height={24} className="size-6 shrink-0" />
           <span className="font-display text-[17px] font-semibold">{t(locale, 'app.title')}</span>
         </div>
+
+        <a
+          href={`${SITE_ORIGIN}/blog`}
+          data-testid="app-blog-link"
+          className="hidden font-sans text-sm text-ink-secondary hover:text-ink sm:inline"
+        >
+          {t(locale, 'blog.navTitle')}
+        </a>
 
         <Separator orientation="vertical" className="h-6" />
 
