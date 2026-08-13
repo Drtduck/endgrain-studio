@@ -31,7 +31,6 @@ const PUBLIC_FILES: readonly string[] = [
   '/robots.txt',
   '/sitemap.xml',
   '/favicon.ico',
-  '/icon.svg',
   '/apple-icon.png',
   '/manifest.webmanifest',
 ]
