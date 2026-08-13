@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { TrackOnMount } from '@/components/analytics/TrackOnMount'
 import { CheckoutBanner } from '@/components/CheckoutBanner'
 import { PricingPlans } from '@/components/pricing/PricingPlans'
 import { t } from '@/lib/i18n'
@@ -29,6 +30,7 @@ export default async function PricingPage(props: PageProps<'/pricing'>) {
 
   return (
     <main className="min-h-screen bg-app px-4 py-10">
+      <TrackOnMount event="pricing_viewed" />
       {state === null ? null : <CheckoutBanner state={state} locale={locale} />}
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <div className="flex flex-col gap-1">

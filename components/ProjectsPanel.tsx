@@ -11,6 +11,7 @@ import {
 import { usePro } from '@/components/ProProvider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { track } from '@/lib/analytics/events'
 import { designDisplayName } from '@/lib/designs/name'
 import { t, type MessageKey } from '@/lib/i18n'
 import { FREE_PROJECT_LIMIT } from '@/lib/stripe/limits'
@@ -72,6 +73,7 @@ export function ProjectsPanel() {
       const res = await saveProjectAction(currentName, currentDesign)
       if (res.ok) {
         setItems((prev) => [res.data, ...prev])
+        track('project_saved')
       } else {
         setError(res.error)
       }

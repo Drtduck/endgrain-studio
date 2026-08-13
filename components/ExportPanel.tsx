@@ -7,6 +7,7 @@ import { usePro } from '@/components/ProProvider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { HelpHint } from '@/components/ui/help-hint'
+import { track } from '@/lib/analytics/events'
 import { designDisplayName } from '@/lib/designs/name'
 import { t, type MessageKey } from '@/lib/i18n'
 import { buildCutPlan, renderBoardSvg, safeFileName } from '@/lib/export'
@@ -85,6 +86,7 @@ export function ExportPanel() {
           await buildInstructionPdf({ design, model, calc, locale, pro: status.pro }),
           safeFileName(title, 'pdf'),
         )
+        track('pdf_exported', { pro: status.pro })
       }
     } catch (err) {
       // Причина уходит в консоль браузера, пользователю показываем одну человеческую строку.
