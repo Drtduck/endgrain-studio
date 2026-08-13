@@ -280,6 +280,10 @@ const ru = {
   'auth.dialogClose': 'Закрыть',
   'auth.confirmClose': 'Понятно',
   'auth.dialogFallback': 'Окно не работает? Откройте страницу входа',
+  'auth.consentLabel': 'Я даю согласие на обработку персональных данных',
+  'auth.errorConsentRequired': 'Отметьте согласие на обработку персональных данных, чтобы продолжить',
+  'auth.consentLinkConsent': 'условия согласия',
+  'auth.consentLinkPrivacy': 'политика конфиденциальности',
   'tabs.projects': 'Мои проекты',
   'account.signIn': 'Войти',
   'account.signOut': 'Выйти',
@@ -413,7 +417,10 @@ const ru = {
   'landing.footer.contact.title': 'Связь',
   'landing.footer.legal.title': 'Правовое',
   'landing.footer.legal.amazonDisclaimer': 'Часть ссылок ведёт на Amazon: как партнёр программы мы получаем комиссию с покупок по ним. Цена для вас от этого не меняется.',
-  'landing.footer.legal.privacy': 'Мы не передаём почту третьим лицам.',
+  'landing.footer.legal.privacyLink': 'Политика конфиденциальности',
+  'landing.footer.legal.personalDataLink': 'Обработка персональных данных',
+  'landing.footer.legal.consentDocLink': 'Согласие на обработку ПДн',
+  'landing.footer.legal.cookieSettings': 'Настройки cookie',
   'landing.footer.copyright': 'Endgrain Studio',
 
   'landing.subscribe.title': 'Истории о досках и тех, кто их делает',
@@ -427,6 +434,8 @@ const ru = {
   'landing.subscribe.errInvalid': 'Похоже, в адресе опечатка. Проверьте?',
   'landing.subscribe.errDisabled': 'Почта пока не подключена. Загляните позже, подписка скоро заработает.',
   'landing.subscribe.errFailed': 'Не получилось отправить. Попробуйте ещё раз через минуту.',
+  'landing.subscribe.consentLabel': 'Я согласен на обработку email для рассылки.',
+  'landing.subscribe.errConsent': 'Отметьте согласие на обработку email, чтобы подписаться.',
 
   'affiliate.disclosure':
     'Ссылки партнёрские: как партнёр Amazon автор получает комиссию с покупок по ним. Цена для вас та же, а подборку собрали до того, как появились ссылки.',
@@ -627,6 +636,29 @@ const ru = {
   'help.promo.title': 'Промо-материалы',
   'help.promo.body':
     'Серия фото собирается из рендера вашей доски: он уходит на сервер вместе с описанием узора и пород. Каждый отмеченный кадр стоит единицу месячной квоты, поэтому набор сцен выбираете вы. Съёмка по референсу сначала показывает разбор чужого кадра и только потом рисует. Мерч отправляет тот же рендер в Printful и возвращает настоящие мокапы. Без ключей все панели показывают компоновку, чтобы было видно, что получится.',
+
+  'consent.bannerAriaLabel': 'Настройка cookie',
+  'consent.optInText': 'Мы используем технические cookie всегда и аналитические cookie только с вашего согласия.',
+  'consent.optOutText': 'Мы считаем обезличенную статистику посещений, персональные данные не продаём.',
+  'consent.privacyLink': 'Политика конфиденциальности',
+  'consent.personalDataLink': 'Обработка персональных данных',
+  'consent.accept': 'Принять',
+  'consent.decline': 'Отклонить',
+  'consent.disableAnalytics': 'Отключить аналитику',
+  'consent.gotIt': 'Понятно',
+  'consent.gpcAck': 'Мы получили сигнал Global Privacy Control вашего браузера и отключили аналитику',
+  'consent.close': 'Закрыть',
+  'consent.settings.title': 'Ваш текущий выбор',
+  'consent.settings.enabled': 'Аналитика включена',
+  'consent.settings.disabled': 'Аналитика отключена',
+  'consent.settings.noDecision': 'Выбор ещё не сделан',
+  'consent.settings.sourceLine': 'Источник: {source}, дата: {date}',
+  'consent.settings.sourceBanner': 'кнопка баннера',
+  'consent.settings.sourceGpc': 'сигнал браузера (GPC)',
+  'consent.settings.sourceSettings': 'этот переключатель',
+  'consent.settings.toggleLabel': 'Разрешить обезличенную аналитику',
+
+  'legal.updatedAt': 'Обновлено: {date}',
 } as const
 
 export default ru
