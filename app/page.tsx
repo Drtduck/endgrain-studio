@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { TrackOnMount } from '@/components/analytics/TrackOnMount'
 import { CheckoutBanner } from '@/components/CheckoutBanner'
 import { StudioShell } from '@/components/StudioShell'
 import { TabUrlSync } from '@/components/TabUrlSync'
@@ -20,6 +21,7 @@ export default async function Page(props: PageProps<'/'>) {
   return (
     <>
       {state === null ? null : <CheckoutBanner state={state} locale={locale} />}
+      {state === 'success' ? <TrackOnMount event="subscription_paid" once="eg-ga-paid" /> : null}
       <Suspense fallback={null}>
         <TabUrlSync />
       </Suspense>

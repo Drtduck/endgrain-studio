@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useGoogleAuthAvailable } from '@/components/GoogleAuthProvider'
 import { safeNextPath } from '@/lib/auth/access'
+import { CONSENT_VERSION } from '@/lib/consent/cookie'
 import { hardNavigate } from '@/lib/routing/navigate'
 import { t, type Locale } from '@/lib/i18n'
 import { getSupabaseBrowser } from '@/lib/supabase/browser'
@@ -72,6 +73,9 @@ export function AuthForm({ mode, locale, redirectOrigin, onSuccess, onConfirmSen
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmSent, setConfirmSent] = useState(false)
+  // Непредзаполненный чекбокс согласия на обработку ПДн, только для регистрации:
+  // прямое требование 420-ФЗ, никаких предвыбранных значений.
+  const [pdConsent, setPdConsent] = useState(false)
 
   function originBase(): string {
     return redirectOrigin ?? window.location.origin
@@ -113,6 +117,12 @@ export function AuthForm({ mode, locale, redirectOrigin, onSuccess, onConfirmSen
       setError(t(locale, 'auth.errorShortPassword', { min: MIN_PASSWORD_LENGTH }))
       return
     }
+    // Пока чекбокс не отмечен, submit не проходит: показываем свой текст ошибки,
+    // а не native required - нативный тултип браузера идёт на языке ОС, не наш.
+    if (mode === 'register' && !pdConsent) {
+      setError(t(locale, 'auth.errorConsentRequired'))
+      return
+    }
     setBusy(true)
     const sb = getSupabaseBrowser()
     const next = nextFromLocation()
@@ -135,6 +145,11 @@ export function AuthForm({ mode, locale, redirectOrigin, onSuccess, onConfirmSen
       password,
       options: {
         emailRedirectTo: `${originBase()}/auth/callback?next=${encodeURIComponent(next)}`,
+        data: {
+          pd_consent_version: CONSENT_VERSION,
+          pd_consent_at: new Date().toISOString(),
+          pd_consent_locale: locale,
+        },
       },
     })
     setBusy(false)
@@ -194,6 +209,34 @@ export function AuthForm({ mode, locale, redirectOrigin, onSuccess, onConfirmSen
           disabled={busy}
         />
       </div>
+
+      {mode === 'register' ? (
+        <label className="flex items-start gap-2 text-[12px] leading-snug text-ink-secondary">
+          <input
+            type="checkbox"
+            data-testid="auth-consent"
+            checked={pdConsent}
+            onChange={(e) => {
+              setPdConsent(e.target.checked)
+              // Отметка чекбокса сразу убирает ошибку «нужно согласие»: не заставляем
+              // человека жать submit второй раз ради того, чтобы увидеть чистую форму.
+              if (e.target.checked) setError(null)
+            }}
+            disabled={busy}
+            className="mt-0.5 size-4 shrink-0"
+          />
+          <span>
+            {t(locale, 'auth.consentLabel')}{' '}
+            <a href="/legal/consent" target="_blank" rel="noreferrer" className="text-accent hover:underline">
+              {t(locale, 'auth.consentLinkConsent')}
+            </a>
+            {', '}
+            <a href="/legal/privacy" target="_blank" rel="noreferrer" className="text-accent hover:underline">
+              {t(locale, 'auth.consentLinkPrivacy')}
+            </a>
+          </span>
+        </label>
+      ) : null}
 
       {error ? (
         <p role="alert" data-testid="auth-error" className="text-sm text-error-text">

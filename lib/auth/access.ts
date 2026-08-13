@@ -22,6 +22,7 @@ export const PUBLIC_PREFIXES: readonly string[] = [
   '/pricing',
   '/landing',
   '/blog',
+  '/legal',
   '/api',
   '/_next',
   '/brand',

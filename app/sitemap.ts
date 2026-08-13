@@ -26,5 +26,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${APP_ORIGIN}/`, priority: 0.8 },
     { url: `${APP_ORIGIN}/pricing`, priority: 0.6 },
     { url: `${APP_ORIGIN}/gallery`, priority: 0.6 },
+    { url: `${APP_ORIGIN}/legal/privacy`, priority: 0.3 },
+    { url: `${APP_ORIGIN}/legal/personal-data`, priority: 0.3 },
+    { url: `${APP_ORIGIN}/legal/consent`, priority: 0.3 },
   ]
 }

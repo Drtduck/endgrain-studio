@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { Check } from 'lucide-react'
 import { createCheckoutAction } from '@/app/actions/billing'
 import { Button } from '@/components/ui/button'
+import { track } from '@/lib/analytics/events'
 import { t, type Locale, type MessageKey } from '@/lib/i18n'
 import { APP_ORIGIN } from '@/lib/routing/host'
 import type { CheckoutError } from '@/lib/stripe/billing'
@@ -92,6 +93,7 @@ export function PricingPlans(props: PricingPlansProps) {
 
   const buy = (plan: PlanId): void => {
     setError(null)
+    track('checkout_started', { plan })
     startTransition(async () => {
       const res = await createCheckoutAction(plan)
       if (res.ok) window.location.assign(res.url)

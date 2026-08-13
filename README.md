@@ -58,6 +58,7 @@ https://endgrain-studio.vercel.app
 | `NEXT_PUBLIC_AMAZON_TAG` | Партнёрский тег Amazon Associates. Без неё блоки рендерятся, ссылки идут без тега. |
 | `NEXT_PUBLIC_SITE_ORIGIN` | Корневой домен лендинга, по умолчанию `https://endgrain.app`. |
 | `NEXT_PUBLIC_APP_ORIGIN` | Домен студии, по умолчанию `https://app.endgrain.app`. Нужна только для ссылок с лендинга и адресов в письмах Supabase; на домен cookie не влияет, его считает хост запроса. |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Id счётчика GA4 (`G-...`). Публичная. Без неё `<Analytics/>` не рендерит ни одного тега и не уходит ни одного запроса к googletagmanager.com - штатное состояние в CI и до заведения аналитики на проде. |
 
 Значения переменных нигде не коммитятся, `.env.local` в `.gitignore`.
 

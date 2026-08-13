@@ -17,7 +17,12 @@ export interface SessionCheck {
  * лишнего round-trip на каждой навигации.
  */
 export async function updateSession(request: NextRequest): Promise<SessionCheck> {
-  if (!isSupabaseConfigured()) return { response: NextResponse.next(), authenticated: false }
+  // NextResponse.next() без { request } не пробрасывает мутированные заголовки
+  // (например x-egs-country из proxy.ts) дальше в рендер страницы: без ключей
+  // Supabase - штатное состояние в CI и до заведения аккаунта на проде - страна
+  // посетителя молча терялась бы, и весь региональный выбор consent-баннера
+  // откатывался бы к дефолту.
+  if (!isSupabaseConfigured()) return { response: NextResponse.next({ request }), authenticated: false }
 
   let response = NextResponse.next({ request })
 
