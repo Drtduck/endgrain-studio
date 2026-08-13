@@ -26,22 +26,36 @@ function withCountryHeader(request: NextRequest): NextRequest {
 }
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
-  const role = hostRole(request.headers.get('host'))
-  const path = request.nextUrl.pathname
+  // Заголовок страны нужен на обоих доменах: лендинг тоже принимает решения по
+  // региону (баннер согласия, opt-in/opt-out), а не только студия. Раньше
+  // withCountryHeader() звался только в ветке app, и весь трафик на site-домене
+  // (лендинг, блог) шёл с request без x-egs-country - каждый посетитель лендинга
+  // получал region-агностичный opt-in вместо честного региона по IP.
+  const requestWithCountry = withCountryHeader(request)
+  const role = hostRole(requestWithCountry.headers.get('host'))
+  const path = requestWithCountry.nextUrl.pathname
+
+  // { request } пробрасывает мутированные заголовки (x-egs-country) дальше в
+  // рендер, ровно как уже делает updateSession() в lib/supabase/proxy.ts.
+  const forwardedHeaders = { headers: requestWithCountry.headers }
 
   if (role === 'site') {
     // Лендинг статичен и анонимен: за сессией Supabase не ходим вовсе.
-    if (path === '/') return NextResponse.rewrite(new URL(LANDING_PATH, request.url))
+    if (path === '/') return NextResponse.rewrite(new URL(LANDING_PATH, requestWithCountry.url), { request: forwardedHeaders })
     // Блог живёт на этом же домене вместе с лендингом (см. isSitePath).
-    if (isSitePath(path)) return NextResponse.next()
+    if (isSitePath(path)) return NextResponse.next({ request: forwardedHeaders })
     // API отдаём прямо на корневом домене: MCP-клиент, вбивший endgrain.app/api/mcp,
     // не обязан следовать 307-редиректу на POST (не все клиенты это делают), а
     // человек, который набрал этот адрес руками, не должен получить невнятную
     // ошибку. Роуты те же самые, приложение одно - разводить их незачем.
-    if (path.startsWith('/api/')) return NextResponse.rewrite(new URL(path + request.nextUrl.search, request.url))
+    if (path.startsWith('/api/')) {
+      return NextResponse.rewrite(new URL(path + requestWithCountry.nextUrl.search, requestWithCountry.url), { request: forwardedHeaders })
+    }
     // Всё остальное на корневом домене это студия: отправляем на поддомен,
     // сохраняя путь и query (например ссылку восстановления пароля из письма).
-    return NextResponse.redirect(new URL(path + request.nextUrl.search, APP_ORIGIN), 307)
+    // Редирект не несёт наш собственный заголовок дальше: страна там определится
+    // заново, уже на app-домене, тем же кодом.
+    return NextResponse.redirect(new URL(path + requestWithCountry.nextUrl.search, APP_ORIGIN), 307)
   }
 
   // Одна страница по двум адресам это две записи в индексе: канон у корневого домена.
@@ -56,12 +70,12 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   // к базе без единой пользы. Проверка ключа (lib/api/auth.ts) не имеет с
   // сессией ничего общего.
   if (role === 'app' && (path.startsWith('/api/v1/') || path === '/api/mcp')) {
-    return NextResponse.next()
+    return NextResponse.next({ request: forwardedHeaders })
   }
 
   // Один поход в Supabase на переход: он же продлевает сессию, он же отвечает,
   // авторизован ли гость.
-  const { response, authenticated } = await updateSession(withCountryHeader(request))
+  const { response, authenticated } = await updateSession(requestWithCountry)
 
   const decision = decideAccess({
     role,
