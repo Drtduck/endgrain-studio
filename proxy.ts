@@ -2,9 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { decideAccess } from '@/lib/auth/access'
 import { COUNTRY_HEADER } from '@/lib/auth/geo'
 import { flags } from '@/lib/flags'
-import { APP_ORIGIN, LANDING_PATH, SITE_ORIGIN, hostRole } from '@/lib/routing/host'
+import { APP_ORIGIN, BLOG_PATH, LANDING_PATH, SITE_ORIGIN, hostRole, isSitePath } from '@/lib/routing/host'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { carryCookies, updateSession } from '@/lib/supabase/proxy'
+
+/** true для /blog и /blog/<что угодно>, но не для '/' - на app-домене '/' это студия, а не лендинг. */
+function isBlogPath(pathname: string): boolean {
+  return pathname === BLOG_PATH || pathname.startsWith(`${BLOG_PATH}/`)
+}
 
 /**
  * Vercel сам определяет страну по IP и кладёт её в x-vercel-ip-country. Переносим
@@ -27,15 +32,18 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   if (role === 'site') {
     // Лендинг статичен и анонимен: за сессией Supabase не ходим вовсе.
     if (path === '/') return NextResponse.rewrite(new URL(LANDING_PATH, request.url))
-    if (path === LANDING_PATH) return NextResponse.next()
+    // Блог живёт на этом же домене вместе с лендингом (см. isSitePath).
+    if (isSitePath(path)) return NextResponse.next()
     // Всё остальное на корневом домене это студия: отправляем на поддомен,
     // сохраняя путь и query (например ссылку восстановления пароля из письма).
     return NextResponse.redirect(new URL(path + request.nextUrl.search, APP_ORIGIN), 307)
   }
 
   // Одна страница по двум адресам это две записи в индексе: канон у корневого домена.
-  if (role === 'app' && path === LANDING_PATH) {
-    return NextResponse.redirect(new URL(LANDING_PATH, SITE_ORIGIN), 308)
+  // То же самое для блога: app.endgrain.app/blog/что-угодно не должен плодить
+  // вторую копию статьи по второму домену.
+  if (role === 'app' && (path === LANDING_PATH || isBlogPath(path))) {
+    return NextResponse.redirect(new URL(path, SITE_ORIGIN), 308)
   }
 
   // Один поход в Supabase на переход: он же продлевает сессию, он же отвечает,

@@ -12,15 +12,17 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getCurrentUser } from "@/lib/supabase/session";
 import { getLandingLocale } from "@/lib/landing/locale";
 import { t } from "@/lib/i18n";
-import { APP_ORIGIN } from "@/lib/routing/host";
+import { appUrl } from "@/lib/seo/metadata";
 import "./globals.css";
 
 // Описание зависит от языка посетителя, поэтому метаданные считаются функцией,
 // а не константой: cookie eg-locale читается тем же способом, что и lang документа.
+// metadataBase собран через appUrl(): страницы лендингового домена (лендинг, блог)
+// переопределяют его у себя через siteUrl(), это дефолт для остальных.
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLandingLocale();
   return {
-    metadataBase: new URL(APP_ORIGIN),
+    metadataBase: new URL(appUrl()),
     title: { default: "Endgrain Studio", template: "%s · Endgrain Studio" },
     description: t(locale, "meta.description"),
   };

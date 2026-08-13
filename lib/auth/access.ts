@@ -21,6 +21,7 @@ export const PUBLIC_PREFIXES: readonly string[] = [
   '/auth',
   '/pricing',
   '/landing',
+  '/blog',
   '/api',
   '/_next',
   '/brand',
@@ -33,6 +34,7 @@ export const PUBLIC_PREFIXES: readonly string[] = [
 const PUBLIC_FILES: readonly string[] = [
   '/robots.txt',
   '/sitemap.xml',
+  '/llms.txt',
   '/favicon.ico',
   '/icon.svg',
   '/apple-icon.png',

@@ -698,6 +698,25 @@ const ru = {
   'video.error.unauthenticated': 'Войдите, чтобы сгенерировать видео: оно платное, из кошелька.',
   'video.error.insufficient': 'Не хватает баланса. Пополните кошелёк в панели аккаунта.',
   'video.error.failed': 'Генерация видео не вышла, списание вернули обратно.',
+
+  'blog.navTitle': 'Блог',
+  'blog.feed.title': 'Блог Endgrain Studio',
+  'blog.feed.description': 'Производственные заметки для столяра: раскрой, материалы, инструкции.',
+  'blog.feed.readMore': 'Читать статью',
+  'blog.feed.openStudio': 'Открыть студию',
+  'blog.post.published': 'Опубликовано {date}',
+  'blog.post.updated': 'Обновлено {date}',
+  'blog.post.readingMinutes': 'Чтение: {minutes} мин',
+  'blog.post.backToBlog': 'Все статьи блога',
+  'blog.post.foreignLanguage': 'На другом языке',
+  'blog.post.ogLabel': 'Блог · Endgrain Studio',
+  'blog.post.notFound': 'Такой статьи нет.',
+  'blog.breadcrumb.home': 'Endgrain Studio',
+  'blog.breadcrumb.blog': 'Блог',
+  'blog.tag.title': 'Тег: {tag}',
+  'blog.tag.description': 'Статьи с тегом «{tag}». Полный список - в блоге.',
+  'blog.tag.back': 'Все статьи',
+  'blog.tag.empty': 'Пока нет статей с этим тегом.',
 } as const
 
 export default ru

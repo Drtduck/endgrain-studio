@@ -698,6 +698,25 @@ const en: Record<keyof typeof ru, string> = {
   'video.error.unauthenticated': 'Sign in to generate a video: it is paid from your wallet.',
   'video.error.insufficient': 'Not enough balance. Top up your wallet in the account panel.',
   'video.error.failed': 'Video generation failed, the charge was refunded.',
+
+  'blog.navTitle': 'Blog',
+  'blog.feed.title': 'Endgrain Studio Blog',
+  'blog.feed.description': 'Shop notes for woodworkers: milling, materials, instructions.',
+  'blog.feed.readMore': 'Read the article',
+  'blog.feed.openStudio': 'Open the studio',
+  'blog.post.published': 'Published {date}',
+  'blog.post.updated': 'Updated {date}',
+  'blog.post.readingMinutes': 'Reading time: {minutes} min',
+  'blog.post.backToBlog': 'All blog posts',
+  'blog.post.foreignLanguage': 'In another language',
+  'blog.post.ogLabel': 'Blog - Endgrain Studio',
+  'blog.post.notFound': 'This article does not exist.',
+  'blog.breadcrumb.home': 'Endgrain Studio',
+  'blog.breadcrumb.blog': 'Blog',
+  'blog.tag.title': 'Tag: {tag}',
+  'blog.tag.description': 'Articles tagged "{tag}". See the full list in the blog.',
+  'blog.tag.back': 'All articles',
+  'blog.tag.empty': 'No articles with this tag yet.',
 }
 
 export default en
