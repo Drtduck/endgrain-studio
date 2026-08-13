@@ -39,18 +39,22 @@ test.describe('оплата без ключей', () => {
     await expect(page.getByTestId('landing-footer-pricing')).toHaveCount(1)
   })
 
-  test('обе кнопки PNG работают, замка нет', async ({ page }) => {
+  test('обычный PNG качается, PNG для печати под замком', async ({ page }) => {
     await openStudio(page)
+
+    // Анонимный человек без подписки: базовый экспорт открыт, кнопка работает.
+    const [file] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByTestId('export-png').click(),
+    ])
+    expect(file.suggestedFilename()).toMatch(/\.png$/)
+    expect(await file.path()).not.toBeNull()
+
+    // PNG для печати показан с замком и ведёт на тарифы, а не прячется.
+    // Именно такое поведение задумано с тех пор, как Pro закрыл тяжёлый экспорт.
     const hd = page.getByTestId('export-png-hd')
     await expect(hd).toBeVisible()
-    // Без кассы всё открыто: кнопка не ссылка на тарифы, а настоящий экспорт.
-    await expect(hd).not.toHaveAttribute('href', '/pricing')
-
-    for (const id of ['export-png', 'export-png-hd']) {
-      const [file] = await Promise.all([page.waitForEvent('download'), page.getByTestId(id).click()])
-      expect(file.suggestedFilename()).toMatch(/\.png$/)
-      expect(await file.path()).not.toBeNull()
-    }
+    await expect(hd).toHaveAttribute('href', '/pricing')
   })
 
   test('отмена оплаты показывает баннер на странице тарифов', async ({ page }) => {
