@@ -73,13 +73,18 @@ function normalizeScopes(value: unknown): readonly ApiScope[] {
  * эндпоинта/инструмента свои и проверяются отдельно, см. authorizeAndConsume).
  */
 async function authenticateKey(req: Request): Promise<RowResult> {
-  if (!isSupabaseServiceConfigured()) return { ok: false, error: 'unavailable' }
-
+  // Заголовок и форма ключа проверяются раньше конфигурации Supabase:
+  // «нет ключа вовсе» - это 401 всегда, а «сходить в базу нечем» - 503, но
+  // только тогда, когда действительно нужно было бы туда идти. Иначе GET
+  // /api/v1/me без заголовка отвечал бы 503 в среде без ключей Supabase,
+  // хотя правильный ответ - честный unauthorized, не зависящий от бэкенда.
   const token = bearerToken(req)
   if (!token) return { ok: false, error: 'unauthorized' }
 
   const parsed = parseApiKey(token)
   if (!parsed) return { ok: false, error: 'unauthorized' }
+
+  if (!isSupabaseServiceConfigured()) return { ok: false, error: 'unavailable' }
 
   const sb = getSupabaseService()
   const { data, error } = await sb
@@ -118,8 +123,8 @@ function touchApiKeyAsync(keyId: string): void {
  * там ключ проверяется один раз на транспортном уровне (verifyMcpToken), а
  * скоуп и стоимость у каждого инструмента свои.
  */
-export async function authorizeAndConsume(row: ApiKeyRow, scope: ApiScope, cost = 1): Promise<AuthResult> {
-  if (!row.scopes.includes(scope)) return { ok: false, error: 'forbidden' }
+export async function authorizeAndConsume(row: ApiKeyRow, scope: ApiScope | null, cost = 1): Promise<AuthResult> {
+  if (scope !== null && !row.scopes.includes(scope)) return { ok: false, error: 'forbidden' }
 
   const sb = getSupabaseService()
   const day = currentUtcDay()
@@ -143,8 +148,12 @@ export async function authorizeAndConsume(row: ApiKeyRow, scope: ApiScope, cost 
   }
 }
 
-/** Полный конвейер: аутентификация ключа плюс скоуп и квота для конкретного действия. */
-export async function authenticateApiRequest(req: Request, scope: ApiScope, cost = 1): Promise<AuthResult> {
+/**
+ * Полный конвейер: аутентификация ключа плюс скоуп и квота для конкретного
+ * действия. scope: null - "любой", для эндпоинтов вроде GET /api/v1/me,
+ * которым достаточно валидного ключа без конкретного разрешения.
+ */
+export async function authenticateApiRequest(req: Request, scope: ApiScope | null, cost = 1): Promise<AuthResult> {
   const found = await authenticateKey(req)
   if (!found.ok) return { ok: false, error: found.error }
   return authorizeAndConsume(found.row, scope, cost)
