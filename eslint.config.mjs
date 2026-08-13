@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "test-results/**",
     "playwright-report/**",
+    // Worktree субагентов: чужие ветки, не наш код.
+    ".claude/worktrees/**",
     // Референс дизайн-хендоффа, не код проекта.
     "docs/design/handoff/**",
   ]),

@@ -54,7 +54,7 @@ export function LandingHero({ locale }: { locale: Locale }) {
 
         <div className="flex items-center justify-center">
           <img
-            src="/brand/beaver-logo.svg"
+            src="/brand/beaver-logo.png"
             width={380}
             height={380}
             alt={t(locale, 'landing.hero.mascotAlt')}

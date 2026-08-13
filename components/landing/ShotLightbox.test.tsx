@@ -1,7 +1,14 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ShotLightbox } from './ShotLightbox'
 import { t } from '@/lib/i18n'
+
+// AuthCta теперь рендерится внутри диалога лайтбокса, а её форма входа требует эти
+// зависимости - без моков рендер диалога падал бы при обращении к Supabase и роутеру.
+vi.mock('@/lib/supabase/browser', () => ({
+  getSupabaseBrowser: () => ({ auth: { signInWithPassword: vi.fn(), signUp: vi.fn(), signInWithOAuth: vi.fn() } }),
+}))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }))
 
 const SHOTS = [
   { slug: 'editor', src: '/landing/shots/ru/editor.png', label: 'Редактор' },
@@ -54,6 +61,18 @@ describe('ShotLightbox', () => {
     fireEvent.click(screen.getByTestId('landing-shot-dialog-close'))
     await waitFor(() => expect(screen.queryByTestId('landing-shot-dialog')).toBeNull())
     await waitFor(() => expect(document.activeElement).toBe(trigger))
+  })
+
+  it('кнопка входа появляется в открытом просмотре и отсутствует до клика по снимку', async () => {
+    render(<ShotLightbox locale="ru" shots={SHOTS} />)
+    expect(screen.queryByTestId('landing-shot-dialog-cta-editor')).toBeNull()
+
+    fireEvent.click(screen.getByTestId('landing-shot-trigger-editor'))
+    await screen.findByTestId('landing-shot-dialog')
+
+    expect(screen.getByTestId('landing-shot-dialog-cta-editor')).toHaveTextContent(
+      t('ru', 'landing.hero.ctaPrimary')
+    )
   })
 
   it('на английской локали подписи и aria-label английские', async () => {

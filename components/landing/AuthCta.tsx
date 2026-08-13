@@ -3,7 +3,7 @@
 import { X } from 'lucide-react'
 import { useRef, useState, type MouseEvent } from 'react'
 import { AuthForm } from '@/components/auth/AuthForm'
-import { Button } from '@/components/ui/button'
+import { AuthHeader } from '@/components/auth/AuthHeader'
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { t, type Locale } from '@/lib/i18n'
 import { APP_SIGNUP_URL, appOriginForClient } from '@/lib/routing/host'
@@ -62,20 +62,19 @@ export function AuthCta({
           finalFocus={anchorRef}
           className="w-[min(420px,92vw)] gap-4"
         >
-          <DialogTitle>{t(locale, mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle')}</DialogTitle>
+          <AuthHeader
+            locale={locale}
+            titleKey={mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle'}
+            subtitleKey={mode === 'login' ? 'auth.loginSubtitle' : undefined}
+            title={
+              <DialogTitle className="font-display text-xl font-semibold text-ink">
+                {t(locale, mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle')}
+              </DialogTitle>
+            }
+          />
           <DialogClose data-testid="landing-auth-dialog-close" aria-label={t(locale, 'auth.dialogClose')}>
             <X className="size-4" aria-hidden="true" />
           </DialogClose>
-
-          <p className="text-sm leading-normal text-ink-secondary">
-            {t(locale, mode === 'login' ? 'auth.loginSubtitle' : 'auth.registerSubtitle')}
-          </p>
-
-          {mode === 'register' && !confirmSent ? (
-            <p data-testid="landing-auth-why" className="text-sm leading-normal text-ink-secondary">
-              {t(locale, 'auth.registerWhy')}
-            </p>
-          ) : null}
 
           {/* key сбрасывает введённые поля и ошибку при переключении режима. */}
           <AuthForm
@@ -96,18 +95,18 @@ export function AuthCta({
               {t(locale, 'auth.confirmClose')}
             </DialogClose>
           ) : (
-            <div className="flex flex-col gap-2 text-sm text-ink-secondary">
-              <Button
-                type="button"
-                variant="ghost"
-                data-testid="landing-auth-switch"
-                // Доступное имя это видимый текст кнопки: aria-label поверх него нарушал бы
-                // WCAG 2.5.3 (голосовое управление ищет кнопку по тому, что написано).
-                className="justify-start px-0 text-accent hover:underline"
-                onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-              >
-                {t(locale, mode === 'login' ? 'auth.registerLink' : 'auth.loginLink')}
-              </Button>
+            <div className="flex flex-col items-center gap-2 text-center text-sm text-ink-secondary">
+              <p>
+                {t(locale, mode === 'login' ? 'auth.noAccountPrompt' : 'auth.hasAccountPrompt')}{' '}
+                <button
+                  type="button"
+                  data-testid="landing-auth-switch"
+                  className="font-semibold text-accent hover:underline"
+                  onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+                >
+                  {t(locale, mode === 'login' ? 'auth.registerAction' : 'auth.signIn')}
+                </button>
+              </p>
 
               <a
                 href={`${appOrigin}/forgot-password`}
