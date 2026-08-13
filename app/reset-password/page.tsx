@@ -46,7 +46,7 @@ export default function ResetPasswordPage() {
 
   if (expired) {
     return (
-      <AuthCard locale={locale} titleKey="auth.resetTitle">
+      <AuthCard locale={locale}>
         <p data-testid="auth-reset-expired" className="text-sm leading-normal text-ink-secondary">
           {t(locale, 'auth.resetExpired')}{' '}
           <Link href="/forgot-password" data-testid="auth-forgot-link" className="text-accent hover:underline">
@@ -58,7 +58,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <AuthCard locale={locale} titleKey="auth.resetTitle" subtitleKey="auth.resetSubtitle">
+    <AuthCard locale={locale} noteKey="auth.resetSubtitle">
       <form onSubmit={onSubmit} className="flex flex-col gap-3" data-testid="auth-form-reset">
         <div className="flex flex-col gap-1">
           <label htmlFor="auth-password" className="text-[11px] text-ink-muted">

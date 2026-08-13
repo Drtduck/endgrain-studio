@@ -19,7 +19,7 @@ describe('buildLlmsTxt', () => {
   it('начинается с H1 и блоквот-описания одной строкой', () => {
     const txt = buildLlmsTxt([POST])
     const lines = txt.split('\n')
-    expect(lines[0]).toBe('# Endgrain Studio')
+    expect(lines[0]).toBe('# Endgrain App')
     const firstNonEmpty = lines.slice(1).find((l) => l.trim().length > 0)
     expect(firstNonEmpty?.startsWith('>')).toBe(true)
   })
@@ -40,7 +40,7 @@ describe('buildLlmsTxt', () => {
 
   it('ссылки на продукт и тарифы абсолютные', () => {
     const txt = buildLlmsTxt([POST])
-    expect(txt).toContain('[Endgrain Studio](https://endgrain.app)')
+    expect(txt).toContain('[Endgrain App](https://endgrain.app)')
     expect(txt).toContain('[Тарифы](https://app.endgrain.app/pricing)')
   })
 
@@ -53,6 +53,6 @@ describe('buildLlmsTxt', () => {
   it('пустой список статей не ломает файл', () => {
     const txt = buildLlmsTxt([])
     expect(txt).toContain('## Блог')
-    expect(txt.startsWith('# Endgrain Studio')).toBe(true)
+    expect(txt.startsWith('# Endgrain App')).toBe(true)
   })
 })

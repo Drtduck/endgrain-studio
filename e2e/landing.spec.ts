@@ -99,18 +99,19 @@ test('окно переключается между регистрацией и
   const dialog = page.getByTestId('landing-auth-dialog')
 
   await page.getByTestId('landing-cta-hero').click()
-  await expect(dialog).toContainText('Регистрация')
+  // Заголовок окна теперь всегда название продукта, режим виден по форме и кнопке.
+  await expect(dialog).toContainText('Endgrain App')
+  await expect(page.getByTestId('auth-form-register')).toBeVisible()
   await page.getByTestId('landing-auth-switch').click()
   await expect(page.getByTestId('auth-form-login')).toBeVisible()
-  await expect(dialog).toContainText('Вход')
   await page.keyboard.press('Escape')
   await expect(dialog).toHaveCount(0)
 
   await page.getByTestId('landing-locale-en').click()
   await page.getByTestId('landing-cta-hero').click()
-  await expect(dialog).toContainText('Sign up')
+  await expect(page.getByTestId('auth-form-register')).toBeVisible()
   await page.getByTestId('landing-auth-switch').click()
-  await expect(dialog).toContainText('Sign in')
+  await expect(page.getByTestId('auth-form-login')).toBeVisible()
 })
 
 test.describe('без JavaScript', () => {
@@ -187,7 +188,7 @@ test('кнопка Начать есть в лайтбоксе снимков н
   await page.getByTestId('landing-locale-en').click()
   await page.getByTestId('landing-shot-trigger-editor').click()
   await expect(cta).toBeVisible()
-  await expect(cta).toHaveText('Start free')
+  await expect(cta).toHaveText('Start')
   await expect(cta).toHaveAttribute('href', /app\.endgrain\.app\/register/)
 })
 

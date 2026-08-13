@@ -35,7 +35,7 @@ export async function createTopUpCheckoutAction(preset: unknown): Promise<Wallet
     'line_items[0][quantity]': '1',
     'line_items[0][price_data][currency]': 'usd',
     'line_items[0][price_data][unit_amount]': String(amount),
-    'line_items[0][price_data][product_data][name]': `Endgrain Studio: пополнение кошелька $${(amount / 100).toFixed(2)}`,
+    'line_items[0][price_data][product_data][name]': `Endgrain App: пополнение кошелька $${(amount / 100).toFixed(2)}`,
     success_url: `${origin}/?wallet=success`,
     cancel_url: `${origin}/?wallet=cancel`,
     client_reference_id: user.id,

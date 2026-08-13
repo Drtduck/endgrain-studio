@@ -15,7 +15,7 @@ export const privacyDoc: LegalDocByLocale = {
       {
         heading: 'Кто мы',
         paragraphs: [
-          'Endgrain Studio - сервис для проектирования торцевых разделочных досок. Оператор: [заполнить перед публикацией: ФИО или наименование юрлица, адрес]. Контакт по всем вопросам конфиденциальности: hello@endgrain.app.',
+          'Endgrain App - сервис для проектирования торцевых разделочных досок. Оператор: [заполнить перед публикацией: ФИО или наименование юрлица, адрес]. Контакт по всем вопросам конфиденциальности: hello@endgrain.app.',
         ],
       },
       {
@@ -82,7 +82,7 @@ export const privacyDoc: LegalDocByLocale = {
       {
         heading: 'Who we are',
         paragraphs: [
-          'Endgrain Studio is a tool for designing end-grain cutting boards. Operator: [fill in before publishing: individual or entity name, address]. Contact for all privacy questions: hello@endgrain.app.',
+          'Endgrain App is a tool for designing end-grain cutting boards. Operator: [fill in before publishing: individual or entity name, address]. Contact for all privacy questions: hello@endgrain.app.',
         ],
       },
       {

@@ -23,7 +23,7 @@ export function organizationJsonLd(): Record<string, unknown> {
   return {
     '@type': 'Organization',
     '@id': ORG_ID,
-    name: 'Endgrain Studio',
+    name: 'Endgrain App',
     url: siteUrl(),
     logo: siteUrl('/icon.svg'),
     description:
@@ -35,7 +35,7 @@ export function websiteJsonLd(): Record<string, unknown> {
   return {
     '@type': 'WebSite',
     '@id': WEBSITE_ID,
-    name: 'Endgrain Studio',
+    name: 'Endgrain App',
     url: siteUrl(),
     inLanguage: 'ru',
     publisher: { '@id': ORG_ID },
@@ -53,7 +53,7 @@ const FEATURE_LIST: readonly string[] = [
 export function softwareApplicationJsonLd(): Record<string, unknown> {
   return {
     '@type': 'SoftwareApplication',
-    name: 'Endgrain Studio',
+    name: 'Endgrain App',
     applicationCategory: 'DesignApplication',
     operatingSystem: 'Web',
     url: APP_ORIGIN,
@@ -86,7 +86,7 @@ export function blogJsonLd(posts: readonly PostMeta[]): Record<string, unknown> 
     '@context': 'https://schema.org',
     '@type': 'Blog',
     '@id': `${siteUrl('/blog')}#blog`,
-    name: 'Блог Endgrain Studio',
+    name: 'Блог Endgrain App',
     url: siteUrl('/blog'),
     publisher: { '@id': ORG_ID },
     blogPost: posts.map((post) => ({
@@ -122,14 +122,14 @@ export function postJsonLd(post: PostMeta): Record<string, unknown> {
     // dateModified из meta.updated, а не из даты сборки: иначе каждый деплой
     // врал бы, что все статьи обновились сегодня.
     dateModified: post.updated,
-    author: { '@type': 'Person', name: 'Endgrain Studio' },
+    author: { '@type': 'Person', name: 'Endgrain App' },
     publisher: { '@id': ORG_ID },
     inLanguage: post.lang,
     mainEntityOfPage: url,
     keywords: post.tags.join(', '),
   }
   const breadcrumb = breadcrumbListJsonLd([
-    { name: 'Endgrain Studio', url: siteUrl() },
+    { name: 'Endgrain App', url: siteUrl() },
     { name: 'Блог', url: siteUrl('/blog') },
     { name: post.title, url },
   ])

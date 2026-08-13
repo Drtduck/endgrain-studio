@@ -45,7 +45,7 @@ export function pageMetadata(input: PageMetadataInput): Metadata {
     openGraph: {
       type: input.type ?? 'website',
       url: input.canonical,
-      siteName: 'Endgrain Studio',
+      siteName: 'Endgrain App',
       title: input.title,
       description: input.description,
       locale: ogLocale,

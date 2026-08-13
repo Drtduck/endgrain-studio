@@ -14,7 +14,7 @@ export const pdConsentDoc: LegalDocByLocale = {
       {
         heading: 'Предмет согласия',
         paragraphs: [
-          'Нажимая чекбокс согласия при регистрации на Endgrain Studio, вы даёте согласие оператору сервиса (см. «Политика обработки персональных данных») на обработку ваших персональных данных на условиях, изложенных в настоящем документе. Это самостоятельный документ, отдельный от политики конфиденциальности, политики обработки персональных данных и любого пользовательского соглашения.',
+          'Нажимая чекбокс согласия при регистрации на Endgrain App, вы даёте согласие оператору сервиса (см. «Политика обработки персональных данных») на обработку ваших персональных данных на условиях, изложенных в настоящем документе. Это самостоятельный документ, отдельный от политики конфиденциальности, политики обработки персональных данных и любого пользовательского соглашения.',
         ],
       },
       {
@@ -62,7 +62,7 @@ export const pdConsentDoc: LegalDocByLocale = {
       {
         heading: 'Subject of consent',
         paragraphs: [
-          'By checking the consent box during registration on Endgrain Studio, you give the service operator (see "Personal Data Processing Policy") consent to process your personal data under the terms of this document. This is a standalone document, separate from the privacy policy, the personal data processing policy, and any terms of service.',
+          'By checking the consent box during registration on Endgrain App, you give the service operator (see "Personal Data Processing Policy") consent to process your personal data under the terms of this document. This is a standalone document, separate from the privacy policy, the personal data processing policy, and any terms of service.',
         ],
       },
       {

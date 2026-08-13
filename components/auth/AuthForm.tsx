@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useGoogleAuthAvailable } from '@/components/GoogleAuthProvider'
@@ -64,9 +64,15 @@ export interface AuthFormProps {
    * сообщением кнопку закрытия, а состояние живёт внутри формы.
    */
   onConfirmSent?: () => void
+  /**
+   * Ссылка на восстановление пароля. Стоит сразу под кнопкой входа, до разделителя
+   * и Google: человек, забывший пароль, ищет её там, а не в подвале карточки.
+   * Адрес и testId задаёт вызывающая сторона: на лендинге ссылка ведёт на другой домен.
+   */
+  forgotLink?: ReactNode
 }
 
-export function AuthForm({ mode, locale, redirectOrigin, onSuccess, onConfirmSent }: AuthFormProps) {
+export function AuthForm({ mode, locale, redirectOrigin, onSuccess, onConfirmSent, forgotLink }: AuthFormProps) {
   const googleAuthAvailable = useGoogleAuthAvailable()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -249,6 +255,10 @@ export function AuthForm({ mode, locale, redirectOrigin, onSuccess, onConfirmSen
           ? t(locale, 'auth.busy')
           : t(locale, mode === 'login' ? 'auth.signIn' : 'auth.signUp')}
       </Button>
+
+      {mode === 'login' && forgotLink ? (
+        <div className="text-center text-sm text-ink-secondary">{forgotLink}</div>
+      ) : null}
 
       {googleAuthAvailable ? (
         <>

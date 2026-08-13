@@ -18,7 +18,7 @@ const PROJECT_PX = 720
 export async function generateMetadata(props: PageProps<'/gallery/[id]'>): Promise<Metadata> {
   const { id } = await props.params
   const row = await getPublishedProject(id)
-  return { title: row?.title ?? 'Endgrain Studio' }
+  return { title: row?.title ?? 'Endgrain App' }
 }
 
 export default async function GalleryProjectPage(props: PageProps<'/gallery/[id]'>) {
