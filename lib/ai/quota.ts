@@ -8,6 +8,13 @@
 /** Сколько AI-генераций в календарный месяц получает Pro-аккаунт. */
 export const AI_MONTHLY_LIMIT = 30
 
+/** Сколько пробных генераций даём одному субъекту (аккаунту или гостю). Живёт вечно, не сбрасывается. */
+export const FREE_TRIAL_LIMIT = 3
+/** Лимит по адресу втрое выше персонального: за одним NAT сидит целый офис. */
+export const FREE_TRIAL_IP_LIMIT = 10
+/** Сколько кадров можно взять за одно нажатие в пробном тире: серия по умолчанию режется до одного. */
+export const FREE_TRIAL_MAX_UNITS = 1
+
 /**
  * Что именно просят. Мокапы мерча рисует Printful, а не языковая модель:
  * генерация там бесплатная, поэтому квоту они не тратят, но Pro всё равно нужен.
@@ -39,24 +46,35 @@ export function aiCost(feature: AiFeature, units = 1): number {
 }
 
 /**
- * Почему отказали. anonymous - не вошёл, notPro - вошёл без подписки,
- * quota - месячный лимит выбран, unavailable - гейт не построить
- * (не настроен Supabase или service-ключ), и тогда пускать нельзя тем более.
+ * Фичи, доступные в пробном тире без подписки. Разбор референса и мокапы
+ * мерча остаются Pro-фичами: у vision-разбора подменять нечем, а kontext-модели
+ * с картинкой на входе стоят на порядок дороже flux/schnell.
  */
-export type AiDenyReason = 'anonymous' | 'notPro' | 'quota' | 'unavailable'
+export const AI_TRIAL_FEATURES: readonly AiFeature[] = ['promoShots', 'referenceShots']
 
 /**
- * Состояние доступа для интерфейса. mock значит, что ключа Gemini нет вовсе:
- * вкладка рисует собственные заглушки, наружу никто не ходит, платить не за что,
- * поэтому на этом состоянии гейта нет.
+ * Почему отказали. anonymous - не вошёл (и гостевой тир недоступен), notPro -
+ * вошёл без подписки и без пробных фич, quota - месячный лимит Pro выбран,
+ * trialSpent - пробные генерации исчерпаны хотя бы по одному субъекту,
+ * unavailable - гейт не построить (не настроен Supabase, service-ключ или RPC упал).
  */
-export type AiAccessState = 'mock' | 'unavailable' | 'anonymous' | 'free' | 'pro'
+export type AiDenyReason = 'anonymous' | 'notPro' | 'quota' | 'trialSpent' | 'unavailable'
+
+/**
+ * Состояние доступа для интерфейса. mock значит, что нет ни одного провайдера
+ * (ни Gemini, ни fal): вкладка рисует собственные заглушки, наружу никто не
+ * ходит, платить не за что, поэтому на этом состоянии гейта нет. trial и
+ * trialSpent появляются только когда настроен бесплатный тир.
+ */
+export type AiAccessState = 'mock' | 'unavailable' | 'anonymous' | 'free' | 'trial' | 'trialSpent' | 'pro'
 
 export interface AiAccess {
   readonly state: AiAccessState
   readonly limit: number
   readonly used: number
   readonly remaining: number
+  /** Какой моделью будет нарисован следующий кадр: null пока это не определено (mock/unavailable/anonymous/free). */
+  readonly tier: 'pro' | 'trial' | null
 }
 
 /**
@@ -73,6 +91,12 @@ export function aiRemaining(used: number, limit: number = AI_MONTHLY_LIMIT): num
   return Math.max(0, limit - Math.max(0, used))
 }
 
+function tierOf(state: AiAccessState): 'pro' | 'trial' | null {
+  if (state === 'pro') return 'pro'
+  if (state === 'trial' || state === 'trialSpent') return 'trial'
+  return null
+}
+
 export function aiAccess(state: AiAccessState, used = 0, limit: number = AI_MONTHLY_LIMIT): AiAccess {
-  return { state, limit, used: Math.max(0, used), remaining: aiRemaining(used, limit) }
+  return { state, limit, used: Math.max(0, used), remaining: aiRemaining(used, limit), tier: tierOf(state) }
 }
