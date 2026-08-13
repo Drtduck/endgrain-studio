@@ -22,6 +22,8 @@ export {
   getElement,
   slicesOfPanel,
   panelLengthMm,
+  sliceLengthMm,
+  angledWasteMm2,
   usageCount,
   nextPanelId,
 } from './panels'
