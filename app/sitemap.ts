@@ -23,7 +23,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.6,
       changeFrequency: 'yearly' as const,
     })),
-    { url: `${APP_ORIGIN}/`, priority: 0.8 },
+    // APP_ORIGIN + '/' сознательно не в индексе: анонимный визит на корень студии
+    // ловит 307 на /login (см. lib/auth/access.ts), и поисковик индексировал бы
+    // редирект вместо страницы. Первая полезная app-страница для анонима - /pricing.
     { url: `${APP_ORIGIN}/pricing`, priority: 0.6 },
     { url: `${APP_ORIGIN}/gallery`, priority: 0.6 },
     { url: `${APP_ORIGIN}/legal/privacy`, priority: 0.3 },
