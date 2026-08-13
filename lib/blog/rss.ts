@@ -39,7 +39,7 @@ export function buildRssFeed(posts: readonly PostMeta[]): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
-    <title>Блог Endgrain Studio</title>
+    <title>Блог Endgrain App</title>
     <link>${escapeXml(channelLink)}</link>
     <description>Производственные заметки для столяра: раскрой, материалы, инструкции.</description>
     <language>ru</language>

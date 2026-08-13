@@ -11,7 +11,6 @@ export default function RegisterPage() {
   return (
     <AuthCard
       locale={locale}
-      titleKey="auth.registerTitle"
       footer={
         <p>
           {t(locale, 'auth.hasAccountPrompt')}{' '}

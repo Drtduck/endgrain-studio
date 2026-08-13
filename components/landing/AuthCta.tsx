@@ -64,11 +64,9 @@ export function AuthCta({
         >
           <AuthHeader
             locale={locale}
-            titleKey={mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle'}
-            subtitleKey={mode === 'login' ? 'auth.loginSubtitle' : undefined}
             title={
               <DialogTitle className="font-display text-xl font-semibold text-ink">
-                {t(locale, mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle')}
+                {t(locale, 'app.title')}
               </DialogTitle>
             }
           />
@@ -83,6 +81,15 @@ export function AuthCta({
             locale={locale}
             redirectOrigin={appOrigin}
             onConfirmSent={() => setConfirmSent(true)}
+            forgotLink={
+              <a
+                href={`${appOrigin}/forgot-password`}
+                data-testid="landing-auth-forgot"
+                className="text-accent hover:underline"
+              >
+                {t(locale, 'auth.forgotLink')}
+              </a>
+            }
             // Другой origin: роутер Next туда не ходит, поэтому меняем адрес целиком.
             onSuccess={(next) => hardNavigate(new URL(next, appOriginForClient()).toString())}
           />
@@ -107,14 +114,6 @@ export function AuthCta({
                   {t(locale, mode === 'login' ? 'auth.registerAction' : 'auth.signIn')}
                 </button>
               </p>
-
-              <a
-                href={`${appOrigin}/forgot-password`}
-                data-testid="landing-auth-forgot"
-                className="text-accent hover:underline"
-              >
-                {t(locale, 'auth.forgotLink')}
-              </a>
 
               <a
                 href={`${appOrigin}/login`}

@@ -21,7 +21,7 @@ export function buildLlmsTxt(posts: readonly PostMeta[]): string {
   const productLines = [
     '## Продукт',
     '',
-    `- [Endgrain Studio](${siteUrl('/')}): что делает инструмент и для кого`,
+    `- [Endgrain App](${siteUrl('/')}): что делает инструмент и для кого`,
     `- [Студия](${appUrl('/')}): редактор узора, расчёты и экспорт`,
     `- [Тарифы](${appUrl('/pricing')}): Free и Pro, что входит в каждый`,
   ].join('\n')
@@ -37,7 +37,7 @@ export function buildLlmsTxt(posts: readonly PostMeta[]): string {
     `- [Карта сайта](${siteUrl('/sitemap.xml')})`,
   ].join('\n')
 
-  return `# Endgrain Studio
+  return `# Endgrain App
 
 > Производственный инструмент для торцевых разделочных досок: узор, схема распила и переклеек, размеры деталей, расчёт материала и себестоимости, печатная инструкция в PDF.
 

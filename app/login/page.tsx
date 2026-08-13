@@ -11,13 +11,8 @@ export default function LoginPage() {
   return (
     <AuthCard
       locale={locale}
-      titleKey="auth.loginTitle"
-      subtitleKey="auth.loginSubtitle"
       footer={
         <>
-          <Link href="/forgot-password" data-testid="auth-forgot-link" className="text-accent hover:underline">
-            {t(locale, 'auth.forgotLink')}
-          </Link>
           <p>
             {t(locale, 'auth.noAccountPrompt')}{' '}
             <Link
@@ -31,7 +26,15 @@ export default function LoginPage() {
         </>
       }
     >
-      <AuthForm mode="login" locale={locale} />
+      <AuthForm
+        mode="login"
+        locale={locale}
+        forgotLink={
+          <Link href="/forgot-password" data-testid="auth-forgot-link" className="text-accent hover:underline">
+            {t(locale, 'auth.forgotLink')}
+          </Link>
+        }
+      />
     </AuthCard>
   )
 }

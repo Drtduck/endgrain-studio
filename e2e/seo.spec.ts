@@ -6,7 +6,7 @@ test('/llms.txt отдаётся как text/plain и начинается по 
   expect(response.headers()['content-type']).toContain('text/plain')
   const text = await response.text()
   const lines = text.split('\n')
-  expect(lines[0]).toBe('# Endgrain Studio')
+  expect(lines[0]).toBe('# Endgrain App')
   const secondNonEmpty = lines.slice(1).find((l) => l.trim().length > 0)
   expect(secondNonEmpty?.startsWith('>')).toBe(true)
 })
