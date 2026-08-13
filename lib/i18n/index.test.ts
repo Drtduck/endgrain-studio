@@ -66,6 +66,8 @@ describe('i18n', () => {
       16: { ru: 'Шестнадцать', en: 'Sixteen' },
       17: { ru: 'Семнадцать', en: 'Seventeen' },
       18: { ru: 'Восемнадцать', en: 'Eighteen' },
+      19: { ru: 'Девятнадцать', en: 'Nineteen' },
+      20: { ru: 'Двадцать', en: 'Twenty' },
     }
     const expected = words[TEMPLATES.length]
     expect(expected, `нет числительного для ${TEMPLATES.length} шаблонов`).toBeDefined()
@@ -75,7 +77,8 @@ describe('i18n', () => {
 
   it('has a message for every diagnostic code', () => {
     const codes = ['MIN_STRIP_WIDTH', 'PLANER_WIDTH', 'PLANING_ALLOWANCE', 'DEPTH_LIMIT', 'PANEL_NOT_FOUND',
-      'EMPTY_PANEL', 'DIMENSION_SANITY', 'RAGGED_BOARD', 'ANGLE_UNSUPPORTED', 'SHRINKAGE_MISMATCH', 'CELL_BUDGET']
+      'EMPTY_PANEL', 'DIMENSION_SANITY', 'RAGGED_BOARD', 'ANGLE_ROW_UNSUPPORTED', 'ANGLE_RANGE', 'ANGLE_WASTE',
+      'SLICE_TOO_SHORT', 'SHRINKAGE_MISMATCH', 'CELL_BUDGET']
     for (const code of codes) expect(ru).toHaveProperty(`diag.${code}`)
   })
 

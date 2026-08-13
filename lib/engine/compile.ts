@@ -1,3 +1,4 @@
+import { clipHalfPlane, polygonBbox, rectPoly, type Pt } from './geometry'
 import { elementExtentMm, findPanel, isStrip, panelLengthMm, panelWidthMm, slicesOfPanel } from './panels'
 import {
   GEOM_EPS_MM,
@@ -11,6 +12,11 @@ import {
   type RowId,
   type SliceRef,
 } from './types'
+
+/** Градусы в радианы. */
+function toRad(deg: number): number {
+  return (deg * Math.PI) / 180
+}
 
 /** Вертикальная полоса одного ряда доски: верхняя граница и высота, мм. Используется для меток рядов в UI. */
 export interface RowBand {
@@ -80,6 +86,14 @@ interface CellBudget {
   truncated: boolean
 }
 
+/**
+ * Раскладывает вклеенный срез (SliceRef) как колонку доски. Внутренняя панель ref.panelId
+ * повторяется вдоль длины доски (Y) циклически со сдвигом offsetMm. Для прямого реза
+ * (ref.angleDeg === 0) граница полос горизонтальна, и этот случай считается ДОСЛОВНО тем же
+ * кодом, что и до угловой поддержки, чтобы гарантировать побитовую регрессию (инвариант 1).
+ * Для углового реза граница полос это прямая y = cursor + (x - xMm) * sSigned, ячейка -
+ * отсечение прямоугольника колонки двумя полуплоскостями этой прямой.
+ */
 function expandSliceRef(
   design: Design,
   ref: SliceRef,
@@ -96,30 +110,119 @@ function expandSliceRef(
   const strips = inner.elements.map((el, index) => ({ el, index })).filter((e) => isStrip(e.el))
   if (strips.length !== inner.elements.length || strips.length === 0) return // глубина 3 или пустая панель
 
-  const ordered = row.flip ? [...strips].reverse() : strips
-  const cycleMm = ordered.reduce((sum, e) => sum + elementExtentMm(e.el), 0)
+  const refFlip = ref.flip ?? false
+  const flipXor = row.flip !== refFlip
+  const ordered = flipXor ? [...strips].reverse() : strips
+
+  const c = Math.cos(toRad(ref.angleDeg))
+  // Знак наклона переворачивается при отражении доски (row.mirror) и при двойном/одинарном
+  // флипе среза (row.flip XOR ref.flip): без этого зеркальная доска ехала бы в ту же сторону.
+  const signMultiplier = (row.mirror ? -1 : 1) * (flipXor ? -1 : 1)
+  const sSigned = Math.tan(toRad(ref.angleDeg)) * signMultiplier
+
+  const cycleMm = ordered.reduce((sum, e) => sum + elementExtentMm(e.el) / c, 0)
   if (cycleMm <= GEOM_EPS_MM) return
 
   const rowBottomMm = rowTopMm + row.thicknessMm
-  let cursorMm = rowTopMm - ((((-ref.offsetMm) % cycleMm) + cycleMm) % cycleMm)
+  const cursorStartMm = rowTopMm - ((((-ref.offsetMm) % cycleMm) + cycleMm) % cycleMm)
 
-  for (let k = 0; cursorMm < rowBottomMm - GEOM_EPS_MM; k += 1) {
+  if (sSigned === 0) {
+    // Прямой рез: код дословно тот же, что был до угловой поддержки, cursorStartMm выше
+    // (сырой ref.offsetMm) используется как есть. При angleDeg = 0 signMultiplier ни на что
+    // не влияет (tan 0 = 0), эффективный offset ниже не считается вовсе - это и есть
+    // физическая гарантия побитовой регрессии при phi = 0 (инвариант 1).
+    let cursorMm = cursorStartMm
+    for (let k = 0; cursorMm < rowBottomMm - GEOM_EPS_MM; k += 1) {
+      if (budget.remaining <= 0) {
+        budget.truncated = true
+        return
+      }
+      const entry = ordered[k % ordered.length]
+      if (!entry) break
+      const h = elementExtentMm(entry.el)
+      const top = Math.max(cursorMm, rowTopMm)
+      const bottom = Math.min(cursorMm + h, rowBottomMm)
+      if (bottom - top > GEOM_EPS_MM && isStrip(entry.el)) {
+        out.push({
+          id: `${row.id}:${elementIndex}:${k}`,
+          xMm,
+          yMm: top,
+          widthMm: ref.thicknessMm,
+          heightMm: bottom - top,
+          speciesId: entry.el.speciesId,
+          grain: 'end',
+          origin: {
+            rowId: row.id,
+            panelId: outerPanelId,
+            elementIndex,
+            depth: 1,
+            innerPanelId: inner.id,
+            innerElementIndex: entry.index,
+          },
+        })
+        budget.remaining -= 1
+      }
+      cursorMm += h
+    }
+    return
+  }
+
+  // offsetMm в документе выведен генератором для канонической раскладки - без mirror и без
+  // флипа (см. lib/generators/angled.ts chevronColumns: base_{k+1} = base_k + t_k * tan(angleDeg_k)).
+  // row.mirror и флип среза (row.flip XOR ref.flip) каждый по отдельности меняют фактическую
+  // раскладку колонки при рендере, и сырой ref.offsetMm перестаёт совпадать с ней - линия V на
+  // стыке соседних колонок расходится (проверено численно: сцепка держится только когда обе
+  // поправки применяются независимо друг от друга, а не только при развороте знака наклона).
+  // Эффективный offset компенсирует это для рендера, не трогая хранимое значение в документе:
+  // - mirror переставляет порядок колонок в ряду (см. `ordered.reverse()` в compile() выше),
+  //   поэтому эта колонка сцепляется с соседом по ДРУГУЮ сторону - поправка - фазовый сдвиг
+  //   на шаг канонической сцепки в противоположную сторону: + ref.thicknessMm * tan(angleDeg);
+  // - флип разворачивает порядок полос внутри самого среза (`ordered` двумя строками выше),
+  //   поэтому интервал целиком отражается относительно границ ряда (rowTopMm + rowBottomMm),
+  //   а не сдвигается на константу.
+  let effectiveOffsetMm = ref.offsetMm
+  if (row.mirror) effectiveOffsetMm += ref.thicknessMm * Math.tan(toRad(ref.angleDeg))
+  if (flipXor) effectiveOffsetMm = rowTopMm + rowBottomMm - effectiveOffsetMm
+  const angledCursorStartMm = rowTopMm - ((((-effectiveOffsetMm) % cycleMm) + cycleMm) % cycleMm)
+
+  // Угловой рез: старт может понадобиться раньше исторического, потому что на правом краю
+  // колонки (x = xMm + t) граница сдвинута на t * sSigned относительно левого.
+  const shearMm = ref.thicknessMm * Math.abs(sSigned)
+  const n = ordered.length
+  let k = 0
+  let cursorMm = angledCursorStartMm
+  while (cursorMm > rowTopMm - shearMm + GEOM_EPS_MM) {
+    k -= 1
+    const idx = ((k % n) + n) % n
+    const entry = ordered[idx]!
+    cursorMm -= elementExtentMm(entry.el) / c
+  }
+
+  const rect = rectPoly(xMm, rowTopMm, ref.thicknessMm, row.thicknessMm)
+
+  for (; cursorMm < rowBottomMm + shearMm - GEOM_EPS_MM; k += 1) {
     if (budget.remaining <= 0) {
       budget.truncated = true
       return
     }
-    const entry = ordered[k % ordered.length]
-    if (!entry) break
-    const h = elementExtentMm(entry.el)
-    const top = Math.max(cursorMm, rowTopMm)
-    const bottom = Math.min(cursorMm + h, rowBottomMm)
-    if (bottom - top > GEOM_EPS_MM && isStrip(entry.el)) {
+    const idx = ((k % n) + n) % n
+    const entry = ordered[idx]!
+    const h = elementExtentMm(entry.el) / c
+    const base = cursorMm
+    // v(x,y) = y - (x - xMm) * sSigned. Полоса занимает v в [base, base + h].
+    // v >= base  =>  sSigned*x - y <= sSigned*xMm - base
+    const lower = clipHalfPlane(rect, sSigned, -1, sSigned * xMm - base)
+    // v <= base + h  =>  -sSigned*x + y <= (base + h) - sSigned*xMm
+    const cellPoly = clipHalfPlane(lower, -sSigned, 1, base + h - sSigned * xMm)
+    if (cellPoly.length >= 3 && isStrip(entry.el)) {
+      const bbox = polygonBbox(cellPoly)
       out.push({
         id: `${row.id}:${elementIndex}:${k}`,
-        xMm,
-        yMm: top,
-        widthMm: ref.thicknessMm,
-        heightMm: bottom - top,
+        xMm: bbox.xMm,
+        yMm: bbox.yMm,
+        widthMm: bbox.widthMm,
+        heightMm: bbox.heightMm,
+        poly: cellPoly as readonly Pt[],
         speciesId: entry.el.speciesId,
         grain: 'end',
         origin: {

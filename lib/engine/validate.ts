@@ -1,9 +1,21 @@
 import { compile } from './compile'
-import { elementExtentMm, findPanel, isSliceRef, isStrip, panelWidthMm } from './panels'
 import {
+  angledWasteMm2,
+  elementExtentMm,
+  findPanel,
+  isSliceRef,
+  isStrip,
+  panelLengthMm,
+  panelWidthMm,
+  usableSliceLengthMm,
+} from './panels'
+import {
+  ANGLE_WASTE_WARN_PCT,
   BOARD_MAX_MM,
   BOARD_MIN_MM,
+  GEOM_EPS_MM,
   MAX_CELLS,
+  MAX_SLICE_ANGLE_DEG,
   MIN_PLANING_ALLOWANCE_MM,
   MIN_STRIP_WIDTH_MM,
   SHRINKAGE_DELTA_PP,
@@ -118,8 +130,16 @@ export function validate(design: Design, opts: ValidateOptions = {}): Diagnostic
         return
       }
 
-      if (el.angleDeg !== 0) {
-        out.push(diag('ANGLE_UNSUPPORTED', 'error', { angleDeg: el.angleDeg }, { panelId: panel.id, elementIndex }))
+      const angleInRange = Number.isFinite(el.angleDeg) && Math.abs(el.angleDeg) <= MAX_SLICE_ANGLE_DEG
+      if (!angleInRange) {
+        out.push(
+          diag(
+            'ANGLE_RANGE',
+            'error',
+            { angleDeg: el.angleDeg, maxDeg: MAX_SLICE_ANGLE_DEG },
+            { panelId: panel.id, elementIndex },
+          ),
+        )
       }
       if (elementExtentMm(el) < MIN_STRIP_WIDTH_MM) {
         out.push(
@@ -147,7 +167,46 @@ export function validate(design: Design, opts: ValidateOptions = {}): Diagnostic
           ),
         )
       }
+
+      // Срез, снятый с inner под углом el.angleDeg, вклеивается колонкой в panel.id и физически
+      // обязан покрывать всю длину panel.id (иначе колонка окажется короче доски). При phi=0 эта
+      // проверка существовала неявно (щит просто должен был совпасть по ширине), угол делает
+      // срез длиннее (1/cos), так что чаще будет ловить старые документы, а не новые.
+      // Полную диагональ W/cos φ использовать нельзя: параллелограмм-заготовка держит полную
+      // ширину t только на части своей длины, правый край сдвинут относительно левого на t·tan φ
+      // (см. expandSliceRef в compile.ts), поэтому сравнивать нужно usableSliceLengthMm.
+      if (angleInRange) {
+        const sourceWidthMm = panelWidthMm(inner)
+        const usableLenMm = usableSliceLengthMm(sourceWidthMm, el.thicknessMm, el.angleDeg)
+        const requiredLenMm = panelLengthMm(design, panel.id)
+        if (usableLenMm < requiredLenMm - GEOM_EPS_MM) {
+          out.push(
+            diag(
+              'SLICE_TOO_SHORT',
+              'error',
+              { sliceLengthMm: usableLenMm, requiredMm: requiredLenMm },
+              { panelId: panel.id, elementIndex },
+            ),
+          )
+        }
+      }
     })
+
+    // Отход на торцевые клинья при угловых резах, снятых С этой панели (panel.id как источник).
+    const wasteMm2 = angledWasteMm2(design, panel.id)
+    if (wasteMm2 > 0) {
+      const panelAreaMm2 = widthMm * panelLengthMm(design, panel.id)
+      if (panelAreaMm2 > 0 && (wasteMm2 / panelAreaMm2) * 100 > ANGLE_WASTE_WARN_PCT) {
+        out.push(
+          diag(
+            'ANGLE_WASTE',
+            'warning',
+            { panelId: panel.id, wastePct: Math.round((wasteMm2 / panelAreaMm2) * 1000) / 10, limitPct: ANGLE_WASTE_WARN_PCT },
+            { panelId: panel.id },
+          ),
+        )
+      }
+    }
 
     const shrink = opts.shrinkageByPct
     if (shrink) {
@@ -188,7 +247,7 @@ export function validate(design: Design, opts: ValidateOptions = {}): Diagnostic
   const rowWidths: number[] = []
   for (const row of design.rows) {
     if (row.angleDeg !== 0) {
-      out.push(diag('ANGLE_UNSUPPORTED', 'error', { angleDeg: row.angleDeg }, { rowId: row.id }))
+      out.push(diag('ANGLE_ROW_UNSUPPORTED', 'error', { angleDeg: row.angleDeg }, { rowId: row.id }))
     }
     const panel = findPanel(design, row.panelId)
     if (!panel) {

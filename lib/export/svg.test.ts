@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { colBandsMm, compile, rowBandsMm } from '@/lib/engine'
+import { baseDesign, colBandsMm, compile, rowBandsMm, stripsPanel } from '@/lib/engine'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import { speciesHex } from '@/lib/species'
 import { COL_LABEL_MARGIN_MM, ROW_LABEL_MARGIN_MM } from '@/lib/render2d/layout'
@@ -8,8 +8,23 @@ import { boardSvgString, escapeXml, renderBoardSvg } from './svg'
 const design = makeCheckerboard()
 const model = compile(design)
 
+/** Панель P с одним угловым SliceRef на Q, вклеенным как единственная колонка ряда r1. */
+function angledDesign() {
+  return baseDesign({
+    panels: [
+      stripsPanel('Q', ['walnut', 'maple'], 12),
+      { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 10, angleDeg: 30, offsetMm: 0 }] },
+    ],
+    rows: [{ id: 'r1', panelId: 'P', thicknessMm: 12, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+  })
+}
+
 function countRects(svg: string): number {
   return svg.split('<rect').length - 1
+}
+
+function countPolygons(svg: string): number {
+  return svg.split('<polygon').length - 1
 }
 
 describe('renderBoardSvg', () => {
@@ -78,6 +93,31 @@ describe('renderBoardSvg', () => {
     const empty = { ...model, cells: [], widthMm: 0, lengthMm: 0 }
     expect(() => renderBoardSvg(empty)).not.toThrow()
     expect(renderBoardSvg(empty).svg).toContain('<svg')
+  })
+
+  it('прямой узор не содержит ни одного polygon', () => {
+    const { svg } = renderBoardSvg(model)
+    expect(countPolygons(svg)).toBe(0)
+  })
+
+  it('угловой узор рисует ячейки с poly через валидный polygon', () => {
+    const angledModel = compile(angledDesign())
+    expect(angledModel.cells.some((c) => c.poly !== undefined)).toBe(true)
+    const { svg } = renderBoardSvg(angledModel)
+    expect(countPolygons(svg)).toBe(angledModel.cells.length)
+    expect(countRects(svg)).toBe(1) // только фон
+
+    const pointsMatches = [...svg.matchAll(/<polygon points="([^"]+)"/g)]
+    expect(pointsMatches).toHaveLength(angledModel.cells.length)
+    for (const match of pointsMatches) {
+      const coords = match[1]!.trim().split(/\s+/).filter(Boolean)
+      expect(coords.length).toBeGreaterThanOrEqual(3)
+      for (const pair of coords) {
+        const [x, y] = pair.split(',').map(Number)
+        expect(Number.isFinite(x)).toBe(true)
+        expect(Number.isFinite(y)).toBe(true)
+      }
+    }
   })
 })
 

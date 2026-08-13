@@ -64,7 +64,8 @@ describe.each(TEMPLATES.map((tpl) => [tpl.id, tpl] as const))('шаблон %s',
       for (const el of panel.elements) {
         const extent = el.kind === 'strip' ? el.widthMm : el.thicknessMm
         expect(extent).toBeGreaterThanOrEqual(MIN_STRIP_WIDTH_MM)
-        if (el.kind === 'sliceRef') expect(el.angleDeg).toBe(0)
+        // Угол среза нулевой у всех групп, кроме 'angled': там наклон - и есть весь смысл шаблона.
+        if (el.kind === 'sliceRef' && tpl.group !== 'angled') expect(el.angleDeg).toBe(0)
       }
     }
     for (const row of design.rows) expect(row.angleDeg).toBe(0)

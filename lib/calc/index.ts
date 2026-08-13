@@ -1,4 +1,4 @@
-import { isStrip, panelLengthMm, type BoardModel, type Design, type SpeciesId } from '@/lib/engine'
+import { cellPolygon, isStrip, panelLengthMm, polygonAreaMm2, type BoardModel, type Design, type SpeciesId } from '@/lib/engine'
 import { SPECIES_BY_ID } from '@/lib/species'
 import { mm3ToBoardFeet } from '@/lib/units'
 
@@ -38,9 +38,12 @@ export function calcProject(design: Design, model: BoardModel): CalcResult {
     }
   }
 
+  // polygonAreaMm2(cellPolygon(cell)) вместо widthMm * heightMm: для прямого реза (poly
+  // отсутствует) cellPolygon достраивает bbox-прямоугольник и площадь совпадает побитово
+  // с прежней формулой; для углового среза площадь честно меньше габаритного прямоугольника.
   const finishedBySpecies = new Map<SpeciesId, number>()
   for (const cell of model.cells) {
-    const v = cell.widthMm * cell.heightMm * model.thicknessMm
+    const v = polygonAreaMm2(cellPolygon(cell)) * model.thicknessMm
     finishedBySpecies.set(cell.speciesId, (finishedBySpecies.get(cell.speciesId) ?? 0) + v)
   }
 

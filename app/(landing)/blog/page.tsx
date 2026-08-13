@@ -14,6 +14,10 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t(locale, 'blog.feed.description'),
     canonical: siteUrl('/blog'),
     locale,
+    // Явная картинка: без неё OG/twitter карточка ленты блога уходила пустой -
+    // openGraph-объект с явными полями подавляет автоподхват файловой
+    // конвенции opengraph-image, поэтому картинку нужно указывать самим.
+    image: siteUrl('/opengraph-image.png'),
     alternates: { types: { 'application/rss+xml': siteUrl('/blog/rss.xml') } },
   })
 }

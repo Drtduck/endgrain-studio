@@ -50,8 +50,8 @@ export function reshuffle(population: Population): Population {
   return seedPopulation(mixSeed(population.seed, population.generation + 0x77), population.familyIds)
 }
 
-type MutationKind = 'species' | 'widths' | 'rows' | 'grid' | 'seed' | 'paletteSize'
-const MUTATIONS: readonly MutationKind[] = ['species', 'widths', 'rows', 'grid', 'seed', 'paletteSize']
+type MutationKind = 'species' | 'widths' | 'rows' | 'grid' | 'seed' | 'paletteSize' | 'angle'
+const MUTATIONS: readonly MutationKind[] = ['species', 'widths', 'rows', 'grid', 'seed', 'paletteSize', 'angle']
 
 function mutateOnce(genome: Genome, kind: MutationKind, rng: Rng): Genome {
   if (kind === 'species') {
@@ -85,6 +85,11 @@ function mutateOnce(genome: Genome, kind: MutationKind, rng: Rng): Genome {
   }
   if (kind === 'seed') {
     return { ...genome, seed: mixSeed(genome.seed, rng.int(1024) + 1) }
+  }
+  if (kind === 'angle') {
+    // Нерелевантным семействам (без хинта угла) clampGenome всё равно занулит правку.
+    const deltaDeg = (rng.next() * 2 - 1) * 8
+    return { ...genome, params: { ...genome.params, angleDeg: genome.params.angleDeg + deltaDeg } }
   }
   const size = genome.palette.length + (rng.bool() ? 1 : -1)
   return { ...genome, palette: sanitisePalette(genome.palette, genome.seed, size) }
@@ -128,6 +133,7 @@ export function crossover(a: Genome, b: Genome, rng: Rng): Genome {
     cellMm: roundHalf((a.params.cellMm + b.params.cellMm) / 2),
     density: (a.params.density + b.params.density) / 2,
     jitter: (a.params.jitter + b.params.jitter) / 2,
+    angleDeg: (a.params.angleDeg + b.params.angleDeg) / 2,
   }
 
   return clampGenome({

@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from 'react'
 import { createApiKeyAction, revokeApiKeyAction, type ApiKeySummary, type ApiKeysError } from '@/app/actions/apiKeys'
+import { ApiUsageGuide } from '@/components/account/ApiUsageGuide'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { t, type Locale, type MessageKey } from '@/lib/i18n'
-import { APP_ORIGIN } from '@/lib/routing/host'
 
 export interface ApiKeysPanelProps {
   readonly locale: Locale
@@ -168,13 +168,6 @@ export function ApiKeysPanel({ locale, initialKeys }: ApiKeysPanelProps) {
     })
   }
 
-  const mcpConfig = JSON.stringify(
-    { mcpServers: { 'endgrain-studio': { url: `${APP_ORIGIN}/api/mcp`, headers: { Authorization: 'Bearer <your-api-key>' } } } },
-    null,
-    2,
-  )
-  const curlExample = `curl -H "Authorization: Bearer <your-api-key>" ${APP_ORIGIN}/api/v1/me`
-
   return (
     <div data-testid="api-keys-panel" className="flex flex-col gap-6">
       {reveal === null ? null : <NewKeyReveal locale={locale} plaintext={reveal} onClose={() => setReveal(null)} />}
@@ -239,21 +232,7 @@ export function ApiKeysPanel({ locale, initialKeys }: ApiKeysPanelProps) {
         </div>
       )}
 
-      <div className="flex flex-col gap-3 rounded-lg border border-line-subtle bg-surface-raised p-4">
-        <span className="font-display text-base font-semibold text-ink">{t(locale, 'apiKeys.howToConnect')}</span>
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-ink-muted">{t(locale, 'apiKeys.curlLabel')}</span>
-          <pre className="overflow-x-auto rounded-md border border-line bg-surface px-3 py-2 font-mono text-[12px] text-ink">
-            <code>{curlExample}</code>
-          </pre>
-        </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-ink-muted">{t(locale, 'apiKeys.mcpLabel')}</span>
-          <pre className="overflow-x-auto rounded-md border border-line bg-surface px-3 py-2 font-mono text-[12px] text-ink">
-            <code>{mcpConfig}</code>
-          </pre>
-        </div>
-      </div>
+      <ApiUsageGuide locale={locale} />
     </div>
   )
 }

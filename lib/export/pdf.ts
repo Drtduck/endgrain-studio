@@ -7,7 +7,7 @@ import { speciesHex } from '@/lib/species'
 import { buildCutPlan, buildGlueUpSteps, type CutPlan, type GlueUpStep, type PanelCutPlan } from './cutlist'
 import { PDF_FONT_FAMILY, registerCyrillicFont } from './pdfFont'
 import { renderBoardSvg } from './svg'
-import { bothUnits, speciesName } from './format'
+import { areaMm2, bothUnits, speciesName } from './format'
 
 // svg2pdf.js расширяет jsPDF методом .svg() как побочный эффект своего импорта (см. node_modules/svg2pdf.js/types.d.ts).
 // Динамический импорт ниже подтягивает эту декларацию в программу TypeScript, поэтому doc.svg() типизирован без каста.
@@ -250,9 +250,21 @@ function drawCutMapPage(ctx: PdfContext): void {
         cut.rowNumber === null
           ? t(locale, 'cut.crosscutInlay', { index: index + 1, thickness: bothUnits(cut.thicknessMm, locale), panel: panel.panelId })
           : t(locale, 'cut.crosscutRow', { index: index + 1, thickness: bothUnits(cut.thicknessMm, locale), row: cut.rowNumber })
-      text(ctx, line, PAGE.marginMm, y, { size: 9 })
+      // Угловой рез получает явную приписку "рез под углом X°" и честную длину заготовки
+      // (sourceWidthMm / cos φ вместо просто ширины щита): превью не должно расходиться со схемой.
+      const angleNote = cut.angleDeg === 0 ? '' : `, ${t(locale, 'cut.angleColumn', { angleDeg: cut.angleDeg })}, ${bothUnits(cut.lengthMm, locale)}`
+      text(ctx, line + angleNote, PAGE.marginMm, y, { size: 9 })
       y += LINE_MM
     })
+
+    if (panel.angledWasteMm2 > 0) {
+      y = ensureRoom(ctx, y, LINE_MM)
+      text(ctx, t(locale, 'cut.wasteAngled', { panel: panel.panelId, waste: areaMm2(panel.angledWasteMm2, locale) }), PAGE.marginMm, y, {
+        size: 9,
+        color: '#b00020',
+      })
+      y += LINE_MM
+    }
 
     y += 4
   }

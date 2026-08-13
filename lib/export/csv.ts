@@ -11,7 +11,7 @@ export interface CsvOptions {
   readonly delimiter?: string
 }
 
-const HEADER = ['kind', 'panel', 'index', 'species', 'width_mm', 'length_mm', 'thickness_mm', 'row'] as const
+const HEADER = ['kind', 'panel', 'index', 'species', 'width_mm', 'length_mm', 'thickness_mm', 'row', 'angle_deg'] as const
 
 function cell(value: string | number, delimiter: string): string {
   const text = typeof value === 'number' ? String(Number(value.toFixed(2))) : value
@@ -31,12 +31,24 @@ export function cutPlanToCsv(plan: CutPlan, options: CsvOptions): string {
     for (const piece of panel.pieces) {
       rows.push(
         piece.kind === 'strip'
-          ? ['strip', panel.panelId, piece.elementIndex + 1, speciesName(piece.speciesId, options.locale), piece.widthMm, panel.lengthMm, panel.planedThicknessMm, '']
-          : ['inlay', panel.panelId, piece.elementIndex + 1, piece.sourcePanelId, piece.thicknessMm, panel.lengthMm, panel.planedThicknessMm, ''],
+          ? ['strip', panel.panelId, piece.elementIndex + 1, speciesName(piece.speciesId, options.locale), piece.widthMm, panel.lengthMm, panel.planedThicknessMm, '', 0]
+          : [
+              'inlay',
+              panel.panelId,
+              piece.elementIndex + 1,
+              piece.sourcePanelId,
+              piece.thicknessMm,
+              panel.lengthMm,
+              panel.planedThicknessMm,
+              '',
+              piece.angleDeg,
+            ],
       )
     }
     panel.crosscuts.forEach((cut, index) => {
-      rows.push(['crosscut', panel.panelId, index + 1, '', panel.widthMm, '', cut.thicknessMm, cut.rowNumber ?? 'inlay'])
+      // length_mm у поперечного реза - длина заготовки вдоль реза (sourceWidthMm / cos φ):
+      // у прямого реза совпадает с width_mm панели, у углового честно больше.
+      rows.push(['crosscut', panel.panelId, index + 1, '', panel.widthMm, cut.lengthMm, cut.thicknessMm, cut.rowNumber ?? 'inlay', cut.angleDeg])
     })
   }
 

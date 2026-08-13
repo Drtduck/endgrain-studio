@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { baseDesign, compile, stripsPanel } from '@/lib/engine'
+import { baseDesign, cellPolygon, compile, polygonAreaMm2, stripsPanel, type Design } from '@/lib/engine'
 import { calcProject } from './index'
 
 describe('calcProject', () => {
@@ -57,5 +57,40 @@ describe('calcProject', () => {
     expect(r.wastePct).toBe(0)
     expect(r.bySpecies).toEqual([])
     expect(r.totalCostUsd).toBe(0)
+  })
+})
+
+/**
+ * Панель Q из одной полосы, срез P (SliceRef) снят с Q под углом и вклеен в единственную
+ * колонку ряда r1 (angleDeg на ряде остаётся 0, наклон только на срезе - решение 0.2 плана).
+ */
+function angledDesign(angleDeg: number): Design {
+  return baseDesign({
+    panels: [
+      { id: 'Q', elements: [{ kind: 'strip', speciesId: 'walnut', widthMm: 20 }] },
+      { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 15, angleDeg, offsetMm: 0 }] },
+    ],
+    rows: [{ id: 'r1', panelId: 'P', thicknessMm: 20, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+  })
+}
+
+describe('calcProject: угловой срез (polygonAreaMm2 вместо width*height)', () => {
+  it('finishedVolumeMm3 равен площади скомпилированных ячеек (по полигону) на толщину', () => {
+    const design = angledDesign(30)
+    const model = compile(design)
+    const result = calcProject(design, model)
+    const areaSum = model.cells.reduce((s, c) => s + polygonAreaMm2(cellPolygon(c)), 0)
+    expect(result.finishedVolumeMm3).toBeCloseTo(areaSum * model.thicknessMm, 6)
+  })
+
+  it('wastePct на угловом срезе заметно выше, чем на прямом (учтён angledWasteMm2 через panelLengthMm)', () => {
+    const straight = angledDesign(0)
+    const angled = angledDesign(30)
+    const rStraight = calcProject(straight, compile(straight))
+    const rAngled = calcProject(angled, compile(angled))
+    expect(rAngled.wastePct).toBeGreaterThan(rStraight.wastePct)
+    // Порог зафиксирован по факту первого прогона (см. план, шаг 2.3): угол 30° на щите
+    // шириной 20 мм даёт заметный, не пограничный разрыв.
+    expect(rAngled.wastePct - rStraight.wastePct).toBeGreaterThan(5)
   })
 })

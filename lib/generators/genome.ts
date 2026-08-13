@@ -1,4 +1,5 @@
 import type { SpeciesId } from '@/lib/engine'
+import { MAX_SLICE_ANGLE_DEG } from '@/lib/engine'
 import {
   MAX_CELL_MM,
   MAX_PANEL_WIDTH_MM,
@@ -19,6 +20,9 @@ export type FamilyId =
   | 'gradient'
   | 'chaos'
   | 'inlay'
+  | 'chevron'
+  | 'diamond'
+  | 'tumbling'
 
 export const FAMILY_IDS: readonly FamilyId[] = [
   'symmetry-pmm',
@@ -29,6 +33,9 @@ export const FAMILY_IDS: readonly FamilyId[] = [
   'gradient',
   'chaos',
   'inlay',
+  'chevron',
+  'diamond',
+  'tumbling',
 ]
 
 export interface GenParams {
@@ -37,6 +44,13 @@ export interface GenParams {
   readonly cellMm: number
   readonly density: number
   readonly jitter: number
+  /**
+   * Угол среза для угловых семейств (chevron/diamond/tumbling), градусов. Знак чередует сам
+   * генератор (см. lib/generators/angled.ts), здесь хранится величина после clamp по хинту.
+   * Для остальных семейств поле есть, но не используется - никакой SliceRef с ненулевым
+   * углом они не порождают.
+   */
+  readonly angleDeg: number
 }
 
 export interface Genome {
@@ -56,6 +70,11 @@ export interface FamilyHint {
   readonly squareCells: boolean
   readonly mirrorWidths: boolean
   readonly fixedCols?: number
+  /**
+   * Коридор угла среза для угловых семейств, градусов, по модулю. Отсутствует у прямых
+   * семейств: у них угол всегда зажимается в 0.
+   */
+  readonly angle?: readonly [number, number]
 }
 
 /** Ряды доски: тот же коридор, что и у полос, плюс потолок длины ради вменяемого габарита. */
@@ -77,6 +96,12 @@ export const FAMILY_HINTS: Readonly<Record<FamilyId, FamilyHint>> = {
   gradient: { cols: [6, 12], rows: [6, 12], palette: [3, 5], squareCells: false, mirrorWidths: true },
   chaos: { cols: [7, 14], rows: [7, 16], palette: [2, 4], squareCells: false, mirrorWidths: false },
   inlay: { cols: [5, 5], rows: [6, 12], palette: [3, 4], squareCells: false, mirrorWidths: true, fixedCols: 5 },
+  // Угловые семейства: cols здесь - число наклонных колонок (не полос), rows - число прямых
+  // поперечных рядов доски. Толщина колонки и величина угла считаются отдельно в angled.ts
+  // (коридор 50-100 мм и 20-40 градусов из раздела 0.5 плана), clampGenome эти поля не знает.
+  chevron: { cols: [6, 10], rows: [4, 8], palette: [2, 3], squareCells: false, mirrorWidths: false, angle: [20, 40] },
+  diamond: { cols: [6, 10], rows: [4, 8], palette: [2, 3], squareCells: false, mirrorWidths: false, angle: [20, 40] },
+  tumbling: { cols: [6, 9], rows: [4, 8], palette: [3, 3], squareCells: false, mirrorWidths: false, angle: [25, 35] },
 }
 
 function clampInt(value: number, min: number, max: number): number {
@@ -177,6 +202,16 @@ export function clampGenome(genome: Genome): Genome {
 
   const rowOrder = isPermutation(genome.rowOrder, rows) ? [...genome.rowOrder] : repairOrder(genome.rowOrder, rows)
 
+  // Угол среза: без хинта у семейства зажимается в 0 (прямой рез), с хинтом - в его коридор,
+  // и всегда дополнительно в MAX_SLICE_ANGLE_DEG движка, округление до половины градуса как
+  // у остальных числовых полей генома.
+  const angleRaw = Number.isFinite(genome.params.angleDeg) ? genome.params.angleDeg : 0
+  const angleBoundLo = hint.angle ? Math.max(-MAX_SLICE_ANGLE_DEG, hint.angle[0]) : 0
+  const angleBoundHi = hint.angle ? Math.min(MAX_SLICE_ANGLE_DEG, hint.angle[1]) : 0
+  const angleDeg = hint.angle
+    ? Math.round(Math.max(angleBoundLo, Math.min(angleBoundHi, Math.abs(angleRaw))) * 2) / 2
+    : 0
+
   return {
     familyId,
     seed,
@@ -190,6 +225,7 @@ export function clampGenome(genome: Genome): Genome {
       cellMm,
       density: clamp01(genome.params.density),
       jitter: clamp01(genome.params.jitter),
+      angleDeg,
     },
   }
 }
@@ -212,6 +248,8 @@ export function randomGenome(familyId: FamilyId, seed: number): Genome {
   const jitter = shapeRng.next()
   const density = shapeRng.next()
   const paletteSize = clampInt(paletteRng.range(hint.palette[0], hint.palette[1] + 1), hint.palette[0], hint.palette[1])
+  const angleRng = makeRng(mixSeed(base, 0x14))
+  const angleDeg = hint.angle ? angleRng.range(hint.angle[0], hint.angle[1]) : 0
 
   return clampGenome({
     familyId,
@@ -220,7 +258,7 @@ export function randomGenome(familyId: FamilyId, seed: number): Genome {
     colWidthsMm: jitteredWidths(cols, cellMm, jitter, widthRng),
     rowHeightsMm: jitteredWidths(rows, cellMm, jitter, widthRng),
     rowOrder: Array.from({ length: rows }, (_, i) => i),
-    params: { cols, rows, cellMm, density, jitter },
+    params: { cols, rows, cellMm, density, jitter, angleDeg },
   })
 }
 
@@ -237,6 +275,7 @@ export function genomeKey(genome: Genome): string {
     genome.params.rows,
     genome.params.density.toFixed(3),
     genome.params.jitter.toFixed(3),
+    genome.params.angleDeg.toFixed(1),
   ]
   return parts.join('/')
 }

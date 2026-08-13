@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { AccountMenu } from '@/components/AccountMenu'
 import { LiteratureSection } from '@/components/affiliate/LiteratureSection'
 import { ToolRecommendations } from '@/components/affiliate/ToolRecommendations'
@@ -20,12 +21,14 @@ import { ProjectsPanel } from '@/components/ProjectsPanel'
 import { PromoPanel } from '@/components/promo/PromoPanel'
 import { ResetButton } from '@/components/ResetButton'
 import { RowInspector } from '@/components/RowInspector'
+import { useSession } from '@/components/SessionProvider'
 import { SpeciesPalette } from '@/components/SpeciesPalette'
 import { StudioTabs } from '@/components/StudioTabs'
 import { TemplateGallery } from '@/components/TemplateGallery'
 import { HelpHint } from '@/components/ui/help-hint'
 import { Separator } from '@/components/ui/separator'
 import { t } from '@/lib/i18n'
+import { SITE_ORIGIN } from '@/lib/routing/host'
 import { useDerived } from '@/lib/store/derived'
 import { rememberLocale } from '@/lib/store/locale'
 import { useStudioPersistence } from '@/lib/store/persist'
@@ -42,6 +45,7 @@ export function StudioShell() {
   const view = useStudio((s) => s.view)
   const setLocale = useStudio((s) => s.setLocale)
   const { model, calc } = useDerived()
+  const { user, enabled } = useSession()
   useStudioPersistence()
 
   return (
@@ -54,6 +58,14 @@ export function StudioShell() {
           <img src="/brand/beaver-mark.png" alt="" width={24} height={24} className="size-6 shrink-0" />
           <span className="font-display text-[17px] font-semibold">{t(locale, 'app.title')}</span>
         </div>
+
+        <a
+          href={`${SITE_ORIGIN}/blog`}
+          data-testid="app-blog-link"
+          className="hidden font-sans text-sm text-ink-secondary hover:text-ink sm:inline"
+        >
+          {t(locale, 'blog.navTitle')}
+        </a>
 
         <Separator orientation="vertical" className="h-6" />
 
@@ -85,6 +97,24 @@ export function StudioShell() {
             rememberLocale(next)
           }}
         />
+
+        <Link
+          href="/gallery"
+          data-testid="studio-nav-gallery"
+          className="rounded-sm px-2 py-1.5 text-sm font-medium text-ink-secondary transition-colors duration-hover hover:bg-app hover:text-ink"
+        >
+          {t(locale, 'appShell.nav.gallery')}
+        </Link>
+
+        {enabled && user ? (
+          <Link
+            href="/account/api"
+            data-testid="studio-nav-api"
+            className="rounded-sm px-2 py-1.5 text-sm font-medium text-ink-secondary transition-colors duration-hover hover:bg-app hover:text-ink"
+          >
+            {t(locale, 'apiKeys.navTitle')}
+          </Link>
+        ) : null}
 
         <AccountMenu />
 

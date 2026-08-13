@@ -127,7 +127,7 @@ describe('clampGenome', () => {
     colWidthsMm: [1, 900, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
     rowHeightsMm: [0],
     rowOrder: [4, 4, 4],
-    params: { cols: 99, rows: -3, cellMm: 500, density: 4, jitter: -1 },
+    params: { cols: 99, rows: -3, cellMm: 500, density: 4, jitter: -1, angleDeg: 999 },
   }
 
   it('чинит заведомо битый геном', () => {

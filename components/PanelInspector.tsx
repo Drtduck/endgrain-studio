@@ -6,7 +6,7 @@ import { NumberFieldMm } from '@/components/NumberFieldMm'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { HelpHint } from '@/components/ui/help-hint'
-import { MIN_STRIP_WIDTH_MM, isStrip, panelWidthMm, usageCount, type Panel, type PanelElement } from '@/lib/engine'
+import { MAX_SLICE_ANGLE_DEG, MIN_STRIP_WIDTH_MM, isStrip, panelWidthMm, usageCount, type Panel, type PanelElement } from '@/lib/engine'
 import { t, unitLabel, type Locale } from '@/lib/i18n'
 import { SPECIES, speciesHex, speciesName } from '@/lib/species'
 import { useDerived } from '@/lib/store/derived'
@@ -34,6 +34,9 @@ function StripRow({
   const moveStrip = useStudio((s) => s.moveStrip)
   const selectStrip = useStudio((s) => s.selectStrip)
   const selectedStripIndex = useStudio((s) => s.selectedStripIndex)
+  const setSliceAngle = useStudio((s) => s.setSliceAngle)
+  const toggleSliceFlip = useStudio((s) => s.toggleSliceFlip)
+  const setSliceOffset = useStudio((s) => s.setSliceOffset)
   const [splitAtMm, setSplitAtMm] = useState(0)
   const testId = `strip-${panelId}-${index}`
   // Одна колонка на доске - это один и тот же индекс сразу в нескольких панелях (шахматка чередует
@@ -48,14 +51,67 @@ function StripRow({
         data-strip-col={index}
         onFocus={() => selectStrip(index)}
         className={cn(
-          'rounded-md border px-2.5 py-2 text-sm text-ink-muted',
+          'flex flex-wrap items-end gap-3 rounded-md border px-2.5 py-2 text-sm text-ink-muted',
           selected ? 'border-accent-border bg-accent-soft' : 'border-line-subtle bg-surface'
         )}
       >
-        {t(locale, 'panels.sliceRef', {
-          panelId: element.panelId,
-          thicknessMm: formatMm(element.thicknessMm, unit, label, 1),
-        })}
+        <span>
+          {t(locale, 'panels.sliceRef', {
+            panelId: element.panelId,
+            thicknessMm: formatMm(element.thicknessMm, unit, label, 1),
+          })}
+        </span>
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor={`${testId}-angle`} className="text-[11px] text-ink-muted">
+            {t(locale, 'panels.sliceAngle')}
+          </label>
+          <div className="flex h-[30px] min-w-0 items-center gap-1 rounded-sm border border-line bg-surface-raised px-2">
+            <input
+              id={`${testId}-angle`}
+              data-testid={`${testId}-angle`}
+              type="number"
+              inputMode="decimal"
+              step="0.5"
+              min={-MAX_SLICE_ANGLE_DEG}
+              max={MAX_SLICE_ANGLE_DEG}
+              defaultValue={element.angleDeg}
+              key={element.angleDeg}
+              onBlur={(e) => {
+                const deg = Number.parseFloat(e.target.value)
+                if (Number.isFinite(deg)) setSliceAngle(panelId, index, deg)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur()
+              }}
+              className="w-16 min-w-0 appearance-none border-0 bg-transparent font-mono text-sm tabular-nums text-ink outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            />
+            <span aria-hidden className="shrink-0 font-mono text-[11px] text-ink-muted">
+              °
+            </span>
+          </div>
+        </div>
+
+        <NumberFieldMm
+          id={`${testId}-offset`}
+          testId={`${testId}-offset`}
+          labelKey="panels.sliceOffset"
+          valueMm={element.offsetMm}
+          unit={unit}
+          locale={locale}
+          size="dense"
+          onCommitMm={(mm) => setSliceOffset(panelId, index, mm)}
+        />
+
+        <label className="flex items-center gap-1 text-sm">
+          <input
+            type="checkbox"
+            data-testid={`${testId}-flip`}
+            checked={element.flip ?? false}
+            onChange={() => toggleSliceFlip(panelId, index)}
+          />
+          {t(locale, 'panels.sliceFlip')}
+        </label>
       </li>
     )
   }
