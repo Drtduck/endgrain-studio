@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { AccountButton } from '@/components/AccountButton'
 import { LiteratureSection } from '@/components/affiliate/LiteratureSection'
 import { ToolRecommendations } from '@/components/affiliate/ToolRecommendations'
@@ -20,6 +21,7 @@ import { ProjectsPanel } from '@/components/ProjectsPanel'
 import { PromoPanel } from '@/components/promo/PromoPanel'
 import { ResetButton } from '@/components/ResetButton'
 import { RowInspector } from '@/components/RowInspector'
+import { useSession } from '@/components/SessionProvider'
 import { SpeciesPalette } from '@/components/SpeciesPalette'
 import { StudioTabs } from '@/components/StudioTabs'
 import { TemplateGallery } from '@/components/TemplateGallery'
@@ -43,6 +45,7 @@ export function StudioShell() {
   const view = useStudio((s) => s.view)
   const setLocale = useStudio((s) => s.setLocale)
   const { model, calc } = useDerived()
+  const { user, enabled } = useSession()
   useStudioPersistence()
 
   return (
@@ -86,6 +89,24 @@ export function StudioShell() {
             rememberLocale(next)
           }}
         />
+
+        <Link
+          href="/gallery"
+          data-testid="studio-nav-gallery"
+          className="rounded-sm px-2 py-1.5 text-sm font-medium text-ink-secondary transition-colors duration-hover hover:bg-app hover:text-ink"
+        >
+          {t(locale, 'appShell.nav.gallery')}
+        </Link>
+
+        {enabled && user ? (
+          <Link
+            href="/account/api"
+            data-testid="studio-nav-api"
+            className="rounded-sm px-2 py-1.5 text-sm font-medium text-ink-secondary transition-colors duration-hover hover:bg-app hover:text-ink"
+          >
+            {t(locale, 'apiKeys.navTitle')}
+          </Link>
+        ) : null}
 
         <AccountButton />
 
