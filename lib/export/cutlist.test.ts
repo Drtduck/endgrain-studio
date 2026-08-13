@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeCheckerboard } from '@/lib/designs/samples'
-import { compile, panelLengthMm, panelWidthMm, rowBandsMm, slicesOfPanel, type Design } from '@/lib/engine'
+import { angledWasteMm2, baseDesign, compile, panelLengthMm, panelWidthMm, rowBandsMm, sliceLengthMm, slicesOfPanel, type Design } from '@/lib/engine'
 import { t } from '@/lib/i18n'
 import { buildCutPlan, buildGlueUpSteps } from './cutlist'
 
@@ -221,5 +221,126 @@ describe('buildGlueUpSteps', () => {
     expect(crosscutWord(1)).toContain('на 1 срез:')
     expect(crosscutWord(2)).toContain('на 2 среза:')
     expect(crosscutWord(5)).toContain('на 5 срезов:')
+  })
+})
+
+/**
+ * Панель Q из одной полосы, срез P (SliceRef) снят с Q под углом angleDeg и вклеен
+ * единственной колонкой ряда r1 (ряд остаётся прямым, наклон только на срезе).
+ */
+function angledDesign(angleDeg: number, opts: { flip?: boolean } = {}): Design {
+  return baseDesign({
+    panels: [
+      { id: 'Q', elements: [{ kind: 'strip', speciesId: 'walnut', widthMm: 20 }] },
+      { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 15, angleDeg, offsetMm: 0, flip: opts.flip ?? false }] },
+    ],
+    rows: [{ id: 'r1', panelId: 'P', thicknessMm: 20, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+  })
+}
+
+describe('buildCutPlan: угловой срез', () => {
+  const angled = angledDesign(30)
+  const straight = angledDesign(0)
+
+  it('рез, снимаемый с Q, несёт свой угол и честную длину заготовки sourceWidthMm / cos φ', () => {
+    const plan = buildCutPlan(angled, 'ru')
+    const panelQ = plan.panels.find((p) => p.panelId === 'Q')
+    expect(panelQ).toBeDefined()
+    const cut = panelQ!.crosscuts[0]
+    expect(cut).toBeDefined()
+    expect(cut!.angleDeg).toBe(30)
+    // sourceWidthMm панели Q - 20 мм (одна полоса), sliceLengthMm = 20 / cos 30°.
+    expect(cut!.lengthMm).toBeCloseTo(20 / Math.cos((30 * Math.PI) / 180), 9)
+    expect(cut!.lengthMm).toBeCloseTo(sliceLengthMm(slicesOfPanel(angled, 'Q')[0]!), 9)
+  })
+
+  it('прямой рез (φ=0) не меняет числа: lengthMm равен sourceWidthMm, angleDeg 0', () => {
+    const plan = buildCutPlan(straight, 'ru')
+    const cut = plan.panels.find((p) => p.panelId === 'Q')!.crosscuts[0]!
+    expect(cut.angleDeg).toBe(0)
+    expect(cut.lengthMm).toBeCloseTo(20, 9)
+  })
+
+  it('panel.angledWasteMm2 берётся из lib/engine/panels.angledWasteMm2, endWasteMm - линейный аналог', () => {
+    const plan = buildCutPlan(angled, 'ru')
+    const panelQ = plan.panels.find((p) => p.panelId === 'Q')!
+    expect(panelQ.angledWasteMm2).toBeCloseTo(angledWasteMm2(angled, 'Q'), 9)
+    expect(panelQ.angledWasteMm2).toBeGreaterThan(0)
+    // Клин W * tan(30°), W = 20 мм.
+    expect(panelQ.endWasteMm).toBeCloseTo(20 * Math.tan((30 * Math.PI) / 180), 9)
+
+    const straightPlan = buildCutPlan(straight, 'ru')
+    const straightQ = straightPlan.panels.find((p) => p.panelId === 'Q')!
+    expect(straightQ.angledWasteMm2).toBe(0)
+    expect(straightQ.endWasteMm).toBe(0)
+  })
+
+  it('hasAngledCuts честно отражает наличие угловых резов в проекте', () => {
+    expect(buildCutPlan(angled, 'ru').hasAngledCuts).toBe(true)
+    expect(buildCutPlan(straight, 'ru').hasAngledCuts).toBe(false)
+  })
+
+  it('ручная сверка: длина заготовки среза + отход на угол согласуются с panelLengthMm панели-источника', () => {
+    const plan = buildCutPlan(angled, 'ru')
+    const panelQ = plan.panels.find((p) => p.panelId === 'Q')!
+    // Отход на угол панели Q, пересчитанный из cutlist-полей, совпадает с формулой движка.
+    const rad = (30 * Math.PI) / 180
+    const cutContrib = (15 + angled.planingAllowanceMm + 0) / Math.cos(rad)
+    const wasteLen = 20 * Math.abs(Math.tan(rad))
+    expect(cutContrib + wasteLen).toBeCloseTo(panelQ.lengthMm, 9)
+    expect(wasteLen).toBeCloseTo(panelQ.endWasteMm, 9)
+  })
+})
+
+describe('buildGlueUpSteps: угловой срез', () => {
+  it('добавляет шаг angled-setup перед распуском щита-источника', () => {
+    const plan = buildCutPlan(angledDesign(30), 'ru')
+    const steps = buildGlueUpSteps(plan, 'ru')
+    const setupIndex = steps.findIndex((s) => s.kind === 'angled-setup')
+    const crosscutIndex = steps.findIndex((s) => s.kind === 'crosscut' && s.panelId === 'Q')
+    expect(setupIndex).toBeGreaterThanOrEqual(0)
+    expect(setupIndex).toBeLessThan(crosscutIndex)
+    const text = t('ru', steps[setupIndex]!.messageKey, steps[setupIndex]!.params)
+    expect(text).toContain('30')
+    expect(text).not.toContain('{')
+  })
+
+  it('не добавляет angled-setup для прямых узоров (регрессия)', () => {
+    const plan = buildCutPlan(angledDesign(0), 'ru')
+    const steps = buildGlueUpSteps(plan, 'ru')
+    expect(steps.some((s) => s.kind === 'angled-setup')).toBe(false)
+    expect(steps.filter((s) => s.kind === 'crosscut').every((s) => s.messageKey === 'steps.crosscut')).toBe(true)
+  })
+
+  it('шаг crosscut на угловой панели явно упоминает "рез под углом" и длину заготовки', () => {
+    const plan = buildCutPlan(angledDesign(30), 'ru')
+    const steps = buildGlueUpSteps(plan, 'ru')
+    const crosscut = steps.find((s) => s.kind === 'crosscut' && s.panelId === 'Q')
+    expect(crosscut?.messageKey).toBe('steps.crosscutAngled')
+    const text = t('ru', crosscut!.messageKey, crosscut!.params)
+    expect(text).toContain('рез под углом 30°')
+    expect(text).not.toContain('{')
+  })
+
+  it('шаг inlay перевёрнутого среза (flip=true) явно упоминает переворот', () => {
+    const plan = buildCutPlan(angledDesign(30, { flip: true }), 'ru')
+    const steps = buildGlueUpSteps(plan, 'ru')
+    const inlay = steps.find((s) => s.kind === 'inlay')
+    expect(inlay?.messageKey).toBe('steps.inlayFlipped')
+    const text = t('ru', inlay!.messageKey, inlay!.params)
+    expect(text).toContain('перевернуть')
+
+    const plainPlan = buildCutPlan(angledDesign(30, { flip: false }), 'ru')
+    const plainInlay = buildGlueUpSteps(plainPlan, 'ru').find((s) => s.kind === 'inlay')
+    expect(plainInlay?.messageKey).toBe('steps.inlay')
+  })
+
+  it('любой шаг, включая angled-setup и crosscutAngled, рендерится без незакрытых плейсхолдеров на обеих локалях', () => {
+    const plan = buildCutPlan(angledDesign(30, { flip: true }), 'ru')
+    for (const locale of ['ru', 'en'] as const) {
+      for (const step of buildGlueUpSteps(plan, locale)) {
+        expect(t(locale, step.messageKey, step.params)).not.toMatch(/\{[a-zA-Z]+\}/)
+      }
+    }
   })
 })

@@ -1,4 +1,4 @@
-import type { BoardModel, Design } from '@/lib/engine'
+import { cellPolygon, polygonAreaMm2, type BoardModel, type Design } from '@/lib/engine'
 import { designDisplayName } from '@/lib/designs/name'
 import { SPECIES_BY_ID } from '@/lib/species'
 
@@ -23,7 +23,7 @@ export interface BoardDescription {
 export function speciesByShare(model: BoardModel): readonly string[] {
   const areaById = new Map<string, number>()
   for (const cell of model.cells) {
-    const area = cell.widthMm * cell.heightMm
+    const area = polygonAreaMm2(cellPolygon(cell))
     areaById.set(cell.speciesId, (areaById.get(cell.speciesId) ?? 0) + area)
   }
   return [...areaById.entries()]
