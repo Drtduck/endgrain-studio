@@ -89,7 +89,9 @@ describe('depth limit invariant', () => {
   it('always rejects depth 3 and never rejects depth 2', () => {
     fc.assert(
       fc.property(fc.integer({ min: 1, max: 3 }), (depth) => {
-        const panels = [stripsPanel('L0', ['walnut', 'maple'], 12)]
+        // Ширина L0 взята с запасом: тест проверяет глубину вложенности, а не материал, и не
+        // должен случайно попадать в SLICE_TOO_SHORT (щит короче панели, в которую вклеивается).
+        const panels = [stripsPanel('L0', ['walnut', 'maple'], 50)]
         for (let i = 1; i < depth; i += 1) {
           panels.push({
             id: `L${i}`,

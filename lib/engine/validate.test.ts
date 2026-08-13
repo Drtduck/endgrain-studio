@@ -50,7 +50,7 @@ describe('validate', () => {
     expect(codes(baseDesign({ board: { targetWidthMm: 300, targetLengthMm: 400, thicknessMm: 5 } }))).toContain('DIMENSION_SANITY')
   })
 
-  it('flags ragged boards and non-zero angles', () => {
+  it('flags ragged boards and non-zero row angles', () => {
     const d = baseDesign({
       panels: [stripsPanel('A', ['walnut', 'maple'], 25), stripsPanel('B', ['maple'], 25)],
       rows: [
@@ -58,7 +58,45 @@ describe('validate', () => {
         { id: 'r2', panelId: 'B', thicknessMm: 30, angleDeg: 45, flip: false, mirror: false, trimMm: 5 },
       ],
     })
-    expect(codes(d)).toEqual(expect.arrayContaining(['RAGGED_BOARD', 'ANGLE_UNSUPPORTED']))
+    expect(codes(d)).toEqual(expect.arrayContaining(['RAGGED_BOARD', 'ANGLE_ROW_UNSUPPORTED']))
+  })
+
+  it('flags SliceRef angle outside the allowed range', () => {
+    const d = baseDesign({
+      panels: [stripsPanel('Q', ['walnut'], 20), { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 10, angleDeg: 75, offsetMm: 0 }] }],
+      rows: [{ id: 'r1', panelId: 'P', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+    })
+    expect(codes(d)).toContain('ANGLE_RANGE')
+  })
+
+  it('passes a SliceRef at 30 degrees without any diagnostic', () => {
+    const d = baseDesign({
+      panels: [stripsPanel('Q', ['walnut', 'maple'], 25), { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 60, angleDeg: 30, offsetMm: 0 }] }],
+      rows: [{ id: 'r1', panelId: 'P', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+    })
+    expect(hasErrors(validate(d))).toBe(false)
+  })
+
+  it('flags a slice shorter than the panel it is glued into', () => {
+    const d = baseDesign({
+      panels: [stripsPanel('Q', ['walnut'], 5), { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 5, angleDeg: 0, offsetMm: 0 }] }],
+      rows: [{ id: 'r1', panelId: 'P', thicknessMm: 200, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+    })
+    expect(codes(d)).toContain('SLICE_TOO_SHORT')
+  })
+
+  it('warns about angled waste above the threshold, and stays quiet below it', () => {
+    const big = baseDesign({
+      panels: [stripsPanel('Q', ['walnut'], 100), { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 10, angleDeg: 45, offsetMm: 0 }] }],
+      rows: [{ id: 'r1', panelId: 'P', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+    })
+    expect(codes(big)).toContain('ANGLE_WASTE')
+
+    const small = baseDesign({
+      panels: [stripsPanel('Q', ['walnut', 'maple'], 25), { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 60, angleDeg: 5, offsetMm: 0 }] }],
+      rows: [{ id: 'r1', panelId: 'P', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+    })
+    expect(codes(small)).not.toContain('ANGLE_WASTE')
   })
 
   it('warns about incompatible shrinkage between neighbours', () => {

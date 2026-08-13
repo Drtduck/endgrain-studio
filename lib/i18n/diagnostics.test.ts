@@ -111,13 +111,34 @@ describe('ни одна диагностика не печатает сырой 
         [row('r1', 'P')],
       ),
     )
+    // ANGLE_RANGE: угол среза за пределами MAX_SLICE_ANGLE_DEG.
+    add(
+      one(
+        [stripsPanel('Q', ['walnut'], 20), { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 10, angleDeg: 75, offsetMm: 0 }] }],
+        [row('r1', 'P')],
+      ),
+    )
+    // SLICE_TOO_SHORT: щит Q узкий, а панель P требует длинную заготовку.
+    add(
+      one(
+        [stripsPanel('Q', ['walnut'], 5), { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 5, angleDeg: 0, offsetMm: 0 }] }],
+        [{ id: 'r1', panelId: 'P', thicknessMm: 200, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+      ),
+    )
+    // ANGLE_WASTE: угол 45° на широком щите Q съедает больше ANGLE_WASTE_WARN_PCT площади.
+    add(
+      one(
+        [stripsPanel('Q', ['walnut'], 100), { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 10, angleDeg: 45, offsetMm: 0 }] }],
+        [row('r1', 'P')],
+      ),
+    )
     return collected
   })()
 
   const ALL_CODES: readonly DiagnosticCode[] = [
     'MIN_STRIP_WIDTH', 'PLANER_WIDTH', 'PLANING_ALLOWANCE', 'DEPTH_LIMIT', 'PANEL_NOT_FOUND',
-    'EMPTY_PANEL', 'DIMENSION_SANITY', 'RAGGED_BOARD', 'ANGLE_UNSUPPORTED', 'SHRINKAGE_MISMATCH',
-    'CELL_BUDGET', 'UNKNOWN_SPECIES',
+    'EMPTY_PANEL', 'DIMENSION_SANITY', 'RAGGED_BOARD', 'ANGLE_ROW_UNSUPPORTED', 'ANGLE_RANGE',
+    'ANGLE_WASTE', 'SLICE_TOO_SHORT', 'SHRINKAGE_MISMATCH', 'CELL_BUDGET', 'UNKNOWN_SPECIES',
   ]
 
   it('фикстуры покрывают все коды диагностик', () => {
