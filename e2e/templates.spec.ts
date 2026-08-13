@@ -43,6 +43,17 @@ test('шаблон поверх правок сначала спрашивает
   await expect(page.locator('rect[data-cell="r0:0"]')).toHaveAttribute('fill', '#e3caa1')
 })
 
+test('группа «Угловые узоры» видна и применяется', async ({ page }) => {
+  await openStudio(page)
+  await page.getByTestId('tab-templates').click()
+  await expect(page.getByTestId('template-gallery')).toBeVisible()
+  await expect(page.getByText('Угловые узоры')).toBeVisible()
+
+  await page.getByTestId('template-chevron-classic').click()
+  await expect(page.getByTestId('board-canvas')).toBeVisible()
+  await expect(page.locator('[data-testid="board-canvas"] polygon[data-cell]').first()).toBeVisible()
+})
+
 test('шаблон переживает перезагрузку страницы', async ({ page }) => {
   await page.goto('/')
   await page.evaluate(() => window.localStorage.clear())

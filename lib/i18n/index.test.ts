@@ -66,6 +66,8 @@ describe('i18n', () => {
       16: { ru: 'Шестнадцать', en: 'Sixteen' },
       17: { ru: 'Семнадцать', en: 'Seventeen' },
       18: { ru: 'Восемнадцать', en: 'Eighteen' },
+      19: { ru: 'Девятнадцать', en: 'Nineteen' },
+      20: { ru: 'Двадцать', en: 'Twenty' },
     }
     const expected = words[TEMPLATES.length]
     expect(expected, `нет числительного для ${TEMPLATES.length} шаблонов`).toBeDefined()

@@ -4,9 +4,11 @@ import { create, type StoreApi, type UseBoundStore } from 'zustand'
 import type { Cell, Design, PaintCost, PaintResult, Panel, PanelId, RowId, SpeciesId } from '@/lib/engine'
 import {
   EngineError,
+  MAX_SLICE_ANGLE_DEG,
   applyPaint,
   compile,
   elementExtentMm,
+  isSliceRef,
   isStrip,
   splitPanel,
   usageCount,
@@ -131,6 +133,11 @@ export interface StudioState {
   removeStrip(panelId: PanelId, elementIndex: number): void
   splitStripAt(panelId: PanelId, elementIndex: number, atMm: number): void
   moveStrip(panelId: PanelId, fromIndex: number, toIndex: number): void
+
+  /** Угол вклеенного среза (SliceRef.angleDeg), градусов. Знак хранится как есть, без abs. */
+  setSliceAngle(panelId: PanelId, elementIndex: number, angleDeg: number): void
+  toggleSliceFlip(panelId: PanelId, elementIndex: number): void
+  setSliceOffset(panelId: PanelId, elementIndex: number, offsetMm: number): void
 
   setRowThickness(rowId: RowId, thicknessMm: number): void
   setRowPanel(rowId: RowId, panelId: PanelId): void
@@ -372,6 +379,32 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
           if (!panel) return
           moveInPlace(panel.elements, fromIndex, toIndex)
         }),
+
+      setSliceAngle: (panelId, elementIndex, angleDeg) => {
+        if (!Number.isFinite(angleDeg)) return
+        const clamped = Math.max(-MAX_SLICE_ANGLE_DEG, Math.min(MAX_SLICE_ANGLE_DEG, angleDeg))
+        edit((d) => {
+          const el = d.panels.find((p) => p.id === panelId)?.elements[elementIndex]
+          if (!el || !isSliceRef(el)) return
+          el.angleDeg = clamped
+        })
+      },
+
+      toggleSliceFlip: (panelId, elementIndex) =>
+        edit((d) => {
+          const el = d.panels.find((p) => p.id === panelId)?.elements[elementIndex]
+          if (!el || !isSliceRef(el)) return
+          el.flip = !(el.flip ?? false)
+        }),
+
+      setSliceOffset: (panelId, elementIndex, offsetMm) => {
+        if (!Number.isFinite(offsetMm)) return
+        edit((d) => {
+          const el = d.panels.find((p) => p.id === panelId)?.elements[elementIndex]
+          if (!el || !isSliceRef(el)) return
+          el.offsetMm = offsetMm
+        })
+      },
 
       setRowThickness: (rowId, thicknessMm) => {
         if (!Number.isFinite(thicknessMm) || thicknessMm <= 0) return
