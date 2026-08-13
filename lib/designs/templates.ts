@@ -207,11 +207,16 @@ function mosaicRandom(): Design {
 /**
  * Единственный шаблон с SliceRef: центральная вставка - срез отдельной панели,
  * поэтому в середине доски ячейки вдвое мельче рядов. Глубина ровно 2, угол 0.
+ *
+ * Срез INNER вклеивается колонкой в MAIN и физически обязан быть не короче суммарной
+ * длины всех рядов MAIN (панель.length): 7 рядов по 30 мм + припуски + kerf дают 284 мм
+ * (см. lib/engine/panels.ts: panelLengthMm). Заготовка INNER взята на 20 полос по 15 мм -
+ * 300 мм, с запасом ~16 мм под ширину рейсмуса (лимит 330 мм), а не впритык к пределу.
  */
 export function makeInlayBand(): Design {
   const inner: Panel = {
     id: 'INNER',
-    elements: Array.from({ length: 12 }, (_, i) => ({
+    elements: Array.from({ length: 20 }, (_, i) => ({
       kind: 'strip' as const,
       speciesId: i % 2 === 0 ? ACCENT : LIGHT,
       widthMm: 15,
@@ -227,7 +232,7 @@ export function makeInlayBand(): Design {
       { kind: 'strip', speciesId: LIGHT, widthMm: 60 },
     ],
   }
-  const rows: Row[] = Array.from({ length: 8 }, (_, i) => ({
+  const rows: Row[] = Array.from({ length: 7 }, (_, i) => ({
     id: `r${i}`,
     panelId: 'MAIN',
     thicknessMm: 30,
@@ -245,7 +250,7 @@ export function makeInlayBand(): Design {
     species: [LIGHT, ACCENT, DARK],
     panels: [main, inner],
     rows,
-    board: { targetWidthMm: 270, targetLengthMm: 240, thicknessMm: GRID_THICKNESS_MM },
+    board: { targetWidthMm: 270, targetLengthMm: 210, thicknessMm: GRID_THICKNESS_MM },
     kerfMm: GRID_KERF_MM,
     planingAllowanceMm: GRID_ALLOWANCE_MM,
     planerWidthMm: DEFAULT_PLANER_WIDTH_MM,
