@@ -40,7 +40,7 @@ export function CopyField({
   return (
     <div className="flex flex-col gap-1" data-testid={testId}>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-medium tracking-[0.08em] text-ink-muted uppercase">{label}</span>
+        <span className="text-[11px] font-medium tracking-[0.12em] text-ink-muted uppercase">{label}</span>
         <Button size="sm" variant="ghost" data-testid={`${testId}-copy`} onClick={copy}>
           {copied ? <Check data-icon="inline-start" className="text-success-text" /> : <Copy data-icon="inline-start" />}
           {t(locale, copied ? 'salePrep.copied' : 'salePrep.copy')}

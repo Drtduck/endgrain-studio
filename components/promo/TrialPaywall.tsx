@@ -23,7 +23,7 @@ export function TrialPaywall({ locale }: { locale: Locale }) {
       data-testid="promo-paywall"
       className="flex flex-col gap-3 rounded-lg border border-line-subtle bg-surface-raised p-4"
     >
-      <h3 className="font-display text-[15px] font-semibold">{t(locale, 'ai.paywall.title')}</h3>
+      <h3 className="font-display text-[17px] font-semibold">{t(locale, 'ai.paywall.title')}</h3>
       <ul className="flex flex-col gap-1.5">
         {(['ai.paywall.point1', 'ai.paywall.point2', 'ai.paywall.point3'] as const).map((key) => (
           <li key={key} className="flex items-start gap-2 text-[13px] text-ink-secondary">
