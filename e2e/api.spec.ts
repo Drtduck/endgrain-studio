@@ -84,3 +84,20 @@ test.describe('REST API v1 без ключей и без Supabase', () => {
     expect(res.url()).toContain('/api/v1/me')
   })
 })
+
+test.describe('Developer тариф и страница ключей', () => {
+  test('на странице тарифов есть карточка Developer со статусом «скоро», без кнопок оплаты', async ({ page }) => {
+    await page.goto('/pricing')
+    await expect(page.getByTestId('pricing-developer')).toBeVisible()
+    await expect(page.getByTestId('pricing-developer-status')).toBeVisible()
+    // Ни цены, ни кнопки оплаты у карточки нет: раздел 9.1/9.3 дизайн-документа.
+    await expect(page.getByTestId('pricing-developer').getByRole('button')).toHaveCount(0)
+  })
+
+  test('/account/api без сессии уводит на логин даже под PUBLIC_STUDIO', async ({ page }) => {
+    // Второй слой защиты сверх proxy.ts: без Supabase/сессии listApiKeysAction
+    // отвечает unauthenticated, и страница сама редиректит на /login.
+    await page.goto('/account/api')
+    await expect(page).toHaveURL(/\/login/)
+  })
+})
