@@ -11,7 +11,7 @@ import {
 import { usePro } from '@/components/ProProvider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { PublishDialog } from '@/components/gallery/PublishDialog'
+import { PublishForm } from '@/components/gallery/PublishForm'
 import { WalletPanel } from '@/components/wallet/WalletPanel'
 import { track } from '@/lib/analytics/events'
 import { designDisplayName } from '@/lib/designs/name'
@@ -195,7 +195,7 @@ export function ProjectsPanel() {
                 >
                   {t(locale, 'projects.load')}
                 </Button>
-                <PublishDialog locale={locale} projectId={item.id} defaultTitle={item.name} />
+                <PublishForm locale={locale} projectId={item.id} defaultTitle={item.name} />
                 <Button
                   variant="destructive"
                   size="sm"

@@ -20,10 +20,10 @@ const ERROR_KEYS: Readonly<Record<GalleryError, MessageKey>> = {
 /**
  * Публикация проекта из «Мои проекты» в галерею. Разворачивается инлайн под
  * строкой проекта: название и цена в долларах (0 значит бесплатно), по
- * publishProjectAction. Полноценный модальный диалог тут избыточен - форма
- * из двух полей, а базовые компоненты диалога в проекте уже заняты под ForkDialog.
+ * publishProjectAction. Полноценный модальный диалог тут избыточен - это
+ * форма из двух полей, встроенная прямо в строку проекта, а не поверх неё.
  */
-export function PublishDialog({ locale, projectId, defaultTitle }: { readonly locale: Locale; readonly projectId: string; readonly defaultTitle: string }) {
+export function PublishForm({ locale, projectId, defaultTitle }: { readonly locale: Locale; readonly projectId: string; readonly defaultTitle: string }) {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState(defaultTitle)
   const [price, setPrice] = useState('0')
