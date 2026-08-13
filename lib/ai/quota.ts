@@ -12,7 +12,7 @@ export const AI_MONTHLY_LIMIT = 30
  * Что именно просят. Мокапы мерча рисует Printful, а не языковая модель:
  * генерация там бесплатная, поэтому квоту они не тратят, но Pro всё равно нужен.
  */
-export type AiFeature = 'promoShots' | 'merchMockups' | 'referenceAnalysis' | 'referenceShots'
+export type AiFeature = 'promoShots' | 'merchMockups' | 'referenceAnalysis' | 'referenceShots' | 'saleListing'
 
 /**
  * Цена ОДНОЙ единицы обращения в квоте. Ноль значит «Pro нужен, а счётчик не трогаем».
@@ -27,6 +27,8 @@ export const AI_FEATURE_COST: Record<AiFeature, number> = {
   merchMockups: 0,
   referenceAnalysis: 1,
   referenceShots: 2,
+  // Карточка Amazon/Etsy это одно текстовое обращение к vision-модели без картинок на входе.
+  saleListing: 1,
 }
 
 /**

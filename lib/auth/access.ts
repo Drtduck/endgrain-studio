@@ -13,7 +13,7 @@ export const LOGIN_PATH = '/login'
  * Открытые адреса студии. Всё, что не в этом списке, требует аккаунта.
  * Префикс закрывает и вложенные пути (/auth/callback, /api/stripe/webhook).
  */
-const PUBLIC_PREFIXES: readonly string[] = [
+export const PUBLIC_PREFIXES: readonly string[] = [
   '/login',
   '/register',
   '/forgot-password',
@@ -24,6 +24,9 @@ const PUBLIC_PREFIXES: readonly string[] = [
   '/api',
   '/_next',
   '/brand',
+  // Галерея единственная страница студии, обязанная открываться анониму:
+  // иначе делиться ссылкой на опубликованный проект незачем.
+  '/gallery',
 ]
 
 /** Файлы-метаданные в корне: их отдаёт Next, логин к ним неприменим. */

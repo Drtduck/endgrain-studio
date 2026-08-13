@@ -11,6 +11,8 @@ import {
 import { usePro } from '@/components/ProProvider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { PublishDialog } from '@/components/gallery/PublishDialog'
+import { WalletPanel } from '@/components/wallet/WalletPanel'
 import { designDisplayName } from '@/lib/designs/name'
 import { t, type MessageKey } from '@/lib/i18n'
 import { FREE_PROJECT_LIMIT } from '@/lib/stripe/limits'
@@ -121,6 +123,8 @@ export function ProjectsPanel() {
         <p className="text-base text-ink-secondary">{t(locale, 'projects.subtitle')}</p>
       </div>
 
+      <WalletPanel locale={locale} />
+
       <div className="flex flex-col gap-2 rounded-lg border border-line-subtle bg-surface-raised p-4">
         <h3 className="text-sm font-semibold">{t(locale, 'projects.saveTitle')}</h3>
         <div className="flex flex-wrap items-end gap-2">
@@ -179,7 +183,7 @@ export function ProjectsPanel() {
                   {t(locale, 'projects.updatedAt', { date: dateFormatter.format(new Date(item.updatedAt)) })}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <Button
                   variant="outline"
                   size="sm"
@@ -189,6 +193,7 @@ export function ProjectsPanel() {
                 >
                   {t(locale, 'projects.load')}
                 </Button>
+                <PublishDialog locale={locale} projectId={item.id} defaultTitle={item.name} />
                 <Button
                   variant="destructive"
                   size="sm"

@@ -1,11 +1,11 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useGoogleAuthAvailable } from '@/components/GoogleAuthProvider'
 import { safeNextPath } from '@/lib/auth/access'
+import { hardNavigate } from '@/lib/routing/navigate'
 import { t, type Locale } from '@/lib/i18n'
 import { getSupabaseBrowser } from '@/lib/supabase/browser'
 
@@ -66,7 +66,6 @@ export interface AuthFormProps {
 }
 
 export function AuthForm({ mode, locale, redirectOrigin, onSuccess, onConfirmSent }: AuthFormProps) {
-  const router = useRouter()
   const googleAuthAvailable = useGoogleAuthAvailable()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -83,8 +82,10 @@ export function AuthForm({ mode, locale, redirectOrigin, onSuccess, onConfirmSen
       onSuccess(next)
       return
     }
-    router.push(next)
-    router.refresh()
+    // Полная навигация, а не router.push: клиентский переход успевает уйти за RSC
+    // раньше, чем браузер закоммитит свежую cookie сессии, и proxy отправляет
+    // человека обратно на форму входа. Проверено на проде после смены домена cookie.
+    hardNavigate(next)
   }
 
   async function onGoogleSignIn(): Promise<void> {

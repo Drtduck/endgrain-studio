@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { t, type Locale } from '@/lib/i18n'
 import { APP_SIGNUP_URL, appOriginForClient } from '@/lib/routing/host'
-import { assignLocation } from '@/lib/routing/navigate'
+import { hardNavigate } from '@/lib/routing/navigate'
 
 /**
  * Кнопка призыва к действию, открывающая вход прямо на лендинге. Триггер это настоящая
@@ -85,7 +85,7 @@ export function AuthCta({
             redirectOrigin={appOrigin}
             onConfirmSent={() => setConfirmSent(true)}
             // Другой origin: роутер Next туда не ходит, поэтому меняем адрес целиком.
-            onSuccess={(next) => assignLocation(new URL(next, appOriginForClient()).toString())}
+            onSuccess={(next) => hardNavigate(new URL(next, appOriginForClient()).toString())}
           />
 
           {confirmSent ? (
