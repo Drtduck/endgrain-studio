@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 import type { LegalDoc } from '@/lib/legal'
 import { t, type Locale } from '@/lib/i18n'
 
@@ -13,7 +14,15 @@ function formatDate(iso: string, locale: Locale): string {
  * захардкоженного текста и не попадает под барьер lib/i18n/purity.test.ts благодаря
  * тому, что кириллица приезжает данными, а не литералом в разметке.
  */
-export function LegalDocView({ doc, locale }: { doc: LegalDoc; locale: Locale }) {
+export function LegalDocView({
+  doc,
+  locale,
+  children,
+}: {
+  doc: LegalDoc
+  locale: Locale
+  children?: ReactNode
+}) {
   return (
     <main className="min-h-screen bg-app px-4 py-10">
       <div className="mx-auto flex max-w-3xl flex-col gap-6" data-testid="legal-doc">
@@ -42,6 +51,8 @@ export function LegalDocView({ doc, locale }: { doc: LegalDoc; locale: Locale })
             </section>
           ))}
         </div>
+
+        {children}
       </div>
     </main>
   )

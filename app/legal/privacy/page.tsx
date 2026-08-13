@@ -14,12 +14,11 @@ export default async function PrivacyPage() {
   const locale = await getLandingLocale()
   const doc = LEGAL_DOCS.privacy[locale]
   return (
-    <>
-      <LegalDocView doc={doc} locale={locale} />
-      <div className="mx-auto -mt-2 flex max-w-3xl flex-col gap-2 px-4 pb-16">
+    <LegalDocView doc={doc} locale={locale}>
+      <div className="flex flex-col gap-2">
         <h2 className="font-display text-lg font-semibold text-ink">{t(locale, 'consent.settings.title')}</h2>
         <ConsentSettings locale={locale} />
       </div>
-    </>
+    </LegalDocView>
   )
 }
