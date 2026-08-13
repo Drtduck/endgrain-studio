@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { createApiKeyAction, revokeApiKeyAction, type ApiKeySummary, type ApiKeysError } from '@/app/actions/apiKeys'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { t, type Locale, type MessageKey } from '@/lib/i18n'
 import { APP_ORIGIN } from '@/lib/routing/host'
@@ -33,15 +34,11 @@ function formatDate(iso: string, locale: Locale): string {
  */
 function NewKeyReveal({ locale, plaintext, onClose }: { locale: Locale; plaintext: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const copy = async (): Promise<void> => {
     await navigator.clipboard.writeText(plaintext)
     setCopied(true)
-  }
-
-  const close = (): void => {
-    if (!window.confirm(t(locale, 'apiKeys.closeConfirm'))) return
-    onClose()
   }
 
   return (
@@ -55,10 +52,37 @@ function NewKeyReveal({ locale, plaintext, onClose }: { locale: Locale; plaintex
         <Button size="sm" variant="outline" data-testid="api-key-copy" onClick={() => void copy()}>
           {t(locale, copied ? 'apiKeys.copied' : 'apiKeys.copy')}
         </Button>
-        <Button size="sm" data-testid="api-key-close" onClick={close}>
+        <Button size="sm" data-testid="api-key-close" onClick={() => setConfirmOpen(true)}>
           {t(locale, 'apiKeys.close')}
         </Button>
       </div>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent
+          data-testid="api-key-close-confirm-dialog"
+          backdropTestId="api-key-close-confirm-backdrop"
+          className="w-[min(420px,92vw)] gap-4"
+        >
+          <DialogTitle>{t(locale, 'apiKeys.closeConfirmTitle')}</DialogTitle>
+          <DialogDescription>{t(locale, 'apiKeys.closeConfirm')}</DialogDescription>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" data-testid="api-key-close-confirm-cancel" onClick={() => setConfirmOpen(false)}>
+              {t(locale, 'apiKeys.closeCancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              data-testid="api-key-close-confirm-ok"
+              onClick={() => {
+                setConfirmOpen(false)
+                onClose()
+              }}
+            >
+              {t(locale, 'apiKeys.close')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -66,9 +90,10 @@ function NewKeyReveal({ locale, plaintext, onClose }: { locale: Locale; plaintex
 function KeyRow({ locale, item, onRevoked }: { locale: Locale; item: ApiKeySummary; onRevoked: (id: string) => void }) {
   const [busy, startTransition] = useTransition()
   const [error, setError] = useState<ApiKeysError | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const revoke = (): void => {
-    if (!window.confirm(t(locale, 'apiKeys.revokeConfirm'))) return
+    setConfirmOpen(false)
     setError(null)
     startTransition(async () => {
       const res = await revokeApiKeyAction(item.id)
@@ -93,11 +118,30 @@ function KeyRow({ locale, item, onRevoked }: { locale: Locale; item: ApiKeySumma
             {t(locale, 'apiKeys.revokedBadge')}
           </span>
         ) : (
-          <Button size="sm" variant="destructive" data-testid="api-key-revoke" disabled={busy} onClick={revoke}>
+          <Button size="sm" variant="destructive" data-testid="api-key-revoke" disabled={busy} onClick={() => setConfirmOpen(true)}>
             {busy ? t(locale, 'apiKeys.revoking') : t(locale, 'apiKeys.revoke')}
           </Button>
         )}
         {error === null ? null : <p className="mt-1 text-xs text-error-text">{t(locale, ERROR_KEYS[error])}</p>}
+
+        <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <DialogContent
+            data-testid="api-key-revoke-confirm-dialog"
+            backdropTestId="api-key-revoke-confirm-backdrop"
+            className="w-[min(420px,92vw)] gap-4"
+          >
+            <DialogTitle>{t(locale, 'apiKeys.revokeConfirmTitle')}</DialogTitle>
+            <DialogDescription>{t(locale, 'apiKeys.revokeConfirm')}</DialogDescription>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" data-testid="api-key-revoke-confirm-cancel" onClick={() => setConfirmOpen(false)}>
+                {t(locale, 'apiKeys.revokeCancel')}
+              </Button>
+              <Button variant="destructive" size="sm" data-testid="api-key-revoke-confirm-ok" onClick={revoke}>
+                {t(locale, 'apiKeys.revoke')}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </td>
     </tr>
   )
