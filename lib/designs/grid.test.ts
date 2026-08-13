@@ -32,7 +32,7 @@ describe('hash2 и pick', () => {
 describe('makeGridDesign', () => {
   const checker = makeGridDesign({
     id: 'test-checker',
-    name: 'Тест',
+    nameKey: 'design.default',
     colWidthsMm: uniform(4, 30),
     rowHeightsMm: uniform(4, 30),
     at: (col, row) => ((col + row) % 2 === 0 ? 'walnut' : 'maple'),
@@ -66,7 +66,7 @@ describe('makeGridDesign', () => {
   it('поддерживает разную ширину колонок и разную высоту рядов', () => {
     const design = makeGridDesign({
       id: 'test-pinstripe',
-      name: 'Тест',
+      nameKey: 'design.default',
       colWidthsMm: [46, 8, 46],
       rowHeightsMm: [30, 8, 30],
       at: (col) => (col === 1 ? 'wenge' : 'maple'),
@@ -80,7 +80,7 @@ describe('makeGridDesign', () => {
 
   it('уважает заданную толщину доски', () => {
     const design = makeGridDesign({
-      id: 'test-thick', name: 'Тест',
+      id: 'test-thick', nameKey: 'design.default',
       colWidthsMm: uniform(2, 30), rowHeightsMm: uniform(2, 30),
       at: () => 'maple', thicknessMm: 50,
     })

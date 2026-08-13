@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.11",
+    "node": ">=22.18",
     "pnpm": ">=9"
   },
   "scripts": {
@@ -18,7 +18,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "shots": "SHOTS=1 playwright test e2e/shots.spec.ts",
-    "brand:icons": "node scripts/brand-icons.mjs"
+    "brand:icons": "node scripts/brand-icons.mjs",
+    "newsletter": "node scripts/newsletter.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

@@ -1,6 +1,7 @@
 import type { jsPDF } from 'jspdf'
 import type { BoardModel, Design } from '@/lib/engine'
 import type { CalcResult } from '@/lib/calc'
+import { designDisplayName } from '@/lib/designs/name'
 import { t, type Locale } from '@/lib/i18n'
 import { speciesHex } from '@/lib/species'
 import { buildCutPlan, buildGlueUpSteps, type CutPlan, type GlueUpStep, type PanelCutPlan } from './cutlist'
@@ -49,7 +50,7 @@ export async function buildInstructionPdf(input: PdfInput): Promise<Blob> {
   const locale: Locale = hasCyrillic ? input.locale : 'en'
   const family = hasCyrillic ? PDF_FONT_FAMILY : 'helvetica'
 
-  const plan = buildCutPlan(input.design)
+  const plan = buildCutPlan(input.design, locale)
   const steps = buildGlueUpSteps(plan, locale)
   const ctx: PdfContext = { doc, family, locale, design: input.design, model: input.model, calc: input.calc, plan, steps }
 
@@ -128,7 +129,7 @@ async function drawOverviewPage(ctx: PdfContext): Promise<void> {
   const { doc, locale, model, calc, design } = ctx
   let y: number = PAGE.marginMm
 
-  text(ctx, design.name, PAGE.marginMm, y, { size: 16, style: 'bold' })
+  text(ctx, designDisplayName(design, locale), PAGE.marginMm, y, { size: 16, style: 'bold' })
   y += 8
   text(ctx, t(locale, 'app.tagline'), PAGE.marginMm, y, { size: 9, color: '#666666' })
   y += 8

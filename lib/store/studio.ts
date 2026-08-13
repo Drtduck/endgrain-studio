@@ -482,7 +482,13 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
       setKerfMm: (mm) => editNumber(mm, (d, v) => { d.kerfMm = v }),
       setPlaningAllowanceMm: (mm) => editNumber(mm, (d, v) => { d.planingAllowanceMm = v }),
       setPlanerWidthMm: (mm) => editNumber(mm, (d, v) => { d.planerWidthMm = v }),
-      setDesignName: (name) => edit((d) => { d.name = name }),
+      // Своё имя перебивает ключ словаря при показе (см. designDisplayName), но сам ключ
+      // остаётся в документе: стёртое поле возвращает исходное имя шаблона или генератора,
+      // а не переименовывает проект в «Шахматку» навсегда.
+      setDesignName: (name) =>
+        edit((d) => {
+          d.name = name
+        }),
 
       loadDesign: (design) =>
         set((s) => ({
@@ -492,8 +498,15 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
           documentTouched: true,
           touchedCellIds: new Set(),
         })),
+      // Сброс возвращает документ и выбор инструментов, но не язык и не единицы:
+      // это настройки человека, а не состояние проекта.
       resetStudio: (design) =>
-        set((s) => ({ history: resetHistory(s.history, design ?? makeCheckerboard()), ...UI_DEFAULTS })),
+        set((s) => ({
+          history: resetHistory(s.history, design ?? makeCheckerboard()),
+          ...UI_DEFAULTS,
+          locale: s.locale,
+          unit: s.unit,
+        })),
       undo: () => set((s) => ({ history: histUndo(s.history), pendingFork: null })),
       redo: () => set((s) => ({ history: histRedo(s.history), pendingFork: null })),
     }

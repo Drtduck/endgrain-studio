@@ -32,7 +32,7 @@ const BLACK: SpeciesId = 'wenge'
 function checkerboardClassic(): Design {
   return makeGridDesign({
     id: 'checkerboard-classic',
-    name: 'Классическая шахматка',
+    nameKey: 'tpl.checkerboard-classic',
     colWidthsMm: uniform(8, 30),
     rowHeightsMm: uniform(8, 30),
     at: (col, row) => ((col + row) % 2 === 0 ? DARK : LIGHT),
@@ -42,7 +42,7 @@ function checkerboardClassic(): Design {
 function checkerboardFine(): Design {
   return makeGridDesign({
     id: 'checkerboard-fine',
-    name: 'Мелкая шахматка',
+    nameKey: 'tpl.checkerboard-fine',
     colWidthsMm: uniform(12, 25),
     rowHeightsMm: uniform(12, 25),
     at: (col, row) => ((col + row) % 2 === 0 ? DARK : LIGHT),
@@ -52,7 +52,7 @@ function checkerboardFine(): Design {
 function checkerboardThree(): Design {
   return makeGridDesign({
     id: 'checkerboard-three',
-    name: 'Шахматка на три породы',
+    nameKey: 'tpl.checkerboard-three',
     colWidthsMm: uniform(9, 30),
     rowHeightsMm: uniform(9, 30),
     at: (col, row) => ((col + row) % 2 === 0 ? LIGHT : row % 4 < 2 ? DARK : ACCENT),
@@ -62,7 +62,7 @@ function checkerboardThree(): Design {
 function blocks2x2(): Design {
   return makeGridDesign({
     id: 'blocks-2x2',
-    name: 'Крупные блоки',
+    nameKey: 'tpl.blocks-2x2',
     colWidthsMm: uniform(12, 25),
     rowHeightsMm: uniform(12, 25),
     at: (col, row) => ((Math.floor(col / 2) + Math.floor(row / 2)) % 2 === 0 ? LIGHT : DARK),
@@ -72,7 +72,7 @@ function blocks2x2(): Design {
 function brickHalf(): Design {
   return makeGridDesign({
     id: 'brick-half',
-    name: 'Кирпич вполовину',
+    nameKey: 'tpl.brick-half',
     colWidthsMm: uniform(10, 30),
     rowHeightsMm: uniform(10, 30),
     // Кирпич в два блока со сдвигом на половину: нечётный ряд начинается с половинки.
@@ -84,7 +84,7 @@ function brickThird(): Design {
   const palette: readonly SpeciesId[] = [LIGHT, DARK, WARM]
   return makeGridDesign({
     id: 'brick-third',
-    name: 'Кирпич в треть',
+    nameKey: 'tpl.brick-third',
     colWidthsMm: uniform(12, 25),
     rowHeightsMm: uniform(12, 25),
     at: (col, row) => pick(palette, Math.floor((col + (row % 3)) / 3) + row),
@@ -94,7 +94,7 @@ function brickThird(): Design {
 function stripesWide(): Design {
   return makeGridDesign({
     id: 'stripes-wide',
-    name: 'Широкие полосы',
+    nameKey: 'tpl.stripes-wide',
     colWidthsMm: uniform(6, 50),
     rowHeightsMm: uniform(8, 30),
     at: (col) => (col % 2 === 0 ? LIGHT : DARK),
@@ -107,7 +107,7 @@ function pinstripe(): Design {
   for (let i = 0; i < 6; i += 1) cols.push(46, 8)
   return makeGridDesign({
     id: 'pinstripe',
-    name: 'Тонкий кант',
+    nameKey: 'tpl.pinstripe',
     colWidthsMm: cols,
     rowHeightsMm: uniform(8, 35),
     at: (col) => (col % 2 === 1 ? BLACK : LIGHT),
@@ -118,7 +118,7 @@ function gradientStripes(): Design {
   const ramp: readonly SpeciesId[] = ['maple', 'ash', 'red-oak', 'cherry', 'walnut', 'wenge']
   return makeGridDesign({
     id: 'gradient-stripes',
-    name: 'Градиент по светлоте',
+    nameKey: 'tpl.gradient-stripes',
     colWidthsMm: uniform(12, 25),
     rowHeightsMm: uniform(8, 30),
     // Зеркальная лесенка: светлое по краям, тёмное в середине.
@@ -130,7 +130,7 @@ function diagonalLadder(): Design {
   const palette: readonly SpeciesId[] = [LIGHT, WARM, DARK, BLACK]
   return makeGridDesign({
     id: 'diagonal-ladder',
-    name: 'Диагональ',
+    nameKey: 'tpl.diagonal-ladder',
     colWidthsMm: uniform(8, 35),
     rowHeightsMm: uniform(12, 30),
     at: (col, row) => pick(palette, col + row),
@@ -141,7 +141,7 @@ function diagonalFine(): Design {
   const palette: readonly SpeciesId[] = [LIGHT, ACCENT, DARK]
   return makeGridDesign({
     id: 'diagonal-fine',
-    name: 'Мелкая диагональ',
+    nameKey: 'tpl.diagonal-fine',
     colWidthsMm: uniform(12, 25),
     rowHeightsMm: uniform(12, 25),
     at: (col, row) => pick(palette, col + row * 2),
@@ -154,7 +154,7 @@ function accentRows(): Design {
   for (let i = 0; i < 4; i += 1) rowsMm.push(30, 30, 8)
   return makeGridDesign({
     id: 'accent-rows',
-    name: 'Поперечный акцент',
+    nameKey: 'tpl.accent-rows',
     colWidthsMm: uniform(10, 30),
     rowHeightsMm: rowsMm,
     at: (col, row) => (row % 3 === 2 ? ACCENT : (col + row) % 2 === 0 ? LIGHT : DARK),
@@ -165,7 +165,7 @@ function frameBorder(): Design {
   const size = 10
   return makeGridDesign({
     id: 'frame-border',
-    name: 'Шахматка в рамке',
+    nameKey: 'tpl.frame-border',
     colWidthsMm: uniform(size, 30),
     rowHeightsMm: uniform(size, 30),
     at: (col, row) => {
@@ -181,7 +181,7 @@ function chess8x8(): Design {
   const cols = [20, ...uniform(8, 32), 20]
   return makeGridDesign({
     id: 'chess-8x8',
-    name: 'Шахматная доска 8 на 8',
+    nameKey: 'tpl.chess-8x8',
     colWidthsMm: cols,
     rowHeightsMm: cols,
     at: (col, row) => {
@@ -196,7 +196,7 @@ function mosaicRandom(): Design {
   const palette: readonly SpeciesId[] = [LIGHT, WARM, DARK, ACCENT]
   return makeGridDesign({
     id: 'mosaic-random',
-    name: 'Мозаика',
+    nameKey: 'tpl.mosaic-random',
     colWidthsMm: uniform(10, 30),
     rowHeightsMm: uniform(10, 30),
     // Сид зашит: «случайный» узор обязан быть одинаковым у всех, иначе ссылка покажет другую доску.
@@ -238,9 +238,10 @@ export function makeInlayBand(): Design {
   }))
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: 'inlay-band',
-    name: 'Вставка мелким срезом',
+    name: '',
+    nameKey: 'tpl.inlay-band',
     species: [LIGHT, ACCENT, DARK],
     panels: [main, inner],
     rows,

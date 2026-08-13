@@ -151,7 +151,7 @@ describe('studio store: settings, selection, history', () => {
     expect(selectCanRedo(store.getState())).toBe(false)
   })
 
-  it('resetStudio returns locale, unit and selection to defaults', () => {
+  it('resetStudio returns selection to defaults but keeps locale and unit', () => {
     const store = createStudioStore(baseDesign())
     store.getState().setLocale('en')
     store.getState().setUnit('in')
@@ -159,8 +159,9 @@ describe('studio store: settings, selection, history', () => {
     store.getState().selectCell('r1:0')
     store.getState().resetStudio(baseDesign())
     const s = store.getState()
-    expect(s.locale).toBe('ru')
-    expect(s.unit).toBe('mm')
+    // Язык и единицы - настройки человека, а не состояние проекта: сброс их не трогает.
+    expect(s.locale).toBe('en')
+    expect(s.unit).toBe('in')
     expect(s.activeSpeciesId).toBe('walnut')
     expect(s.selectedCellId).toBe(null)
     expect(s.pendingFork).toBe(null)

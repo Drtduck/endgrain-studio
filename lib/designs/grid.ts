@@ -11,7 +11,9 @@ const SPECIES_ORDER = new Map(SPECIES.map((s, index) => [s.id, index]))
 
 export interface GridSpec {
   readonly id: string
-  readonly name: string
+  /** Имя сетки живёт ключом словаря: документ не должен носить строку на одном языке. */
+  readonly nameKey: string
+  readonly nameParams?: Readonly<Record<string, string>>
   /** Ширины колонок вдоль ширины доски, мм. Одни и те же для всех рядов, иначе доска выйдет рваной. */
   readonly colWidthsMm: readonly number[]
   /** Высоты рядов вдоль длины доски, мм: это толщина поперечного среза. */
@@ -83,9 +85,11 @@ export function makeGridDesign(spec: GridSpec): Design {
   const sum = (list: readonly number[]): number => list.reduce((acc, value) => acc + value, 0)
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: spec.id,
-    name: spec.name,
+    name: '',
+    nameKey: spec.nameKey,
+    ...(spec.nameParams ? { nameParams: spec.nameParams } : {}),
     species,
     panels,
     rows,

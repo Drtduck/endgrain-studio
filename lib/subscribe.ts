@@ -12,4 +12,4 @@ export const subscribeSchema = z.object({
 })
 
 export type SubscribeError = 'invalid' | 'disabled' | 'failed' | 'bot'
-export type SubscribeResult = { ok: true; already: boolean } | { ok: false; error: SubscribeError }
+export type SubscribeResult = { ok: true } | { ok: false; error: SubscribeError }

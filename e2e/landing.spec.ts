@@ -22,24 +22,171 @@ test('переключатель языка меняет копирайт', asyn
 
 test('витрина показывает фото досок', async ({ page }) => {
   await openLanding(page)
-  const grid = page.getByTestId('landing-pattern-grid')
+  const grid = page.getByTestId('landing-pattern-marquee')
   await expect(grid).toBeVisible()
   const shots = grid.locator('img')
-  await expect(shots).toHaveCount(16)
+  // 16 шаблонов, каждый отрисован дважды ради бесшовной петли ленты.
+  await expect(shots).toHaveCount(32)
 
-  // Каждая карточка обязана нести осмысленный alt и реально загрузиться,
-  // иначе блок молча превратится в сетку битых иконок.
+  // Оригиналы несут осмысленный alt, клоны петли идут пустым alt и скрыты от читалки:
+  // ровно 16 картинок с подписью и ровно 16 aria-hidden, иначе лента озвучится дважды.
+  await expect(grid.locator('img[alt]:not([alt=""])')).toHaveCount(16)
+  await expect(grid.locator('img[alt=""]')).toHaveCount(16)
   const first = shots.first()
   await expect(first).toHaveAttribute('alt', /.{10,}/)
+
+  // Хотя бы одна картинка обязана реально загрузиться, иначе блок молча
+  // превратится в сетку битых иконок.
   await expect(async () => {
     const loaded = await first.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)
     expect(loaded).toBe(true)
   }).toPass()
 })
 
-test('кнопки ведут на поддомен студии', async ({ page }) => {
+const CTA_IDS = ['landing-cta-header', 'landing-cta-hero', 'landing-cta-shots', 'landing-cta-final'] as const
+
+test('кнопки открывают окно входа и сохраняют ссылку на страницу регистрации', async ({ page }) => {
   await openLanding(page)
-  await expect(page.getByTestId('landing-cta-hero')).toHaveAttribute('href', /app\.endgrain\.app/)
+  const dialog = page.getByTestId('landing-auth-dialog')
+
+  for (const id of CTA_IDS) {
+    const cta = page.getByTestId(id)
+    // Ссылка остаётся запасным входом: она обязана пережить появление модалки.
+    await expect(cta).toHaveAttribute('href', /app\.endgrain\.app\/register/)
+    await cta.click()
+    await expect(dialog).toBeVisible()
+    await expect(page.getByTestId('auth-form-register')).toBeVisible()
+    // Клик по кнопке не уводит человека со страницы.
+    await expect(page).toHaveURL(/\/landing/)
+    await page.keyboard.press('Escape')
+    await expect(dialog).toHaveCount(0)
+  }
+})
+
+test('окно входа закрывается по Escape, клику вне и крестику, фокус возвращается на кнопку', async ({ page }) => {
+  await openLanding(page)
+  const trigger = page.getByTestId('landing-cta-hero')
+  const dialog = page.getByTestId('landing-auth-dialog')
+
+  await trigger.click()
+  await expect(dialog).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+
+  await trigger.click()
+  await expect(dialog).toBeVisible()
+  await page.getByTestId('landing-auth-dialog-backdrop').click({ position: { x: 5, y: 5 } })
+  await expect(dialog).toHaveCount(0)
+
+  await trigger.click()
+  await expect(dialog).toBeVisible()
+  await page.getByTestId('landing-auth-dialog-close').click()
+  await expect(dialog).toHaveCount(0)
+
+  await expect(async () => {
+    const focused = await page.evaluate(() => document.activeElement?.getAttribute('data-testid'))
+    expect(focused).toBe('landing-cta-hero')
+  }).toPass()
+})
+
+test('окно переключается между регистрацией и входом на обоих языках', async ({ page }) => {
+  await openLanding(page, 'ru')
+  const dialog = page.getByTestId('landing-auth-dialog')
+
+  await page.getByTestId('landing-cta-hero').click()
+  await expect(dialog).toContainText('Регистрация')
+  await page.getByTestId('landing-auth-switch').click()
+  await expect(page.getByTestId('auth-form-login')).toBeVisible()
+  await expect(dialog).toContainText('Вход')
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+
+  await page.getByTestId('landing-locale-en').click()
+  await page.getByTestId('landing-cta-hero').click()
+  await expect(dialog).toContainText('Sign up')
+  await page.getByTestId('landing-auth-switch').click()
+  await expect(dialog).toContainText('Sign in')
+})
+
+test.describe('без JavaScript', () => {
+  test.use({ javaScriptEnabled: false })
+
+  // Запасной вход обязан работать разметкой: без JS кнопка это обычная ссылка на /register.
+  test('кнопка ведёт на страницу регистрации', async ({ page }) => {
+    await page.goto('/landing')
+    const cta = page.getByTestId('landing-cta-hero')
+    await expect(cta).toHaveAttribute('href', /app\.endgrain\.app\/register/)
+    await page.goto('/register')
+    await expect(page.getByTestId('auth-register-why')).toBeVisible()
+  })
+})
+
+test('снимок открывается в полноразмерном просмотре', async ({ page }) => {
+  await openLanding(page)
+  await page.getByTestId('landing-shot-trigger-editor').click()
+
+  // Диалог живёт в портале, вне секции landing-shots: искать только от page.
+  await expect(page.getByTestId('landing-shot-dialog')).toBeVisible()
+  const image = page.getByTestId('landing-shot-dialog-image')
+  await expect(async () => {
+    const loaded = await image.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)
+    expect(loaded).toBe(true)
+  }).toPass()
+})
+
+test('просмотр закрывается по Escape, клику вне и крестику', async ({ page }) => {
+  await openLanding(page)
+  const trigger = page.getByTestId('landing-shot-trigger-editor')
+  const dialog = page.getByTestId('landing-shot-dialog')
+
+  await trigger.click()
+  await expect(dialog).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+
+  await trigger.click()
+  await expect(dialog).toBeVisible()
+  await page.getByTestId('landing-shot-dialog-backdrop').click({ position: { x: 5, y: 5 } })
+  await expect(dialog).toHaveCount(0)
+
+  await trigger.click()
+  await expect(dialog).toBeVisible()
+  await page.getByTestId('landing-shot-dialog-close').click()
+  await expect(dialog).toHaveCount(0)
+})
+
+test('просмотр доступен с клавиатуры', async ({ page }) => {
+  await openLanding(page)
+  await page.getByTestId('landing-shot-trigger-editor').focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('landing-shot-dialog')).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('landing-shot-dialog')).toHaveCount(0)
+  await expect(async () => {
+    const focused = await page.evaluate(() => document.activeElement?.getAttribute('data-testid'))
+    expect(focused).toBe('landing-shot-trigger-editor')
+  }).toPass()
+})
+
+test('кнопка Начать есть в блоке снимков на обоих языках', async ({ page }) => {
+  await openLanding(page, 'ru')
+  const cta = page.getByTestId('landing-cta-shots')
+  await expect(cta).toBeVisible()
+  await expect(cta).toHaveText('Начать')
+  await expect(cta).toHaveAttribute('href', /app\.endgrain\.app\/register/)
+
+  await page.getByTestId('landing-locale-en').click()
+  await expect(cta).toBeVisible()
+  await expect(cta).toHaveText('Start free')
+  await expect(cta).toHaveAttribute('href', /app\.endgrain\.app\/register/)
+})
+
+test('окно входа открывается из блока снимков', async ({ page }) => {
+  await openLanding(page, 'ru')
+  await page.getByTestId('landing-cta-shots').click()
+  await expect(page.getByTestId('landing-auth-dialog')).toBeVisible()
+  await expect(page.getByTestId('auth-email')).toBeVisible()
 })
 
 test('подвал несёт дисклеймер Amazon и строку про приватность', async ({ page }) => {
@@ -72,7 +219,7 @@ test('студия на корне не изменилась', async ({ page }) 
 
 test('витрина уважает prefers-reduced-motion', async ({ page }) => {
   await openLanding(page)
-  const card = page.getByTestId('landing-pattern-grid').locator('.eg-photo-card').first()
+  const card = page.getByTestId('landing-pattern-marquee').locator('.eg-photo-card').first()
   await expect(card).toHaveCount(1)
 
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -81,4 +228,34 @@ test('витрина уважает prefers-reduced-motion', async ({ page }) =>
     const transform = await card.evaluate((el) => getComputedStyle(el).transform)
     expect(transform).toBe('none')
   }).toPass()
+
+  const track = page.getByTestId('landing-marquee-row-a').locator('.eg-marquee-track')
+  await expect(async () => {
+    const name = await track.evaluate((el) => getComputedStyle(el).animationName)
+    expect(name).toBe('none')
+  }).toPass()
+})
+
+test('ленты едут в разные стороны', async ({ page }) => {
+  await openLanding(page)
+  // Курсор в стороне: под ним лента встаёт на паузу и animationName стал бы 'none'.
+  await page.mouse.move(0, 0)
+
+  const trackA = page.getByTestId('landing-marquee-row-a').locator('.eg-marquee-track')
+  const trackB = page.getByTestId('landing-marquee-row-b').locator('.eg-marquee-track')
+  for (const track of [trackA, trackB]) {
+    const name = await track.evaluate((el) => getComputedStyle(el).animationName)
+    expect(name).toBe('eg-marquee')
+  }
+  expect(await trackA.evaluate((el) => getComputedStyle(el).animationDirection)).toBe('normal')
+  expect(await trackB.evaluate((el) => getComputedStyle(el).animationDirection)).toBe('reverse')
+
+  // Замер сдвига по координатам сюда не идёт сознательно: за доступное тесту время
+  // лента при цикле в минуту проезжает считаные пиксели, и на нагруженном CI проверка
+  // мигала бы. Направление уже гарантировано animationDirection строкой выше.
+})
+
+test('клик по узору ведёт в студию', async ({ page }) => {
+  await openLanding(page)
+  await expect(page.getByTestId('landing-pattern-checkerboard-classic')).toHaveAttribute('href', /app\.endgrain\.app/)
 })

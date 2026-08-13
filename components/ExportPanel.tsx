@@ -7,6 +7,7 @@ import { usePro } from '@/components/ProProvider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { HelpHint } from '@/components/ui/help-hint'
+import { designDisplayName } from '@/lib/designs/name'
 import { t, type MessageKey } from '@/lib/i18n'
 import { buildCutPlan, renderBoardSvg, safeFileName } from '@/lib/export'
 import { CSV_BOM, cutPlanToCsv } from '@/lib/export/csv'
@@ -37,9 +38,10 @@ export function ExportPanel() {
 
   // SVG/PNG подписи должны нести то же предупреждение, что и первая страница PDF:
   // усечённая по бюджету ячеек модель одинаково неполна в любом формате экспорта.
+  const title = designDisplayName(design, locale)
   const caption =
     t(locale, 'export.caption', {
-      name: design.name,
+      name: title,
       width: bothUnits(model.widthMm, locale, 0),
       length: bothUnits(model.lengthMm, locale, 0),
       thickness: bothUnits(model.thicknessMm, locale, 0),
@@ -54,16 +56,16 @@ export function ExportPanel() {
       // png/pdf грузятся по клику: jspdf и канвас-растеризатор в первом бандле страницы делать нечего.
       if (format === 'svg') {
         const svg = renderBoardSvg(model, {
-          title: design.name,
+          title,
           caption,
           maxPx: 1600,
           rowLabels: rowBandsMm(design),
           colLabels: colBandsMm(design),
         }).svg
-        downloadText(svg, safeFileName(design.name, 'svg'), 'image/svg+xml;charset=utf-8')
+        downloadText(svg, safeFileName(title, 'svg'), 'image/svg+xml;charset=utf-8')
       } else if (format === 'csv') {
-        const csv = cutPlanToCsv(buildCutPlan(design), { locale })
-        downloadText(CSV_BOM + csv, safeFileName(design.name, 'csv'), 'text/csv;charset=utf-8')
+        const csv = cutPlanToCsv(buildCutPlan(design, locale), { locale })
+        downloadText(CSV_BOM + csv, safeFileName(title, 'csv'), 'text/csv;charset=utf-8')
       } else if (format === 'png' || format === 'png-hd') {
         // Мягкий гейт: растеризация целиком в браузере, поэтому проверка тут не защита,
         // а честная витрина. Серверно защищён только лимит облачных проектов.
@@ -75,13 +77,13 @@ export function ExportPanel() {
         // мелкой сцены даёт для печати ровно тот же результат, что и крупная сцена.
         const maxPx = (format === 'png-hd' ? PNG_MAX_PX_PRO : PNG_MAX_PX_FREE) / scale
         const [{ downloadBlob }, { svgToPngBlob }] = await Promise.all([import('@/lib/export/download'), import('@/lib/export/png')])
-        const rendered = renderBoardSvg(model, { title: design.name, caption, maxPx })
-        downloadBlob(await svgToPngBlob(rendered, { scale }), safeFileName(design.name, 'png'))
+        const rendered = renderBoardSvg(model, { title, caption, maxPx })
+        downloadBlob(await svgToPngBlob(rendered, { scale }), safeFileName(title, 'png'))
       } else {
         const [{ downloadBlob }, { buildInstructionPdf }] = await Promise.all([import('@/lib/export/download'), import('@/lib/export/pdf')])
         downloadBlob(
           await buildInstructionPdf({ design, model, calc, locale, pro: status.pro }),
-          safeFileName(design.name, 'pdf'),
+          safeFileName(title, 'pdf'),
         )
       }
     } catch (err) {

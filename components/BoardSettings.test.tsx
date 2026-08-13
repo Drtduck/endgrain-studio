@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
+import { designDisplayName } from '@/lib/designs/name'
+import { makeCheckerboard } from '@/lib/designs/samples'
+import { templateById } from '@/lib/designs/templates'
 import { baseDesign } from '@/lib/engine'
+import { t } from '@/lib/i18n'
 import { useStudio } from '@/lib/store/studio'
 import { BoardSettings } from './BoardSettings'
 
@@ -13,7 +17,12 @@ function commitField(testId: string, value: string): void {
 }
 
 describe('BoardSettings', () => {
-  beforeEach(() => useStudio.getState().resetStudio(baseDesign()))
+  beforeEach(() => {
+    useStudio.getState().resetStudio(baseDesign())
+    // Сброс больше не трогает язык и единицы: это настройки человека, а не состояние проекта.
+    useStudio.getState().setLocale('ru')
+    useStudio.getState().setUnit('mm')
+  })
 
   it('правит все размеры доски в миллиметрах', () => {
     render(<BoardSettings />)
@@ -29,10 +38,38 @@ describe('BoardSettings', () => {
     expect(design().planerWidthMm).toBe(250)
   })
 
-  it('правит название проекта', () => {
+  it('правит название проекта, и своё имя перебивает ключ словаря', () => {
     render(<BoardSettings />)
     fireEvent.change(screen.getByTestId('board-name'), { target: { value: 'Подарок' } })
     expect(design().name).toBe('Подарок')
+    expect(designDisplayName(design(), 'ru')).toBe('Подарок')
+  })
+
+  it('стёртое имя возвращает исходное имя шаблона, а не имя по умолчанию', () => {
+    const tpl = templateById('checkerboard-fine')
+    if (!tpl) throw new Error('шаблон checkerboard-fine пропал из набора')
+    act(() => useStudio.getState().loadDesign(tpl.build()))
+    render(<BoardSettings />)
+
+    const input = screen.getByTestId('board-name')
+    fireEvent.change(input, { target: { value: 'Подарок' } })
+    expect(designDisplayName(design(), 'ru')).toBe('Подарок')
+
+    fireEvent.change(input, { target: { value: '' } })
+    expect(design().nameKey).toBe(tpl.nameKey)
+    expect(designDisplayName(design(), 'ru')).toBe(t('ru', tpl.nameKey))
+    expect(designDisplayName(design(), 'ru')).not.toBe(t('ru', 'design.default'))
+  })
+
+  it('в английской локали поле пустое, а плейсхолдер показывает имя по умолчанию', () => {
+    act(() => {
+      useStudio.getState().resetStudio(makeCheckerboard())
+      useStudio.getState().setLocale('en')
+    })
+    render(<BoardSettings />)
+    const input = screen.getByTestId('board-name') as HTMLInputElement
+    expect(input.value).toBe('')
+    expect(input.placeholder).toBe('Checkerboard')
   })
 
   it('переключение на дюймы переписывает значения всех полей', () => {

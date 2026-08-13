@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { makeCheckerboard } from '@/lib/designs/samples'
+import { designDisplayName } from '@/lib/designs/name'
 import { TEMPLATES } from '@/lib/designs/templates'
 import { selectDesign, useStudio } from '@/lib/store/studio'
 import { TemplateGallery } from './TemplateGallery'
@@ -8,6 +9,8 @@ import { TemplateGallery } from './TemplateGallery'
 describe('TemplateGallery', () => {
   beforeEach(() => {
     useStudio.getState().resetStudio(makeCheckerboard({ cols: 2, rows: 4 }))
+    useStudio.getState().setLocale('ru')
+    useStudio.getState().setUnit('mm')
   })
 
   it('показывает карточку с превью на каждый шаблон', () => {
@@ -73,10 +76,13 @@ describe('TemplateGallery', () => {
     expect(selectDesign(useStudio.getState()).id).not.toBe('brick-half')
   })
 
-  it('применённое имя шаблона переведено на выбранный язык интерфейса', () => {
+  it('имя применённого шаблона живёт ключом и переводится вслед за интерфейсом', () => {
     act(() => { useStudio.getState().setLocale('en') })
     render(<TemplateGallery />)
     fireEvent.click(screen.getByTestId('template-checkerboard-classic'))
-    expect(selectDesign(useStudio.getState()).name).toBe('Classic checkerboard')
+    const design = selectDesign(useStudio.getState())
+    expect(design.name).toBe('')
+    expect(designDisplayName(design, 'en')).toBe('Classic checkerboard')
+    expect(designDisplayName(design, 'ru')).toBe('Классическая шахматка')
   })
 })

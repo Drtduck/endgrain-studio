@@ -3,6 +3,7 @@ import { compile, panelWidthMm, validate, MIN_STRIP_WIDTH_MM, WARN_CELLS } from 
 import { SPECIES, shrinkageMap } from '@/lib/species'
 import ru from '@/lib/i18n/ru'
 import en from '@/lib/i18n/en'
+import { designDisplayName } from './name'
 import { TEMPLATES, groupNameKey, templateById } from './templates'
 
 const OPTS = { shrinkageByPct: shrinkageMap(), knownSpeciesIds: SPECIES.map((s) => s.id) }
@@ -11,6 +12,17 @@ describe('библиотека шаблонов', () => {
   it('содержит не меньше 16 шаблонов с уникальными id', () => {
     expect(TEMPLATES.length).toBeGreaterThanOrEqual(16)
     expect(new Set(TEMPLATES.map((tpl) => tpl.id)).size).toBe(TEMPLATES.length)
+  })
+
+  it('build не кладёт в документ готовую строку имени, только ключ', () => {
+    for (const tpl of TEMPLATES) {
+      const design = tpl.build()
+      expect(design.name).toBe('')
+      expect(design.nameKey).toBe(tpl.nameKey)
+      // Русское значение, скопированное в en.ts, поймается на этом сравнении.
+      expect(designDisplayName(design, 'en')).not.toBe(designDisplayName(design, 'ru'))
+      expect(designDisplayName(design, 'en')).not.toMatch(/[\u0400-\u04ff]/)
+    }
   })
 
   it('у каждого шаблона есть имя в обеих локалях', () => {

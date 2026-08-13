@@ -3,7 +3,7 @@ import { makeCheckerboard } from '@/lib/designs/samples'
 import { buildCutPlan } from './cutlist'
 import { CSV_BOM, cutPlanToCsv } from './csv'
 
-const plan = buildCutPlan(makeCheckerboard())
+const plan = buildCutPlan(makeCheckerboard(), 'ru')
 const csv = cutPlanToCsv(plan, { locale: 'ru' })
 const lines = csv.split('\r\n').filter((l) => l !== '')
 

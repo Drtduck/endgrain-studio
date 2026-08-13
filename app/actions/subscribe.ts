@@ -1,13 +1,13 @@
 'use server'
 
-import { RESEND_API_KEY, RESEND_AUDIENCE_ID, isResendConfigured } from '@/lib/resend/config'
+import { isKitConfigured } from '@/lib/kit/config'
+import { subscribeToKit } from '@/lib/kit/subscribe'
 import { subscribeSchema, type SubscribeResult } from '@/lib/subscribe'
 
 /**
- * Resend REST напрямую, без SDK: один POST не стоит 300 КБ зависимости.
- * Аудитория бесплатного тарифа держит 1000 контактов, этого хватит надолго.
- * Дубль адреса Resend возвращает как 200 с уже существующим контактом, поэтому
- * повторная подписка для пользователя выглядит успехом, а не ошибкой.
+ * Kit (бывший ConvertKit) вместо Resend для сбора подписчиков лендинга.
+ * Resend остаётся для системных писем приложения и сюда не относится.
+ * Контракт SubscribeResult не меняется, поэтому SubscribeForm и его тесты правки не требуют.
  */
 export async function subscribeAction(input: unknown): Promise<SubscribeResult> {
   const parsed = subscribeSchema.safeParse(input)
@@ -17,24 +17,11 @@ export async function subscribeAction(input: unknown): Promise<SubscribeResult> 
     return { ok: false, error: 'invalid' }
   }
 
-  if (!isResendConfigured()) return { ok: false, error: 'disabled' }
+  if (!isKitConfigured()) return { ok: false, error: 'disabled' }
 
-  try {
-    const res = await fetch(`https://api.resend.com/audiences/${RESEND_AUDIENCE_ID}/contacts`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email: parsed.data.email, unsubscribed: false }),
-      // Ответ Resend кэшировать нечего и опасно.
-      cache: 'no-store',
-    })
-    if (!res.ok) return { ok: false, error: 'failed' }
-    const body = (await res.json()) as { id?: string }
-    return { ok: true, already: typeof body.id !== 'string' }
-  } catch {
-    // Сеть упала или Resend недоступен: пользователю честная ошибка, а не белый экран.
-    return { ok: false, error: 'failed' }
-  }
+  const res = await subscribeToKit(parsed.data.email)
+  if (!res.ok) return { ok: false, error: 'failed' }
+  // Kit v4 не возвращает признак «подписчик уже был», в отличие от Resend:
+  // любой успешный ответ трактуем как обычный успех подписки.
+  return { ok: true }
 }

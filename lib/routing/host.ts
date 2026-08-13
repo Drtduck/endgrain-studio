@@ -34,3 +34,14 @@ export function hostRole(hostHeader: string | null): HostRole {
   if (APP_HOSTS.includes(host)) return 'app'
   return 'unknown'
 }
+
+/**
+ * Origin приложения с точки зрения браузера. На лендинге это соседний домен, везде
+ * ещё (студия, localhost, превью) это текущий origin: там proxy.ts домены не разводит,
+ * и уход на APP_ORIGIN увёл бы человека с превью на прод. Единственное место, где
+ * решается, куда вести после входа из модалки.
+ */
+export function appOriginForClient(): string {
+  if (typeof window === 'undefined') return APP_ORIGIN
+  return hostRole(window.location.host) === 'site' ? APP_ORIGIN : window.location.origin
+}

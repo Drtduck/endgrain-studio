@@ -38,6 +38,8 @@ export const designSchema = z.object({
   schemaVersion: z.literal(CURRENT_SCHEMA_VERSION),
   id: z.string().min(1),
   name: z.string(),
+  nameKey: z.string().optional(),
+  nameParams: z.record(z.string(), z.string()).optional(),
   species: z.array(z.string().min(1)),
   panels: z.array(panelSchema),
   rows: z.array(rowSchema),
@@ -64,6 +66,9 @@ export const migrations: Readonly<Record<number, (doc: unknown) => unknown>> = {
     const d = doc as Record<string, unknown>
     return { ...d, schemaVersion: 1, planerWidthMm: typeof d['planerWidthMm'] === 'number' ? d['planerWidthMm'] : DEFAULT_PLANER_WIDTH_MM }
   },
+  // v2 добавил nameKey: старый документ оставляет своё имя как есть. Человек это имя уже
+  // видел и, возможно, вводил сам, поэтому молча переименовывать его нельзя.
+  1: (doc) => ({ ...(doc as Record<string, unknown>), schemaVersion: 2 }),
 }
 
 export function migrate(doc: unknown): unknown {

@@ -13,7 +13,11 @@ const cleanDesign = baseDesign({
 })
 
 describe('DiagnosticsPanel', () => {
-  beforeEach(() => useStudio.getState().resetStudio(cleanDesign))
+  beforeEach(() => {
+    useStudio.getState().resetStudio(cleanDesign)
+    useStudio.getState().setLocale('ru')
+    useStudio.getState().setUnit('mm')
+  })
 
   it('сообщает, что замечаний нет', () => {
     render(<DiagnosticsPanel />)

@@ -14,8 +14,8 @@
       "en": "Academic but essential on why wood behaves the way it does."
     },
     "why": {
-      "ru": "Единственная книга, которая объясняет, почему торцевая доска ведёт себя не как обычная. Усушка поперёк волокон, движение по сезонам, почему щит трескается. Без неё расчёты студии останутся цифрами без смысла.",
-      "en": "The one book that explains why an end-grain board behaves unlike any other. Cross-grain shrinkage, seasonal movement, why panels crack. Without it the studio numbers stay numbers without meaning."
+      "ru": "Единственная книга, которая объясняет, почему торцевая доска ведёт себя не как обычная. Усушка поперёк волокон, движение по сезонам, почему щит трескается. Без неё расчёты приложения останутся цифрами без смысла.",
+      "en": "The one book that explains why an end-grain board behaves unlike any other. Cross-grain shrinkage, seasonal movement, why panels crack. Without it the numbers in the app stay numbers without meaning."
     },
     "band": "b25_50",
     "unverified": false
@@ -141,8 +141,8 @@
       "en": "About a sensible mix of machine and hand tool work in one shop."
     },
     "why": {
-      "ru": "Про то, где станок экономит день, а где рука точнее машины. Полезно именно тем, кто уже собрал студию и режет доски регулярно.",
-      "en": "About where a machine saves you a day and where a hand beats it on precision. Useful exactly for someone who already runs the studio and cuts boards regularly."
+      "ru": "Про то, где станок экономит день, а где рука точнее машины. Полезно тем, кто уже собрал мастерскую и режет доски регулярно.",
+      "en": "About where a machine saves you a day and where a hand beats it on precision. Useful for someone who already has a shop set up and cuts boards regularly."
     },
     "band": "b25_50",
     "unverified": false

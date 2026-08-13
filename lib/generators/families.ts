@@ -11,7 +11,12 @@ import { symmetryCells } from './symmetry'
 export interface GeneratorFamily {
   readonly id: FamilyId
   readonly nameKey: MessageKey
-  readonly build: (genome: Genome, name: string) => Design
+  readonly build: (genome: Genome) => Design
+}
+
+/** Ключ имени документа для семейства: своя пара строк на каждое, без вложенной подстановки. */
+export function familyDesignNameKey(id: FamilyId): MessageKey {
+  return `gen.designName.${id}` as MessageKey
 }
 
 /** Сетчатое семейство: вся разница между ними умещается в функцию клетки. */
@@ -19,11 +24,11 @@ function gridFamily(id: FamilyId, cells: (genome: Genome) => CellFn): GeneratorF
   return {
     id,
     nameKey: `gen.family.${id}` as MessageKey,
-    build: (genome, name) => {
+    build: (genome) => {
       const at = cells(genome)
       return makeGridDesign({
         id: `gen-${id}-${genome.seed}`,
-        name,
+        nameKey: familyDesignNameKey(id),
         colWidthsMm: [...genome.colWidthsMm],
         rowHeightsMm: [...genome.rowHeightsMm],
         // rowOrder переставляет содержимое рядов, не их высоты: доска сохраняет габарит,
@@ -51,9 +56,9 @@ export function familyById(id: FamilyId): GeneratorFamily {
   return family
 }
 
-/** Единственный вход: геном плюс имя на языке пользователя даёт обычный Design. */
-export function toDesign(genome: Genome, name: string): Design {
-  return familyById(FAMILY_IDS.includes(genome.familyId) ? genome.familyId : 'stripes').build(genome, name)
+/** Единственный вход: геном даёт обычный Design с ключом имени вместо готовой строки. */
+export function toDesign(genome: Genome): Design {
+  return familyById(FAMILY_IDS.includes(genome.familyId) ? genome.familyId : 'stripes').build(genome)
 }
 
 export { genomeKey }

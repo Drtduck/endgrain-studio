@@ -207,6 +207,22 @@
 }
 
 @layer utilities {
+  /* Бегущая лента узоров. Двигаем -50%, потому что набор дублируется ровно
+     дважды: на стыке рисунок совпадает и шва не видно. */
+  @keyframes eg-marquee {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(-50%, 0, 0); }
+  }
+  .eg-marquee-track {
+    display: flex;
+    width: max-content;
+    animation: eg-marquee var(--eg-marquee-dur, 60s) linear infinite;
+  }
+  .eg-marquee-reverse { animation-direction: reverse; }
+  /* Пауза под курсором и на фокусе: по едущей карточке иначе не попасть кликом. */
+  .eg-marquee:hover .eg-marquee-track,
+  .eg-marquee:focus-within .eg-marquee-track { animation-play-state: paused; }
+
   /* Карточка витрины узоров: подъём и тень у самой плитки, лёгкий наезд у фото
      внутри. Разнесено на два класса, потому что transform нужен обоим, а
      сложить их в один элемент нельзя. */
@@ -318,9 +334,11 @@
 
   /* Один выключатель на всё. Без него лендинг нарушает prefers-reduced-motion. */
   @media (prefers-reduced-motion: reduce) {
-    .eg-bob, .eg-reveal,
+    .eg-marquee-track, .eg-bob, .eg-reveal,
     .eg-robot-bob, .eg-robot-leg, .eg-robot-eye,
     .eg-robot-hop, .eg-robot-flip, .eg-robot-backflip { animation: none !important; }
+    /* Замершая лента иначе прячет все карточки кроме первых: отдаём прокрутку руками. */
+    .eg-marquee { overflow-x: auto; }
     .eg-tilt:hover { transform: none; }
     .eg-photo-card:hover, .eg-photo-card:hover .eg-photo-zoom { transform: none; }
   }

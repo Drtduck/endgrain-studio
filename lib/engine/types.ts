@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 1 as const
+export const SCHEMA_VERSION = 2 as const
 
 export type SpeciesId = string
 export type PanelId = string
@@ -48,7 +48,12 @@ export interface BoardSpec {
 export interface Design {
   readonly schemaVersion: typeof SCHEMA_VERSION
   readonly id: string
+  /** Только то, что человек ввёл руками. Всё сгенерированное держит пустую строку и nameKey. */
   readonly name: string
+  /** Ключ словаря для имени по умолчанию: имя переводится при показе, а не при постройке документа. */
+  readonly nameKey?: string | undefined
+  /** Подстановки для nameKey: имя файла фото и подобное. */
+  readonly nameParams?: Readonly<Record<string, string>> | undefined
   /** Палитра проекта: id пород, доступных в редакторе. */
   readonly species: readonly SpeciesId[]
   readonly panels: readonly Panel[]

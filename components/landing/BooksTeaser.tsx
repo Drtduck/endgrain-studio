@@ -2,7 +2,7 @@ import { BOOKS } from '@/lib/affiliate'
 import { t, type Locale } from '@/lib/i18n'
 import { APP_ORIGIN } from '@/lib/routing/host'
 
-// Лёгкая витрина: три книги из полной подборки лежат во вкладке «Литература» студии,
+// Лёгкая витрина: три книги из полной подборки лежат во вкладке «Литература» приложения,
 // ссылки на Amazon карточки не несут, чтобы на лендинге остался один явный CTA.
 const TEASER = BOOKS.slice(0, 3)
 

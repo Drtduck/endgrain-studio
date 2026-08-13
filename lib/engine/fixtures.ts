@@ -6,9 +6,10 @@ export function stripsPanel(id: string, speciesIds: SpeciesId[], widthMm = 25): 
 
 export function baseDesign(overrides: Partial<Design> = {}): Design {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: 'fixture',
-    name: 'фикстура',
+    name: '',
+    nameKey: 'design.default',
     species: ['walnut', 'maple'],
     panels: [stripsPanel('A', ['walnut', 'maple']), stripsPanel('B', ['maple', 'walnut'])],
     rows: [

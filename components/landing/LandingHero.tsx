@@ -1,5 +1,5 @@
+import { AuthCta } from '@/components/landing/AuthCta'
 import { t, type Locale } from '@/lib/i18n'
-import { APP_SIGNUP_URL } from '@/lib/routing/host'
 import { speciesHex } from '@/lib/species'
 
 // Четыре полосы-породы для декоративной сетки фона. Цвета берутся из движка пород
@@ -34,13 +34,12 @@ export function LandingHero({ locale }: { locale: Locale }) {
           <p className="max-w-[52ch] font-sans text-lg text-ink-secondary">{t(locale, 'landing.hero.subtitle')}</p>
 
           <div className="flex flex-wrap items-center gap-3">
-            <a
-              href={APP_SIGNUP_URL}
-              data-testid="landing-cta-hero"
+            <AuthCta
+              locale={locale}
+              testId="landing-cta-hero"
+              label={t(locale, 'landing.hero.ctaPrimary')}
               className="rounded-md bg-accent px-5 py-3 font-sans text-base font-semibold text-accent-fg shadow-sm transition-colors duration-hover hover:bg-accent-hover"
-            >
-              {t(locale, 'landing.hero.ctaPrimary')}
-            </a>
+            />
             <a
               href="#patterns"
               data-testid="landing-cta-patterns"

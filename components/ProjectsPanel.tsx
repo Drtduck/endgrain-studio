@@ -11,6 +11,7 @@ import {
 import { usePro } from '@/components/ProProvider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { designDisplayName } from '@/lib/designs/name'
 import { t, type MessageKey } from '@/lib/i18n'
 import { FREE_PROJECT_LIMIT } from '@/lib/stripe/limits'
 import { selectDesign, useStudio } from '@/lib/store/studio'
@@ -33,7 +34,17 @@ export function ProjectsPanel() {
 
   const [items, setItems] = useState<readonly ProjectSummary[]>([])
   const [loaded, setLoaded] = useState(false)
-  const [name, setName] = useState(design.name)
+  // Имя из документа пересчитывается на каждый рендер и подставляется заново, когда оно
+  // изменилось: иначе в облако уезжало имя на языке момента открытия вкладки, а после
+  // загрузки другого проекта - имя предыдущего. Правка состояния прямо в рендере, а не в
+  // эффекте, сознательно: это штатный приём React для сброса состояния по смене входа.
+  const suggestedName = designDisplayName(design, locale)
+  const [name, setName] = useState(suggestedName)
+  const [lastSuggestedName, setLastSuggestedName] = useState(suggestedName)
+  if (lastSuggestedName !== suggestedName) {
+    setLastSuggestedName(suggestedName)
+    setName(suggestedName)
+  }
   const [error, setError] = useState<ProjectsError | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()

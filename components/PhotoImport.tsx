@@ -33,7 +33,7 @@ export function PhotoImport() {
     const built = photoToDesign(photo.grid, {
       colors: photo.colors,
       panels: photo.panels,
-      name: t(locale, 'photo.designName', { file: photo.fileName }),
+      fileName: photo.fileName,
       seed: seedFromString(photo.fileName),
     })
     return { ...built, model: compile(built.design) }

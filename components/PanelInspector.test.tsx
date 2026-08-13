@@ -8,7 +8,11 @@ const design = () => useStudio.getState().history.present
 const panelA = () => design().panels.find((p) => p.id === 'A')
 
 describe('PanelInspector', () => {
-  beforeEach(() => useStudio.getState().resetStudio(baseDesign()))
+  beforeEach(() => {
+    useStudio.getState().resetStudio(baseDesign())
+    useStudio.getState().setLocale('ru')
+    useStudio.getState().setUnit('mm')
+  })
 
   it('перечисляет панели и их полосы', () => {
     render(<PanelInspector />)

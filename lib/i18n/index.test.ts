@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { dictionaries, plural, t } from './index'
 import ru from './ru'
 import en from './en'
+import { TEMPLATES } from '@/lib/designs/templates'
+import { FAMILIES, familyDesignNameKey } from '@/lib/generators/families'
+import { SHOTS } from '@/lib/landing/shots'
 
 describe('i18n', () => {
   it('has the same keys in both locales', () => {
@@ -15,6 +18,59 @@ describe('i18n', () => {
         expect(value.includes(EM_DASH), `ключ ${key}`).toBe(false)
       }
     }
+  })
+
+  it('в английском словаре нет ни одного символа кириллицы', () => {
+    for (const [key, value] of Object.entries(en)) {
+      expect(/[\u0400-\u04ff]/.test(value), `ключ ${key}`).toBe(false)
+    }
+  })
+
+  it('в русском словаре нет заглушек: значение не равно ключу', () => {
+    for (const [key, value] of Object.entries(ru)) {
+      // app.title это имя продукта, оно совпадает с собой в обеих локалях по делу.
+      if (key === 'app.title') continue
+      expect(value, `ключ ${key}`).not.toBe(key)
+    }
+  })
+
+  it('ключи шаблонов и семейств генератора есть в обеих локалях', () => {
+    // В коде эти ключи собираются строкой и кастуются в MessageKey, компилятор их не ловит.
+    for (const tpl of TEMPLATES) {
+      expect(ru, tpl.id).toHaveProperty(tpl.nameKey)
+      expect(en, tpl.id).toHaveProperty(tpl.nameKey)
+    }
+    for (const family of FAMILIES) {
+      expect(ru, family.id).toHaveProperty(family.nameKey)
+      expect(en, family.id).toHaveProperty(family.nameKey)
+      expect(ru, family.id).toHaveProperty(familyDesignNameKey(family.id))
+      expect(en, family.id).toHaveProperty(familyDesignNameKey(family.id))
+    }
+  })
+
+  it('ключи подписей к снимкам лендинга есть в обеих локалях', () => {
+    // `landing.shots.alt.${slug}` тоже собирается строкой и кастуется: шестой снимок
+    // без перевода отрендерил бы сырой ключ в alt и в aria-label.
+    for (const shot of SHOTS) {
+      expect(ru, shot.slug).toHaveProperty(`landing.shots.alt.${shot.slug}`)
+      expect(en, shot.slug).toHaveProperty(`landing.shots.alt.${shot.slug}`)
+    }
+  })
+
+  it('число узоров в тексте лендинга совпадает с числом шаблонов', () => {
+    // Число в копирайте написано словом, поэтому одной проверкой длины не обойтись:
+    // семнадцатый шаблон обязан уронить тест, а не молча превратить лендинг в неправду.
+    const words: Record<number, { ru: string; en: string }> = {
+      14: { ru: 'Четырнадцать', en: 'Fourteen' },
+      15: { ru: 'Пятнадцать', en: 'Fifteen' },
+      16: { ru: 'Шестнадцать', en: 'Sixteen' },
+      17: { ru: 'Семнадцать', en: 'Seventeen' },
+      18: { ru: 'Восемнадцать', en: 'Eighteen' },
+    }
+    const expected = words[TEMPLATES.length]
+    expect(expected, `нет числительного для ${TEMPLATES.length} шаблонов`).toBeDefined()
+    expect(ru['landing.patterns.body']).toContain(expected?.ru)
+    expect(en['landing.patterns.body']).toContain(expected?.en)
   })
 
   it('has a message for every diagnostic code', () => {

@@ -2,16 +2,21 @@
 
 import './globals.css'
 
+/**
+ * Рендерится вместо всего документа, layout и стор приложения сюда не доходят,
+ * поэтому языка взять неоткуда: текст честно двуязычный целиком, включая кнопку.
+ */
 export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <html lang="ru">
       <body className="min-h-full flex flex-col antialiased">
         <main className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center gap-4 p-6 text-center">
-          <h1 className="text-xl font-semibold">Критическая ошибка приложения</h1>
-          <p className="text-sm text-muted-foreground">
-            Студия не смогла загрузиться. Обновите страницу.
+          <h1 className="text-xl font-semibold">Приложение упало</h1>
+          <h2 className="text-xl font-semibold">The app crashed</h2>
+          <p className="text-sm text-ink-muted">
+            Приложение не загрузилось. Обновите страницу.
             <br />
-            <span className="text-xs">The app failed to load. Please refresh the page.</span>
+            The app did not load. Reload the page.
           </p>
           <button
             type="button"

@@ -41,7 +41,7 @@ export function GeneratorPanel() {
   const favouriteIds = generator?.favouriteIds ?? []
 
   const previews: readonly BoardModel[] = useMemo(
-    () => population.items.map((item) => compile(toDesign(item.genome, item.id))),
+    () => population.items.map((item) => compile(toDesign(item.genome))),
     [population],
   )
 
@@ -67,9 +67,7 @@ export function GeneratorPanel() {
   const apply = (index: number): void => {
     const item = population.items[index]
     if (!item) return
-    const family = FAMILIES.find((f) => f.id === item.genome.familyId)
-    const familyName = family ? t(locale, family.nameKey) : item.genome.familyId
-    loadDesign(toDesign(item.genome, t(locale, 'gen.designName', { family: familyName })))
+    loadDesign(toDesign(item.genome))
     setPending(null)
     setView('editor')
   }
@@ -78,6 +76,12 @@ export function GeneratorPanel() {
     if (dirty) setPending(index)
     else apply(index)
   }
+
+  // В подтверждении стоит имя семейства выбранного варианта, а не заголовок вкладки:
+  // иначе получалось «Узор «Генератор узоров» заменит доску целиком».
+  const pendingGenome = pending === null ? undefined : population.items[pending]?.genome
+  const pendingFamily = FAMILIES.find((f) => f.id === pendingGenome?.familyId)
+  const pendingFamilyName = pendingFamily ? t(locale, pendingFamily.nameKey) : t(locale, 'gen.title')
 
   const first = population.items[0]?.genome.params
 
@@ -242,7 +246,7 @@ export function GeneratorPanel() {
         <ConfirmReplace
           testId="generator"
           title={t(locale, 'gen.confirmTitle')}
-          body={t(locale, 'gen.confirmBody', { name: t(locale, 'gen.title') })}
+          body={t(locale, 'gen.confirmBody', { name: pendingFamilyName })}
           confirmLabel={t(locale, 'gen.confirmApply')}
           cancelLabel={t(locale, 'gen.confirmCancel')}
           onConfirm={() => apply(pending)}

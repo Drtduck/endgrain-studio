@@ -11,7 +11,11 @@ const twoSpeciesDesign = () =>
   })
 
 describe('SpeciesPalette', () => {
-  beforeEach(() => useStudio.getState().resetStudio(baseDesign()))
+  beforeEach(() => {
+    useStudio.getState().resetStudio(baseDesign())
+    useStudio.getState().setLocale('ru')
+    useStudio.getState().setUnit('mm')
+  })
 
   it('рисует все 16 пород справочника', () => {
     const { container } = render(<SpeciesPalette />)

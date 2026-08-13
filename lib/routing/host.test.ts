@@ -1,5 +1,8 @@
+// Хост подменяется явно: на дефолтном jsdom-хосте проверка «остаётся на текущем origin»
+// сравнивала бы значение само с собой.
+// @vitest-environment-options { "url": "http://localhost:3100/" }
 import { describe, expect, it } from 'vitest'
-import { hostRole } from './host'
+import { APP_ORIGIN, appOriginForClient, hostRole } from './host'
 
 describe('hostRole', () => {
   it('распознаёт корневой домен сайта', () => {
@@ -32,5 +35,13 @@ describe('hostRole', () => {
 
   it('подделка домена не проходит: сравнение точное, а не endsWith', () => {
     expect(hostRole('evil-endgrain.app')).toBe('unknown')
+  })
+})
+
+describe('appOriginForClient', () => {
+  it('на незнакомом хосте остаётся на текущем origin, а не уводит на прод', () => {
+    expect(window.location.origin).toBe('http://localhost:3100')
+    expect(appOriginForClient()).toBe('http://localhost:3100')
+    expect(appOriginForClient()).not.toBe(APP_ORIGIN)
   })
 })

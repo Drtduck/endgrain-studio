@@ -41,14 +41,12 @@ const FREE_FEATURES: readonly MessageKey[] = [
   'pricing.f.local',
 ]
 
+// Pro не повторяет список бесплатного тарифа: одна строка «всё из бесплатного» плюс то, за что платят.
 const PRO_FEATURES: readonly MessageKey[] = [
+  'pricing.f.allFree',
   'pricing.f.pdfPro',
   'pricing.f.pngPro',
   'pricing.f.projectsPro',
-  'pricing.f.editor',
-  'pricing.f.generate',
-  'pricing.f.calc',
-  'pricing.f.exportBasic',
 ]
 
 function formatDate(iso: string, locale: Locale): string {
@@ -71,7 +69,7 @@ function FeatureList({ locale, keys }: { locale: Locale; keys: readonly MessageK
 /**
  * Единственное место, где описаны обе карточки. Используется дважды: на странице
  * тарифов с настоящими кнопками (mode="checkout") и в секции лендинга со ссылкой
- * в студию (mode="link"). Лендинг анонимен и в Supabase не ходит, поэтому pro
+ * в приложение (mode="link"). Лендинг анонимен и в Supabase не ходит, поэтому pro
  * и signedIn там заведомо false.
  */
 export function PricingPlans(props: PricingPlansProps) {

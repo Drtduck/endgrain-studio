@@ -36,6 +36,9 @@ export function toCompact(design: Design): unknown {
     v: CURRENT_SCHEMA_VERSION,
     i: design.id,
     n: design.name,
+    // Ключ и подстановки кладём только когда они есть: пустые поля раздували бы ссылку.
+    ...(design.nameKey === undefined ? {} : { nk: design.nameKey }),
+    ...(design.nameParams === undefined ? {} : { np: design.nameParams }),
     s: species,
     p,
     r,
@@ -84,6 +87,8 @@ export function fromCompact(compact: unknown): Design {
     schemaVersion: c['v'],
     id: c['i'],
     name: c['n'],
+    nameKey: c['nk'],
+    nameParams: c['np'],
     species,
     panels,
     rows,
