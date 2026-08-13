@@ -21,7 +21,7 @@ export function GalleryCard({ locale, card }: { readonly locale: Locale; readonl
     <Link
       href={`/gallery/${card.id}`}
       data-testid={`gallery-card-${card.id}`}
-      className="group flex flex-col gap-2 overflow-hidden rounded-lg border border-line-subtle bg-surface-raised p-3 shadow-sm transition-shadow hover:shadow-md"
+      className="group flex flex-col gap-2 overflow-hidden rounded-lg border border-line-subtle bg-surface-raised p-3 shadow-sm transition-[box-shadow,border-color] duration-hover hover:border-accent-border hover:shadow-md"
     >
       <div className="flex aspect-square items-center justify-center overflow-hidden rounded-md bg-canvas p-3">
         <div className="flex flex-col items-center gap-1 text-center text-[11px] text-ink-secondary">
