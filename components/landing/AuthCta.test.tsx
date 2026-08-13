@@ -103,6 +103,7 @@ describe('AuthCta', () => {
     await openDialog()
     fireEvent.change(screen.getByTestId('auth-email'), { target: { value: 'a@example.com' } })
     fireEvent.change(screen.getByTestId('auth-password'), { target: { value: 'password123' } })
+    fireEvent.click(screen.getByTestId('auth-consent'))
     fireEvent.submit(screen.getByTestId('auth-form-register'))
 
     await screen.findByTestId('auth-confirm-sent')
