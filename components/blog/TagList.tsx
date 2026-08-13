@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Badge } from '@/components/ui/badge'
 
 /**
  * Список тегов статьи, каждый ссылкой на /blog/tag/<tag>. Страницы тегов
@@ -10,12 +11,9 @@ export function TagList({ tags }: { tags: readonly string[] }) {
     <ul className="flex flex-wrap gap-2" data-testid="blog-tags">
       {tags.map((tag) => (
         <li key={tag}>
-          <Link
-            href={`/blog/tag/${encodeURIComponent(tag)}`}
-            className="rounded-full border border-line bg-surface-panel px-3 py-1 font-sans text-xs text-ink-secondary hover:text-ink"
-          >
+          <Badge variant="secondary" render={<Link href={`/blog/tag/${encodeURIComponent(tag)}`} />}>
             {tag}
-          </Link>
+          </Badge>
         </li>
       ))}
     </ul>

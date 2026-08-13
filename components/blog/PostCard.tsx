@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Badge } from '@/components/ui/badge'
 import type { PostMeta } from '@/lib/blog/types'
 import { t, type Locale } from '@/lib/i18n'
 
@@ -14,14 +15,14 @@ export function PostCard({ post, locale }: { post: PostMeta; locale: Locale }) {
     <article
       data-testid="blog-post-card"
       data-slug={post.slug}
-      className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-5 shadow-sm"
+      className="flex flex-col gap-2 rounded-lg border border-line-subtle bg-surface p-5 shadow-sm"
     >
       <div className="flex items-center gap-2 font-sans text-xs text-ink-muted">
         <time dateTime={post.date}>{post.date}</time>
         {isForeignLanguage ? (
-          <span className="rounded-full border border-line px-2 py-0.5" data-testid="blog-post-card-lang-badge">
+          <Badge variant="outline" data-testid="blog-post-card-lang-badge">
             {t(locale, 'blog.post.foreignLanguage')}
-          </span>
+          </Badge>
         ) : null}
       </div>
       <h2 className="font-display text-xl font-semibold tracking-tight text-ink">
