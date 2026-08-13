@@ -12,6 +12,7 @@ import { selectDesign, useStudio } from '@/lib/store/studio'
 const ERROR_KEYS: Readonly<Record<ListingError, MessageKey>> = {
   anonymous: 'ai.gate.anonymous',
   notPro: 'ai.gate.free',
+  trialSpent: 'ai.gate.trialSpent',
   quota: 'ai.gate.quota',
   unavailable: 'ai.gate.unavailable',
   invalid: 'salePrep.error',
