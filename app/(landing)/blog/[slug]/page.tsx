@@ -71,12 +71,6 @@ export default async function BlogPostPage(props: PageProps<'/blog/[slug]'>) {
         <PostHeader post={post} locale={locale} />
         <PostBody />
       </article>
-
-      <div className="mx-auto w-full max-w-2xl">
-        <Link href="/blog" className="font-sans text-sm text-accent hover:text-accent-hover">
-          {t(locale, 'blog.post.backToBlog')}
-        </Link>
-      </div>
     </main>
   )
 }
