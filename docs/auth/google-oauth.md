@@ -21,10 +21,10 @@ Supabase project ref: `fusexddgetnyadxnyaqz`, регион us-east-2.
 
 ## 1. Google Cloud Console
 
-1. Откройте [console.cloud.google.com](https://console.cloud.google.com/), создайте проект `Endgrain Studio` или выберите существующий.
+1. Откройте [console.cloud.google.com](https://console.cloud.google.com/), создайте проект `Endgrain App` или выберите существующий.
 2. **APIs & Services -> OAuth consent screen** (в новом интерфейсе это раздел **Google Auth Platform -> Branding / Audience**):
    - User type / Audience: **External**.
-   - App name: `Endgrain Studio`.
+   - App name: `Endgrain App`.
    - User support email: `drtloki@gmail.com`.
    - App logo: можно пропустить (логотип требует верификации приложения, а она нам пока не нужна).
    - Authorized domains: `endgrain.app` и `supabase.co`. Второй домен обязателен, потому что redirect URI ведёт именно туда.
@@ -33,7 +33,7 @@ Supabase project ref: `fusexddgetnyadxnyaqz`, регион us-east-2.
    - Publishing status: пока приложение в **Testing**, войти смогут только аккаунты из списка Test users (максимум 100). Для прода нажмите **Publish app** и переведите в **In production**. С non-sensitive scopes это происходит сразу, без ревью Google.
 3. **APIs & Services -> Credentials -> Create Credentials -> OAuth client ID**:
    - Application type: **Web application**.
-   - Name: `Endgrain Studio Web` (видно только вам).
+   - Name: `Endgrain App Web` (видно только вам).
    - **Authorized JavaScript origins** (откуда стартует запрос):
      - `https://app.endgrain.app`
      - `https://endgrain.app`
