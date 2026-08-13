@@ -20,6 +20,20 @@ test.describe('аккаунт', () => {
     ).toBeVisible({ timeout: 15_000 })
   })
 
+  test('вход через окно на лендинге доводит до студии', async ({ page }) => {
+    // Боевые домены не нужны: на локальном хосте appOriginForClient() отдаёт текущий origin,
+    // а домен auth-cookie считается от того же хоста, поэтому cookie остаётся host-only
+    // и сессия из модалки видна студии на том же адресе.
+    await page.goto('/landing')
+    await page.getByTestId('landing-cta-hero').click()
+    await expect(page.getByTestId('landing-auth-dialog')).toBeVisible()
+    await page.getByTestId('landing-auth-switch').click()
+    await page.getByTestId('auth-email').fill(process.env['E2E_AUTH_EMAIL'] ?? '')
+    await page.getByTestId('auth-password').fill(process.env['E2E_AUTH_PASSWORD'] ?? '')
+    await page.getByTestId('auth-submit').click()
+    await expect(page.getByTestId('tab-projects')).toBeVisible({ timeout: 15_000 })
+  })
+
   test('вход существующим пользователем открывает вкладку проектов', async ({ page }) => {
     await page.goto('/login')
     await page.getByTestId('auth-email').fill(process.env['E2E_AUTH_EMAIL'] ?? '')

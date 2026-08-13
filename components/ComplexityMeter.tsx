@@ -3,7 +3,7 @@ import { HelpHint } from '@/components/ui/help-hint'
 import type { BoardModel } from '@/lib/engine'
 import type { CalcResult } from '@/lib/calc'
 import { t, unitLabel, type Locale, type MessageKey } from '@/lib/i18n'
-import { SPECIES_BY_ID } from '@/lib/species'
+import { speciesName } from '@/lib/species'
 import { formatMm } from '@/lib/units'
 
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
@@ -70,8 +70,7 @@ export function ComplexityMeter({
         <p className="mb-1 text-[11px] text-ink-muted">{t(locale, 'meter.lumberBySpecies')}</p>
         <ul className="space-y-0.5 text-[11px] text-ink-muted">
           {calc.bySpecies.map((s) => {
-            const species = SPECIES_BY_ID.get(s.speciesId)
-            const name = species ? (locale === 'ru' ? species.nameRu : species.nameEn) : s.speciesId
+            const name = speciesName(s.speciesId, locale)
             return (
               <li key={s.speciesId} className="font-mono tabular-nums">
                 {t(locale, 'meter.speciesRow', {

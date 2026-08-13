@@ -18,17 +18,19 @@ describe('FAMILIES', () => {
 })
 
 describe('toDesign', () => {
-  it('присваивает документу переданное имя', () => {
-    expect(toDesign(randomGenome('stripes', 1), 'Мой узор').name).toBe('Мой узор')
+  it('не пишет в документ готовую строку имени, только ключ словаря', () => {
+    const design = toDesign(randomGenome('stripes', 1))
+    expect(design.name).toBe('')
+    expect(design.nameKey).toBe('gen.designName.stripes')
   })
 
   it('детерминирована', () => {
     const g = randomGenome('chaos', 5)
-    expect(toDesign(g, 'A')).toEqual(toDesign(g, 'A'))
+    expect(toDesign(g)).toEqual(toDesign(g))
   })
 
   it('одинаковые ряды схлопываются в одну панель', () => {
-    const design = toDesign(randomGenome('stripes', 7), 'Полосы')
+    const design = toDesign(randomGenome('stripes', 7))
     // У полосатого узора все ряды одинаковы: склейка ровно одна.
     expect(design.panels).toHaveLength(1)
   })
@@ -42,7 +44,7 @@ describe('toDesign', () => {
     for (let seed = 0; seed < 30 && !changed; seed += 1) {
       const g = randomGenome('brick', seed)
       const shuffled = { ...g, rowOrder: [...g.rowOrder].reverse() }
-      if (JSON.stringify(toDesign(shuffled, 'X')) !== JSON.stringify(toDesign(g, 'X'))) changed = true
+      if (JSON.stringify(toDesign(shuffled)) !== JSON.stringify(toDesign(g))) changed = true
     }
     expect(changed).toBe(true)
   })

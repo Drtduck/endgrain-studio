@@ -31,7 +31,7 @@ function inlayDesign(): Design {
 
 describe('buildCutPlan', () => {
   it('перечисляет полосы каждой панели в порядке склейки', () => {
-    const plan = buildCutPlan(design)
+    const plan = buildCutPlan(design, 'ru')
     const first = plan.panels[0]
     const panel = design.panels.find((p) => p.id === first?.panelId)
     expect(first?.pieces).toHaveLength(panel?.elements.length ?? -1)
@@ -39,7 +39,7 @@ describe('buildCutPlan', () => {
   })
 
   it('длина щита берётся из движка и включает kerf, припуск и торцы', () => {
-    const plan = buildCutPlan(design)
+    const plan = buildCutPlan(design, 'ru')
     for (const p of plan.panels) {
       expect(p.lengthMm).toBeCloseTo(panelLengthMm(design, p.panelId), 9)
       expect(p.widthMm).toBeCloseTo(panelWidthMm(design.panels.find((x) => x.id === p.panelId)!), 9)
@@ -47,20 +47,20 @@ describe('buildCutPlan', () => {
   })
 
   it('толщина строгания щита выше готовой на припуск', () => {
-    const plan = buildCutPlan(design)
+    const plan = buildCutPlan(design, 'ru')
     const p = plan.panels[0]
     expect(p?.planedThicknessMm).toBeCloseTo(design.board.thicknessMm + design.planingAllowanceMm, 9)
   })
 
   it('поперечных резов ровно столько, сколько срезов снимается с панели', () => {
-    const plan = buildCutPlan(design)
+    const plan = buildCutPlan(design, 'ru')
     for (const p of plan.panels) {
       expect(p.crosscuts).toHaveLength(slicesOfPanel(design, p.panelId).length)
     }
   })
 
   it('номера рядов совпадают с нумерацией на холсте', () => {
-    const plan = buildCutPlan(design)
+    const plan = buildCutPlan(design, 'ru')
     const bands = rowBandsMm(design)
     expect(plan.rows.map((r) => r.rowId)).toEqual(bands.map((b) => b.id))
     expect(plan.rows.map((r) => r.number)).toEqual(bands.map((_, i) => i + 1))
@@ -69,7 +69,7 @@ describe('buildCutPlan', () => {
   })
 
   it('сводка по породам суммирует ширины полос', () => {
-    const plan = buildCutPlan(design)
+    const plan = buildCutPlan(design, 'ru')
     for (const p of plan.panels) {
       const sum = p.bySpecies.reduce((s, x) => s + x.totalWidthMm, 0)
       const stripWidth = p.pieces.filter((x) => x.kind === 'strip').reduce((s, x) => s + x.widthMm, 0)
@@ -78,7 +78,7 @@ describe('buildCutPlan', () => {
   })
 
   it('вложенные панели идут раньше внешних', () => {
-    const plan = buildCutPlan(inlayDesign())
+    const plan = buildCutPlan(inlayDesign(), 'ru')
     const outer = plan.panels.findIndex((p) => p.panelId === 'PX')
     const inner = plan.panels.findIndex((p) => p.hasInlay === false)
     expect(inner).toBeLessThan(outer)
@@ -86,22 +86,22 @@ describe('buildCutPlan', () => {
   })
 
   it('вклейка не получает номера ряда', () => {
-    const plan = buildCutPlan(inlayDesign())
+    const plan = buildCutPlan(inlayDesign(), 'ru')
     const innerPlan = plan.panels.find((p) => p.crosscuts.some((c) => c.consumer.kind === 'sliceRef'))
     const inlayCut = innerPlan?.crosscuts.find((c) => c.consumer.kind === 'sliceRef')
     expect(inlayCut?.rowNumber).toBeNull()
   })
 
   it('итоги считают все полосы и все резы', () => {
-    const plan = buildCutPlan(design)
+    const plan = buildCutPlan(design, 'ru')
     expect(plan.stripCount).toBe(plan.panels.reduce((s, p) => s + p.pieces.filter((x) => x.kind === 'strip').length, 0))
     expect(plan.crosscutCount).toBe(plan.panels.reduce((s, p) => s + p.crosscuts.length, 0))
   })
 
   it('панель без срезов не роняет расчёт', () => {
     const orphan: Design = { ...design, rows: [] }
-    expect(() => buildCutPlan(orphan)).not.toThrow()
-    expect(buildCutPlan(orphan).panels.every((p) => p.lengthMm === 0)).toBe(true)
+    expect(() => buildCutPlan(orphan, 'ru')).not.toThrow()
+    expect(buildCutPlan(orphan, 'ru').panels.every((p) => p.lengthMm === 0)).toBe(true)
   })
 
   it('регрессия: габариты доски в плане берутся из скомпилированной модели, а не из target-размеров дизайна', () => {
@@ -113,7 +113,7 @@ describe('buildCutPlan', () => {
       board: { ...design.board, targetWidthMm: 300, targetLengthMm: 400 },
     }
     const model = compile(mismatched)
-    const plan = buildCutPlan(mismatched)
+    const plan = buildCutPlan(mismatched, 'ru')
     expect(plan.boardWidthMm).toBe(model.widthMm)
     expect(plan.boardLengthMm).toBe(model.lengthMm)
     expect(plan.boardWidthMm).toBe(240)
@@ -124,7 +124,7 @@ describe('buildCutPlan', () => {
 })
 
 describe('buildGlueUpSteps', () => {
-  const plan = buildCutPlan(makeCheckerboard())
+  const plan = buildCutPlan(makeCheckerboard(), 'ru')
   const steps = buildGlueUpSteps(plan, 'ru')
 
   it('нумерует шаги подряд с единицы', () => {
@@ -191,7 +191,7 @@ describe('buildGlueUpSteps', () => {
         { id: 'g3', panelId: 'FIVE', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 },
       ],
     }
-    const glueSteps = buildGlueUpSteps(buildCutPlan(glueDesign), 'ru')
+    const glueSteps = buildGlueUpSteps(buildCutPlan(glueDesign, 'ru'), 'ru')
     const gluePanelSteps = glueSteps.filter((s) => s.kind === 'glue-panel')
     const byPanel = (id: string) => gluePanelSteps.find((s) => s.panelId === id)
     expect(t('ru', byPanel('ONE')!.messageKey, byPanel('ONE')!.params)).toContain('из 1 заготовки')
@@ -213,7 +213,7 @@ describe('buildGlueUpSteps', () => {
       rows: [{ id: 'cc', panelId: 'CC', thicknessMm: 5 * count, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
     })
     const crosscutWord = (count: number): string => {
-      const p = buildCutPlan(crosscutDesign(count))
+      const p = buildCutPlan(crosscutDesign(count), 'ru')
       const steps = buildGlueUpSteps(p, 'ru')
       const step = steps.find((s) => s.kind === 'crosscut' && s.panelId === inner.id)
       return t('ru', step!.messageKey, step!.params)

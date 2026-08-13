@@ -12,6 +12,9 @@ vi.mock('@/components/Board3D', () => ({
 describe('Board3DPanel', () => {
   beforeEach(() => {
     useStudio.getState().resetStudio(makeCheckerboard({ cols: 2, rows: 2 }))
+    // Сброс больше не трогает язык (это настройка человека), поэтому локаль ставим явно.
+    useStudio.getState().setLocale('ru')
+    useStudio.getState().setUnit('mm')
   })
 
   it('подгружает сцену и подписывает её для скринридера', async () => {

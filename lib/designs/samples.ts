@@ -1,4 +1,5 @@
 import type { Design, Panel, Row, SpeciesId } from '@/lib/engine'
+import { DEFAULT_NAME_KEY } from './name'
 
 export interface CheckerboardOptions {
   readonly cellMm?: number
@@ -33,9 +34,10 @@ export function makeCheckerboard(opts: CheckerboardOptions = {}): Design {
   }))
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: 'sample-checkerboard',
-    name: 'Шахматка',
+    name: '',
+    nameKey: DEFAULT_NAME_KEY,
     species: [speciesA, speciesB],
     panels: [panelOf('A', speciesA, speciesB), panelOf('B', speciesB, speciesA)],
     rows: designRows,

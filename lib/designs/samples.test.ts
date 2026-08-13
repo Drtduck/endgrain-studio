@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { compile, hasErrors, validate } from '@/lib/engine'
 import { shrinkageMap } from '@/lib/species'
+import { designDisplayName } from './name'
 import { makeCheckerboard } from './samples'
 
 describe('makeCheckerboard', () => {
@@ -18,6 +19,13 @@ describe('makeCheckerboard', () => {
   it('alternates the two species like a chessboard', () => {
     const m = compile(makeCheckerboard({ cols: 2, rows: 2 }))
     expect(m.cells.map((c) => c.speciesId)).toEqual(['walnut', 'maple', 'maple', 'walnut'])
+  })
+
+  it('стартовый документ безымянный и переводится ключом', () => {
+    const d = makeCheckerboard()
+    expect(d.name).toBe('')
+    expect(designDisplayName(d, 'ru')).toBe('Шахматка')
+    expect(designDisplayName(d, 'en')).toBe('Checkerboard')
   })
 
   it('uses exactly two panels regardless of size', () => {

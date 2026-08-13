@@ -19,7 +19,7 @@ const SHRINK = shrinkageMap()
 
 function expectAllBuildable(genomes: readonly Genome[]): void {
   for (const genome of genomes) {
-    const diagnostics = validate(toDesign(genome, 'x'), { shrinkageByPct: SHRINK, knownSpeciesIds: KNOWN })
+    const diagnostics = validate(toDesign(genome), { shrinkageByPct: SHRINK, knownSpeciesIds: KNOWN })
     expect(hasErrors(diagnostics), JSON.stringify(diagnostics.filter((d) => d.level === 'error'))).toBe(false)
   }
 }

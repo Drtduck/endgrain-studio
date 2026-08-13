@@ -30,8 +30,11 @@ describe('describeBoard', () => {
     expect(d.text).toContain(String(model.cells.length))
   })
 
-  it('безымянный проект не даёт пустых кавычек в промпте', () => {
-    expect(describeBoard({ ...design, name: '   ' }, model).text).toContain('Endgrain board')
+  it('проект без своего имени подставляет в промпт английское имя из словаря', () => {
+    // Имя по умолчанию берётся из словаря в английской локали, а не из русской строки документа.
+    const text = describeBoard({ ...design, name: '   ', nameKey: undefined }, model).text
+    expect(text).toContain('Checkerboard')
+    expect(text).not.toContain('named ""')
   })
 
   it('дробность рисунка растёт вместе с числом клеток', () => {

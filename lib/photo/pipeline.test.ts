@@ -96,7 +96,10 @@ describe('photoToDesign', () => {
   })
 
   it('имя документа берётся из параметров', () => {
-    expect(photoToDesign(bandsGrid(), { colors: 3, panels: 3, name: 'Кот' }).design.name).toBe('Кот')
+    const design = photoToDesign(bandsGrid(), { colors: 3, panels: 3, fileName: 'cat.png' }).design
+    expect(design.name).toBe('')
+    expect(design.nameKey).toBe('photo.designName')
+    expect(design.nameParams).toEqual({ file: 'cat.png' })
   })
 })
 

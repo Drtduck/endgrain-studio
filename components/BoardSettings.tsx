@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { NumberFieldMm } from '@/components/NumberFieldMm'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { designDisplayName } from '@/lib/designs/name'
 import { BOARD_MAX_MM, BOARD_MIN_MM, THICKNESS_MAX_MM, THICKNESS_MIN_MM } from '@/lib/engine'
 import { t, unitLabel } from '@/lib/i18n'
 import { shareUrl } from '@/lib/store/persist'
@@ -54,6 +55,9 @@ export function BoardSettings() {
             id="board-name"
             data-testid="board-name"
             value={design.name}
+            // Поле хранит только своё имя, а имя по умолчанию показывается плейсхолдером:
+            // так оно переводится вместе с интерфейсом и его видно, чем его перебивают.
+            placeholder={designDisplayName(design, locale)}
             onChange={(e) => setDesignName(e.target.value)}
             className="h-[34px] w-full rounded-sm border border-line bg-surface-raised px-2 font-sans text-sm text-ink outline-none transition-[border-color,box-shadow] duration-hover ease-out hover:border-line-strong focus:border-[1.5px] focus:border-accent focus:shadow-focus"
           />

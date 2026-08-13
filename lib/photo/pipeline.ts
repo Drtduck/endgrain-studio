@@ -40,7 +40,8 @@ const LOW_QUALITY_FIT_THRESHOLD = 0.8
 export interface PhotoParams {
   readonly colors: number
   readonly panels: number
-  readonly name?: string
+  /** Имя файла картинки: подставляется в локализованное имя документа. */
+  readonly fileName?: string
   readonly seed?: number
 }
 
@@ -165,7 +166,8 @@ export function photoToDesign(grid: PixelGrid, params: PhotoParams): PhotoResult
   const fallback: SpeciesId = species[0] ?? 'maple'
   const design = makeGridDesign({
     id: `photo-${cols}x${rows}-${colors}-${panels}`,
-    name: params.name ?? 'Фото',
+    nameKey: 'photo.designName',
+    nameParams: { file: params.fileName ?? '' },
     colWidthsMm,
     rowHeightsMm,
     at: (col, row) => species[rowOf(row)[col] ?? 0] ?? fallback,

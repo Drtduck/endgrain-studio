@@ -47,7 +47,25 @@ function GoogleLogo() {
   )
 }
 
-export function AuthForm({ mode, locale }: { mode: AuthMode; locale: Locale }) {
+export interface AuthFormProps {
+  mode: AuthMode
+  locale: Locale
+  /**
+   * База для emailRedirectTo и OAuth redirectTo. По умолчанию текущий origin: страницы
+   * /login и /register живут на домене приложения. Модалка на лендинге передаёт сюда
+   * origin приложения, иначе Supabase получит адрес, которого нет в его allowlist.
+   */
+  redirectOrigin?: string
+  /** Что делать после успеха. По умолчанию навигация роутером внутри приложения. */
+  onSuccess?: (next: string) => void
+  /**
+   * Регистрация ушла в ожидание письма. Нужен обёртке в модалке: она рисует под
+   * сообщением кнопку закрытия, а состояние живёт внутри формы.
+   */
+  onConfirmSent?: () => void
+}
+
+export function AuthForm({ mode, locale, redirectOrigin, onSuccess, onConfirmSent }: AuthFormProps) {
   const router = useRouter()
   const googleAuthAvailable = useGoogleAuthAvailable()
   const [email, setEmail] = useState('')
@@ -56,6 +74,19 @@ export function AuthForm({ mode, locale }: { mode: AuthMode; locale: Locale }) {
   const [error, setError] = useState<string | null>(null)
   const [confirmSent, setConfirmSent] = useState(false)
 
+  function originBase(): string {
+    return redirectOrigin ?? window.location.origin
+  }
+
+  function succeed(next: string): void {
+    if (onSuccess) {
+      onSuccess(next)
+      return
+    }
+    router.push(next)
+    router.refresh()
+  }
+
   async function onGoogleSignIn(): Promise<void> {
     setError(null)
     setBusy(true)
@@ -63,7 +94,7 @@ export function AuthForm({ mode, locale }: { mode: AuthMode; locale: Locale }) {
     const { error: oauthError } = await sb.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextFromLocation())}`,
+        redirectTo: `${originBase()}/auth/callback?next=${encodeURIComponent(nextFromLocation())}`,
       },
     })
     if (oauthError) {
@@ -94,8 +125,7 @@ export function AuthForm({ mode, locale }: { mode: AuthMode; locale: Locale }) {
         setError(t(locale, 'auth.errorBadCredentials'))
         return
       }
-      router.push(next)
-      router.refresh()
+      succeed(next)
       return
     }
 
@@ -103,7 +133,7 @@ export function AuthForm({ mode, locale }: { mode: AuthMode; locale: Locale }) {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        emailRedirectTo: `${originBase()}/auth/callback?next=${encodeURIComponent(next)}`,
       },
     })
     setBusy(false)
@@ -115,10 +145,10 @@ export function AuthForm({ mode, locale }: { mode: AuthMode; locale: Locale }) {
     // это не ошибка, а ожидание письма.
     if (!data.session) {
       setConfirmSent(true)
+      onConfirmSent?.()
       return
     }
-    router.push(next)
-    router.refresh()
+    succeed(next)
   }
 
   if (confirmSent) {

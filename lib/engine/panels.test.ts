@@ -12,7 +12,7 @@ const panelA: Panel = {
 }
 
 const design: Design = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   id: 'd1',
   name: 'тест',
   species: ['walnut', 'maple'],

@@ -19,7 +19,7 @@ const MIN_BAND_MM = 12
  * отдельной панели, вклеенный в наружную. Внутри вставки полосы мельче наружных рядов,
  * поэтому в середине доски появляется мелкий рисунок, недостижимый обычной сеткой.
  */
-export function inlayDesign(genome: Genome, name: string): Design {
+export function inlayDesign(genome: Genome): Design {
   const [light, mid, accent, extra] = genome.palette
   const outerSpecies: SpeciesId = light ?? 'maple'
   const frameSpecies: SpeciesId = mid ?? 'walnut'
@@ -73,9 +73,10 @@ export function inlayDesign(genome: Genome, name: string): Design {
   const species = [...used].sort((a, b) => (SPECIES_ORDER.get(a) ?? 0) - (SPECIES_ORDER.get(b) ?? 0))
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: `gen-inlay-${genomeKey(genome).length}-${genome.seed}`,
-    name,
+    name: '',
+    nameKey: 'gen.designName.inlay',
     species,
     panels: [outer, inner],
     rows,

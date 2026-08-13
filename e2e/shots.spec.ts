@@ -25,8 +25,14 @@ test.describe('скриншоты лендинга', () => {
       if (locale !== 'ru') {
         // Язык студии живёт в zustand-сторе, переключается той же кнопкой, что и у пользователя.
         await page.getByTestId(`locale-${locale}`).click()
+        // Английские подписи вкладок короче русских, и полоса табов после смены языка
+        // переезжает. Клик без этой паузы считает координаты по старому лейауту и
+        // попадает мимо. LocaleToggle проставляет lang на документ, когда локаль применилась.
+        await expect(page.locator('html')).toHaveAttribute('lang', locale)
       }
-      await page.getByTestId(`tab-${view.tab}`).click()
+      const tab = page.getByTestId(`tab-${view.tab}`)
+      await tab.click()
+      await expect(tab).toHaveAttribute('aria-selected', 'true')
       await expect(page.getByTestId(view.marker)).toBeVisible()
 
       if (view.tab === 'view3d') {
@@ -43,7 +49,9 @@ test.describe('скриншоты лендинга', () => {
       }
 
       await page.evaluate(() => document.fonts.ready)
-      await page.screenshot({ path: `public/landing/shots/${locale}/${view.file}` })
+      // Подсветка вкладки едет через transition-colors: без досрочной доводки анимации
+      // кадр ловит фон на старой вкладке, хотя контент уже новый.
+      await page.screenshot({ path: `public/landing/shots/${locale}/${view.file}`, animations: 'disabled' })
     })
   }
   }

@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { t } from '@/lib/i18n'
-import { SPECIES_BY_ID } from '@/lib/species'
+import { speciesName } from '@/lib/species'
 import { useStudio } from '@/lib/store/studio'
 
 export function ForkDialog() {
@@ -45,8 +45,7 @@ export function ForkDialog() {
             {t(locale, 'fork.cuts', { count: pendingFork.cost.extraCuts })}
           </li>
           {lumber.map(([speciesId, meters]) => {
-            const species = SPECIES_BY_ID.get(speciesId)
-            const name = species ? (locale === 'ru' ? species.nameRu : species.nameEn) : speciesId
+            const name = speciesName(speciesId, locale)
             return (
               <li key={speciesId} data-testid="fork-lumber" className="font-mono tabular-nums">
                 {t(locale, 'fork.lumber', { name, meters: meters.toFixed(2) })}

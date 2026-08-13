@@ -28,6 +28,7 @@ import { HelpHint } from '@/components/ui/help-hint'
 import { Separator } from '@/components/ui/separator'
 import { t } from '@/lib/i18n'
 import { useDerived } from '@/lib/store/derived'
+import { rememberLocale } from '@/lib/store/locale'
 import { useStudioPersistence } from '@/lib/store/persist'
 import { useStudio, type StudioView } from '@/lib/store/studio'
 import type { UnitSystem } from '@/lib/units'
@@ -78,7 +79,13 @@ export function StudioShell() {
           ))}
         </div>
 
-        <LocaleToggle locale={locale} onChange={setLocale} />
+        <LocaleToggle
+          locale={locale}
+          onChange={(next) => {
+            setLocale(next)
+            rememberLocale(next)
+          }}
+        />
 
         <AccountButton />
 

@@ -13,6 +13,7 @@ import {
   type RowId,
   type SpeciesId,
 } from '@/lib/engine'
+import { designDisplayName } from '@/lib/designs/name'
 import { plural, t, type Locale, type MessageKey } from '@/lib/i18n'
 import { bothUnits, speciesName } from './format'
 
@@ -117,7 +118,8 @@ function pieces(panel: Panel): PanelPiece[] {
   )
 }
 
-export function buildCutPlan(design: Design): CutPlan {
+/** Локаль нужна только имени документа: остальной план цифровой и от языка не зависит. */
+export function buildCutPlan(design: Design, locale: Locale): CutPlan {
   // Нумерация рядов берётся у rowBandsMm, а не у design.rows: движок пропускает
   // ряды с несуществующей панелью, и на холсте пользователь видит именно эту нумерацию.
   const bands = rowBandsMm(design)
@@ -163,7 +165,7 @@ export function buildCutPlan(design: Design): CutPlan {
   })
 
   return {
-    designName: design.name,
+    designName: designDisplayName(design, locale),
     panels,
     rows,
     kerfMm: design.kerfMm,

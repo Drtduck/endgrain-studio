@@ -31,6 +31,25 @@ describe('codec', () => {
     expect(decodeDesignFromHash(hash)).toEqual(nested)
   })
 
+  it('round-trips ключ имени и его параметры', () => {
+    const named = baseDesign({ name: '', nameKey: 'photo.designName', nameParams: { file: 'cat.png' } })
+    const throughJson = deserializeDesign(serializeDesign(named))
+    expect(throughJson.nameKey).toBe('photo.designName')
+    expect(throughJson.nameParams).toEqual({ file: 'cat.png' })
+    const throughHash = decodeDesignFromHash(encodeDesignToHash(named))
+    expect(throughHash.nameKey).toBe('photo.designName')
+    expect(throughHash.nameParams).toEqual({ file: 'cat.png' })
+  })
+
+  it('документ схемы v1 с русским именем поднимается до v2 и своё имя сохраняет', () => {
+    // Настоящий документ v1 полей имени по ключу не знал вовсе.
+    const legacy = { ...baseDesign({ name: 'Моя доска' }), schemaVersion: 1, nameKey: undefined }
+    const migrated = parseDesign(legacy)
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION)
+    expect(migrated.name).toBe('Моя доска')
+    expect(migrated.nameKey).toBeUndefined()
+  })
+
   it('produces a compact positional form', () => {
     const c = toCompact(nested) as Record<string, unknown>
     expect(c['v']).toBe(CURRENT_SCHEMA_VERSION)
@@ -77,7 +96,7 @@ describe('migrations', () => {
   it('upgrades a version-0 document by filling the new fields', () => {
     const legacy = { ...baseDesign(), schemaVersion: undefined, planerWidthMm: undefined }
     const migrated = migrate(legacy) as Record<string, unknown>
-    expect(migrated['schemaVersion']).toBe(1)
+    expect(migrated['schemaVersion']).toBe(CURRENT_SCHEMA_VERSION)
     expect(migrated['planerWidthMm']).toBe(330)
     expect(() => parseDesign(legacy)).not.toThrow()
   })

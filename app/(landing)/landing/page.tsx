@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
+import { AuthCta } from '@/components/landing/AuthCta'
 import { LandingHeader } from '@/components/landing/LandingHeader'
 import { LandingFooter } from '@/components/landing/LandingFooter'
 import { LandingHero } from '@/components/landing/LandingHero'
-import { PatternGrid } from '@/components/landing/PatternGrid'
+import { PatternMarquee } from '@/components/landing/PatternMarquee'
 import { FeatureGrid } from '@/components/landing/FeatureGrid'
 import { HowItWorks } from '@/components/landing/HowItWorks'
 import { ShotStrip } from '@/components/landing/ShotStrip'
@@ -11,7 +12,7 @@ import { PricingSection } from '@/components/landing/PricingSection'
 import { SubscribeSection } from '@/components/landing/SubscribeSection'
 import { getLandingLocale } from '@/lib/landing/locale'
 import { t } from '@/lib/i18n'
-import { APP_SIGNUP_URL, SITE_ORIGIN } from '@/lib/routing/host'
+import { SITE_ORIGIN } from '@/lib/routing/host'
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLandingLocale()
@@ -49,7 +50,7 @@ export default async function LandingPage() {
             <p className="mx-auto mt-3 max-w-[60ch] text-ink-secondary">{t(locale, 'landing.patterns.body')}</p>
           </div>
         </section>
-        <PatternGrid locale={locale} />
+        <PatternMarquee locale={locale} />
 
         <FeatureGrid locale={locale} />
         <HowItWorks locale={locale} />
@@ -61,13 +62,12 @@ export default async function LandingPage() {
           <div className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
             <h2 className="font-display text-3xl tracking-tight text-ink sm:text-4xl">{t(locale, 'landing.finalCta.title')}</h2>
             <p className="max-w-[52ch] text-ink-secondary">{t(locale, 'landing.finalCta.body')}</p>
-            <a
-              href={APP_SIGNUP_URL}
-              data-testid="landing-cta-final"
+            <AuthCta
+              locale={locale}
+              testId="landing-cta-final"
+              label={t(locale, 'landing.hero.ctaPrimary')}
               className="rounded-md bg-accent px-6 py-3 font-sans text-base font-semibold text-accent-fg shadow-sm transition-colors duration-hover hover:bg-accent-hover"
-            >
-              {t(locale, 'landing.hero.ctaPrimary')}
-            </a>
+            />
           </div>
         </section>
 

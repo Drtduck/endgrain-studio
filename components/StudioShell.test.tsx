@@ -15,6 +15,9 @@ describe('StudioShell', () => {
     // rows: 4 (не 2), чтобы обе панели переиспользовались (usageCount > 1) и клик по ячейке
     // открывал форк-диалог, а не красил панель на месте.
     useStudio.getState().resetStudio(makeCheckerboard({ cols: 2, rows: 4 }))
+    // Сброс больше не трогает язык (это настройка человека), поэтому локаль ставим явно.
+    useStudio.getState().setLocale('ru')
+    useStudio.getState().setUnit('mm')
   })
 
   it('собирает холст, палитру, инспекторы, параметры, счётчик и проверки', () => {

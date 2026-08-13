@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from './config'
+import { supabaseCookieOptions } from './cookies'
 
 export interface SessionCheck {
   /** Ответ с уже выставленными Set-Cookie: его либо отдают, либо переносят cookie на редирект. */
@@ -21,6 +22,8 @@ export async function updateSession(request: NextRequest): Promise<SessionCheck>
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    // Тот же хост, от которого домен считают браузерный и серверный клиенты.
+    cookieOptions: supabaseCookieOptions(request.headers.get('host')),
     cookies: {
       getAll() {
         return request.cookies.getAll()

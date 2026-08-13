@@ -1,35 +1,32 @@
-import { t, type Locale } from '@/lib/i18n'
+import { AuthCta } from '@/components/landing/AuthCta'
+import { ShotLightbox } from '@/components/landing/ShotLightbox'
+import { SHOTS } from '@/lib/landing/shots'
+import { t, type Locale, type MessageKey } from '@/lib/i18n'
 
 // Снимаются через `pnpm shots` (e2e/shots.spec.ts) и коммитятся как обычные файлы.
 // Комплект свой на каждую локаль: интерфейс на снимке должен совпадать с языком лендинга.
-const SHOTS = [
-  { file: 'editor.png', slug: 'editor', labelRu: 'Редактор', labelEn: 'Editor' },
-  { file: 'templates.png', slug: 'templates', labelRu: 'Шаблоны', labelEn: 'Templates' },
-  { file: 'generator.png', slug: 'generator', labelRu: 'Генератор', labelEn: 'Generator' },
-  { file: 'photo.png', slug: 'photo', labelRu: 'Фото в узор', labelEn: 'Photo to pattern' },
-  { file: 'view3d.png', slug: 'view3d', labelRu: 'Превью в 3D', labelEn: '3D preview' },
-] as const
 
 export function ShotStrip({ locale }: { locale: Locale }) {
+  const shots = SHOTS.map((shot) => ({
+    slug: shot.slug,
+    src: `/landing/shots/${locale}/${shot.file}`,
+    label: t(locale, `landing.shots.alt.${shot.slug}` as MessageKey),
+  }))
+
   return (
     <section className="bg-surface px-6 py-20" data-testid="landing-shots">
       <div className="mx-auto max-w-5xl">
-        <h2 className="mb-8 font-display text-3xl tracking-tight text-ink">{t(locale, 'landing.shots.title')}</h2>
+        <h2 className="mb-2 font-display text-3xl tracking-tight text-ink">{t(locale, 'landing.shots.title')}</h2>
+        <p className="mb-6 max-w-[60ch] text-sm text-ink-secondary">{t(locale, 'landing.shots.hint')}</p>
 
-        <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
-          {SHOTS.map((shot) => (
-            <img
-              key={shot.file}
-              src={`/landing/shots/${locale}/${shot.file}`}
-              width={1280}
-              height={720}
-              loading="lazy"
-              alt={locale === 'ru' ? shot.labelRu : shot.labelEn}
-              data-testid={`landing-shot-${shot.slug}`}
-              className="eg-tilt h-auto w-[85vw] shrink-0 snap-start rounded-lg border border-line bg-surface-raised sm:w-[420px]"
-            />
-          ))}
-        </div>
+        <ShotLightbox locale={locale} shots={shots} />
+
+        <AuthCta
+          locale={locale}
+          testId="landing-cta-shots"
+          label={t(locale, 'landing.hero.ctaPrimary')}
+          className="mt-8 inline-flex rounded-md bg-accent px-5 py-3 font-sans text-base font-semibold text-accent-fg shadow-sm transition-colors duration-hover hover:bg-accent-hover"
+        />
       </div>
     </section>
   )

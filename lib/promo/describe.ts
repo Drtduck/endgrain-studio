@@ -1,4 +1,5 @@
 import type { BoardModel, Design } from '@/lib/engine'
+import { designDisplayName } from '@/lib/designs/name'
 import { SPECIES_BY_ID } from '@/lib/species'
 
 /**
@@ -46,9 +47,10 @@ export function describeBoard(design: Design, model: BoardModel): BoardDescripti
   const sizeMm = `${width} x ${length} x ${thickness} mm`
   const cellCount = model.cells.length
   const woods = species.length > 0 ? species.join(', ') : 'hardwood'
-  const name = design.name.trim()
+  // Промпт всегда английский, поэтому и имя документа берём в английской локали.
+  const name = designDisplayName(design, 'en')
   const text =
-    `An end-grain cutting board named "${name === '' ? 'Endgrain board' : name}", ${sizeMm}, ` +
+    `An end-grain cutting board named "${name}", ${sizeMm}, ` +
     `made of ${woods}. The end-grain face shows a ${patternGrain(cellCount)} geometric pattern ` +
     `of ${cellCount} square wood blocks, oiled to a satin finish.`
   return { species, sizeMm, cellCount, text }

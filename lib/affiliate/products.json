@@ -54,8 +54,8 @@
     "brand": "Neiko",
     "title": { "ru": "Штангенциркуль цифровой 150 мм", "en": "Digital caliper, 6 in" },
     "note": {
-      "ru": "Студия считает в миллиметрах и требует того же от вас. Дешёвый цифровой штангель окупается на первой же ошибке в толщине ряда.",
-      "en": "The studio counts in millimetres and expects the same from you. A cheap digital caliper pays for itself on the first row thickness mistake."
+      "ru": "Приложение считает в миллиметрах и требует того же от вас. Дешёвый цифровой штангель окупается на первой же ошибке в толщине ряда.",
+      "en": "The app counts in millimetres and expects the same from you. A cheap digital caliper pays for itself on the first row thickness mistake."
     },
     "band": "b10_25",
     "unverified": false

@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { HelpHint } from '@/components/ui/help-hint'
 import { t } from '@/lib/i18n'
-import { SPECIES, SPECIES_BY_ID } from '@/lib/species'
+import { SPECIES, SPECIES_BY_ID, speciesName } from '@/lib/species'
 import { useDerived } from '@/lib/store/derived'
 import { useStudio } from '@/lib/store/studio'
 
@@ -14,7 +14,6 @@ export function SpeciesPalette() {
   const setActiveSpecies = useStudio((s) => s.setActiveSpecies)
   const { model } = useDerived()
   const active = SPECIES_BY_ID.get(activeSpeciesId)
-  const nameOf = (nameRu: string, nameEn: string): string => (locale === 'ru' ? nameRu : nameEn)
 
   // Породы, реально нарисованные в текущей модели: палитра - не селектор "выбери одну",
   // это кисть плюс справка о том, что уже пошло в дело.
@@ -24,7 +23,7 @@ export function SpeciesPalette() {
     return set
   }, [model])
 
-  const activeName = active ? nameOf(active.nameRu, active.nameEn) : activeSpeciesId
+  const activeName = active ? speciesName(active.id, locale) : activeSpeciesId
 
   return (
     <Card>
@@ -42,7 +41,7 @@ export function SpeciesPalette() {
           {SPECIES.map((species) => {
             const isActive = species.id === activeSpeciesId
             const isUsed = usedSpeciesIds.has(species.id)
-            const title = nameOf(species.nameRu, species.nameEn)
+            const title = speciesName(species.id, locale)
             const ariaLabel = isActive
               ? t(locale, 'palette.brushAria', { name: title })
               : isUsed

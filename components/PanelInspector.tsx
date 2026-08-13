@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { HelpHint } from '@/components/ui/help-hint'
 import { MIN_STRIP_WIDTH_MM, isStrip, panelWidthMm, usageCount, type Panel, type PanelElement } from '@/lib/engine'
 import { t, unitLabel, type Locale } from '@/lib/i18n'
-import { SPECIES, speciesHex } from '@/lib/species'
+import { SPECIES, speciesHex, speciesName } from '@/lib/species'
 import { useDerived } from '@/lib/store/derived'
 import { selectDesign, useStudio } from '@/lib/store/studio'
 import { cn } from '@/lib/utils'
@@ -93,7 +93,7 @@ function StripRow({
         >
           {SPECIES.map((s) => (
             <option key={s.id} value={s.id}>
-              {locale === 'ru' ? s.nameRu : s.nameEn}
+              {speciesName(s.id, locale)}
             </option>
           ))}
         </select>

@@ -42,12 +42,12 @@ const examples: Example[] = [
   {
     file: 'generator-symmetry-p4m.png',
     title: 'Генератор: симметрия p4m (seed 42)',
-    design: () => toDesign(randomGenome('symmetry-p4m', 42), 'Симметрия p4m'),
+    design: () => toDesign(randomGenome('symmetry-p4m', 42)),
   },
   {
     file: 'generator-gradient.png',
     title: 'Генератор: градиент (seed 7)',
-    design: () => toDesign(randomGenome('gradient', 7), 'Градиент'),
+    design: () => toDesign(randomGenome('gradient', 7)),
   },
 ]
 

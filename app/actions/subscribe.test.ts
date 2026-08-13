@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 let configured = true
 
-vi.mock('@/lib/resend/config', () => ({
-  RESEND_API_KEY: 'test-key',
-  RESEND_AUDIENCE_ID: 'test-audience',
-  isResendConfigured: () => configured,
+vi.mock('@/lib/kit/config', () => ({
+  KIT_API_KEY: 'test-key',
+  KIT_FORM_ID: 'test-form',
+  isKitConfigured: () => configured,
 }))
 
 describe('app/actions/subscribe', () => {
@@ -14,7 +14,7 @@ describe('app/actions/subscribe', () => {
     vi.unstubAllGlobals()
   })
 
-  it('ненастроенный Resend даёт error: disabled', async () => {
+  it('ненастроенный Kit даёт error: disabled', async () => {
     configured = false
     const { subscribeAction } = await import('./subscribe')
     const res = await subscribeAction({ email: 'stas@example.com' })
@@ -39,31 +39,38 @@ describe('app/actions/subscribe', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('успешный ответ Resend с id даёт ok: true, already: false', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 'contact-1' }) })
+  it('успешная подписка через Kit даёт ok: true', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ subscriber: { id: 1 } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({}) })
     vi.stubGlobal('fetch', fetchMock)
     const { subscribeAction } = await import('./subscribe')
     const res = await subscribeAction({ email: 'stas@example.com' })
-    expect(res).toEqual({ ok: true, already: false })
-    expect(fetchMock).toHaveBeenCalledWith(
-      'https://api.resend.com/audiences/test-audience/contacts',
+    expect(res).toEqual({ ok: true })
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://api.kit.com/v4/subscribers',
       expect.objectContaining({
         method: 'POST',
-        headers: expect.objectContaining({ Authorization: 'Bearer test-key' }) as unknown,
+        headers: expect.objectContaining({ 'X-Kit-Api-Key': 'test-key' }) as unknown,
       })
     )
   })
 
-  it('ответ Resend без id (уже подписан) даёт ok: true, already: true', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) })
+  it('повторная подписка тоже даёт ok: true (Kit сам решает upsert)', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({}) })
     vi.stubGlobal('fetch', fetchMock)
     const { subscribeAction } = await import('./subscribe')
     const res = await subscribeAction({ email: 'stas@example.com' })
-    expect(res).toEqual({ ok: true, already: true })
+    expect(res).toEqual({ ok: true })
   })
 
-  it('422 от Resend даёт error: failed', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) })
+  it('422 от Kit даёт error: failed', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: false, status: 422, json: async () => ({}) })
     vi.stubGlobal('fetch', fetchMock)
     const { subscribeAction } = await import('./subscribe')
     const res = await subscribeAction({ email: 'stas@example.com' })

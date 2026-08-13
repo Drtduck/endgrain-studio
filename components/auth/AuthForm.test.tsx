@@ -156,6 +156,45 @@ describe('AuthForm', () => {
     })
   })
 
+  it('redirectOrigin подменяет базу для письма подтверждения', async () => {
+    const { container } = render(
+      <AuthForm mode="register" locale="ru" redirectOrigin="https://app.endgrain.app" />
+    )
+    fillCredentials(container, 'a@example.com', 'password123')
+    fireEvent.submit(container.querySelector('[data-testid="auth-form-register"]') as HTMLFormElement)
+    await waitFor(() => expect(signUp).toHaveBeenCalledTimes(1))
+    expect(signUp).toHaveBeenCalledWith({
+      email: 'a@example.com',
+      password: 'password123',
+      options: { emailRedirectTo: 'https://app.endgrain.app/auth/callback?next=%2F' },
+    })
+  })
+
+  it('redirectOrigin подменяет базу для входа через Google', async () => {
+    const { container } = render(
+      <GoogleAuthProvider value={true}>
+        <AuthForm mode="login" locale="ru" redirectOrigin="https://app.endgrain.app" />
+      </GoogleAuthProvider>
+    )
+    fireEvent.click(container.querySelector('[data-testid="auth-google"]') as HTMLButtonElement)
+    await waitFor(() => expect(signInWithOAuth).toHaveBeenCalledTimes(1))
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: 'https://app.endgrain.app/auth/callback?next=%2F' },
+    })
+  })
+
+  it('onSuccess забирает переход себе и роутер не трогается', async () => {
+    window.history.replaceState({}, '', '/login?next=%2F%3Ftab%3Dcut')
+    const onSuccess = vi.fn()
+    const { container } = render(<AuthForm mode="login" locale="ru" onSuccess={onSuccess} />)
+    fillCredentials(container, 'a@example.com', 'password123')
+    fireEvent.submit(container.querySelector('[data-testid="auth-form-login"]') as HTMLFormElement)
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('/?tab=cut'))
+    expect(push).not.toHaveBeenCalled()
+    expect(refresh).not.toHaveBeenCalled()
+  })
+
   it('shows an error and stays interactive when Google OAuth fails to start', async () => {
     signInWithOAuth.mockResolvedValueOnce({ error: { message: 'network error' } } as never)
     const { container } = render(<AuthForm mode="login" locale="ru" />)

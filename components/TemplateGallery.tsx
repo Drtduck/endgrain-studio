@@ -27,8 +27,8 @@ export function TemplateGallery() {
   const [pending, setPending] = useState<BoardTemplate | null>(null)
 
   const apply = (tpl: BoardTemplate): void => {
-    // Загрузка шаблона обнуляет историю правок, поэтому имя фиксируем на языке пользователя сразу при применении.
-    loadDesign({ ...tpl.build(), name: t(locale, tpl.nameKey) })
+    // Имя приезжает ключом внутри документа, поэтому шаблон переводится вместе с интерфейсом.
+    loadDesign(tpl.build())
     setPending(null)
     setView('editor')
   }
