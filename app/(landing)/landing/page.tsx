@@ -10,28 +10,20 @@ import { ShotStrip } from '@/components/landing/ShotStrip'
 import { BooksTeaser } from '@/components/landing/BooksTeaser'
 import { PricingSection } from '@/components/landing/PricingSection'
 import { SubscribeSection } from '@/components/landing/SubscribeSection'
+import { JsonLd } from '@/components/seo/JsonLd'
 import { getLandingLocale } from '@/lib/landing/locale'
 import { t } from '@/lib/i18n'
-import { SITE_ORIGIN } from '@/lib/routing/host'
+import { landingJsonLd } from '@/lib/seo/jsonld'
+import { pageMetadata, siteUrl } from '@/lib/seo/metadata'
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLandingLocale()
   const title = `${t(locale, 'app.title')}: ${t(locale, 'app.slogan')}`
   const description = t(locale, 'landing.hero.subtitle')
   return {
-    metadataBase: new URL(SITE_ORIGIN),
+    metadataBase: new URL(siteUrl('/')),
+    ...pageMetadata({ title, description, canonical: siteUrl('/'), locale }),
     title: { absolute: title },
-    description,
-    alternates: { canonical: SITE_ORIGIN },
-    openGraph: {
-      type: 'website',
-      url: SITE_ORIGIN,
-      siteName: 'Endgrain App',
-      title,
-      description,
-      locale: locale === 'ru' ? 'ru_RU' : 'en_US',
-    },
-    twitter: { card: 'summary_large_image', title, description },
   }
 }
 
@@ -40,6 +32,7 @@ export default async function LandingPage() {
 
   return (
     <>
+      <JsonLd data={landingJsonLd()} />
       <LandingHeader locale={locale} />
       <main data-testid="landing" className="flex flex-col">
         <LandingHero locale={locale} />

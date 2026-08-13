@@ -1,5 +1,10 @@
 import { expect, test, type Page } from '@playwright/test'
 import path from 'node:path'
+import { presetConsent } from './helpers/consent'
+
+test.beforeEach(async ({ page }) => {
+  await presetConsent(page)
+})
 
 // package.json не объявляет "type": "module", поэтому Playwright транспилирует спеки в CommonJS
 // и import.meta.url там недоступен (SyntaxError на старте). __dirname даёт тот же путь без ESM.

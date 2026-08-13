@@ -21,12 +21,19 @@ const ERROR_KEYS: Readonly<Record<VisibleError, MessageKey>> = {
 export function SubscribeForm({ locale }: { locale: Locale }) {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
-  const [error, setError] = useState<VisibleError | null>(null)
+  const [error, setError] = useState<VisibleError | 'consent' | null>(null)
+  const [consent, setConsent] = useState(false)
   const [pending, startTransition] = useTransition()
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
     e.preventDefault()
     setError(null)
+    // Email это ПДн, а собирается он на корневом домене, где формы регистрации
+    // нет вовсе. Непредзаполненный чекбокс, submit не проходит без него.
+    if (!consent) {
+      setError('consent')
+      return
+    }
     const form = e.currentTarget
     const company = (new FormData(form).get('company') ?? '').toString()
     startTransition(async () => {
@@ -82,9 +89,30 @@ export function SubscribeForm({ locale }: { locale: Locale }) {
         </Button>
       </div>
 
+      <label className="flex items-start gap-2 text-[12px] leading-snug text-ink-secondary">
+        <input
+          type="checkbox"
+          data-testid="subscribe-consent"
+          checked={consent}
+          onChange={(e) => setConsent(e.target.checked)}
+          disabled={pending}
+          className="mt-0.5 size-4 shrink-0"
+        />
+        <span>
+          {t(locale, 'landing.subscribe.consentLabel')}{' '}
+          <a href="/legal/consent" target="_blank" rel="noreferrer" className="text-accent hover:underline">
+            {t(locale, 'auth.consentLinkConsent')}
+          </a>
+          {', '}
+          <a href="/legal/privacy" target="_blank" rel="noreferrer" className="text-accent hover:underline">
+            {t(locale, 'auth.consentLinkPrivacy')}
+          </a>
+        </span>
+      </label>
+
       {error ? (
         <p role="alert" data-testid="subscribe-error" className="text-sm text-error-text">
-          {t(locale, ERROR_KEYS[error])}
+          {error === 'consent' ? t(locale, 'landing.subscribe.errConsent') : t(locale, ERROR_KEYS[error])}
         </p>
       ) : null}
     </form>

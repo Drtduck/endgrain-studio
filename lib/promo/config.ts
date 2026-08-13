@@ -8,6 +8,16 @@
 export const GEMINI_API_KEY: string = process.env['GEMINI_API_KEY'] ?? ''
 export const PRINTFUL_API_KEY: string = process.env['PRINTFUL_API_KEY'] ?? ''
 
+/** Дешёвая модель fal.ai (flux/schnell): дешёвый fallback Pro-пути и мотор бесплатного тира. */
+export const FAL_KEY: string = process.env['FAL_KEY'] ?? ''
+
+/**
+ * Секрет подписи гостевой cookie egs_ft и хеша IP в бесплатном тире. Без него
+ * подписать нечего: гостевой тир выключается целиком, и подделать cookie
+ * новым uuid на каждый запрос было бы можно.
+ */
+export const FREE_TRIAL_SECRET: string = process.env['FREE_TRIAL_SECRET'] ?? ''
+
 /**
  * Id магазина Printful. Токен уровня аккаунта сам по себе не знает, в каком
  * магазине работать, и генератор мокапов на него отвечает «This endpoint
@@ -23,4 +33,13 @@ export function isGeminiConfigured(): boolean {
 
 export function isPrintfulConfigured(): boolean {
   return PRINTFUL_API_KEY.length > 0
+}
+
+export function isFalConfigured(): boolean {
+  return FAL_KEY.length > 0
+}
+
+/** Секрет есть и есть дешёвый провайдер: обе вещи нужны, чтобы дать гостю пробные генерации. */
+export function isFreeTrialConfigured(): boolean {
+  return FREE_TRIAL_SECRET.length > 0 && isFalConfigured()
 }

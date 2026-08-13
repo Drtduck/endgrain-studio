@@ -7,7 +7,10 @@ import { SITE_ORIGIN } from '@/lib/routing/host'
 // handler, который читает заголовок Host сам.
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: { userAgent: '*', allow: '/', disallow: ['/auth/', '/reset-password'] },
+    // ИИ-краулеров (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, OAI-SearchBot)
+    // не блокируем и отдельных правил под них не пишем: общее allow их и так
+    // пропускает, а цель этого кластера - чтобы нас цитировали, а не наоборот.
+    rules: { userAgent: '*', allow: '/', disallow: ['/auth/', '/reset-password', '/api/'] },
     sitemap: `${SITE_ORIGIN}/sitemap.xml`,
   }
 }

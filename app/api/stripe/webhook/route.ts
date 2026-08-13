@@ -1,4 +1,5 @@
 import { parseSubscriptionEvent } from '@/lib/stripe/events'
+import { parseOneTimeEvent } from '@/lib/stripe/oneTime'
 import { STRIPE_WEBHOOK_SECRET, isStripeConfigured } from '@/lib/stripe/config'
 import { verifyStripeSignature } from '@/lib/stripe/signature'
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabase/admin'
@@ -13,6 +14,40 @@ const LIVE_STATUSES: readonly string[] = ['active', 'trialing', 'past_due']
 /** Ответ всегда короткий текст: никакого JSON и никакого эха события наружу. */
 function text(body: string, status: number): Response {
   return new Response(body, { status, headers: { 'content-type': 'text/plain; charset=utf-8' } })
+}
+
+/**
+ * Разовый платёж. wallet_topup зовёт SQL-функцию под service-role: она сама
+ * идемпотентна по (kind, ref), поэтому повторная доставка того же события просто
+ * вернёт текущий баланс, не увеличив его дважды. gallery_purchase в MVP не входит
+ * (см. спеку, раздел «Отложено»): ветка существует, чтобы фаза 2 не трогала транспорт.
+ */
+async function handleOneTime(payment: import('@/lib/stripe/oneTime').OneTimePayment): Promise<Response> {
+  if (payment.kind === 'gallery_purchase') {
+    console.warn('stripe webhook: gallery_purchase ещё не реализована (фаза 2)', {
+      sessionId: payment.sessionId,
+      publishedId: payment.publishedId,
+    })
+    return text('ok', 200)
+  }
+
+  try {
+    const sb = getSupabaseAdmin()
+    const { error } = await sb.rpc('wallet_topup', {
+      p_user_id: payment.userId,
+      p_amount: payment.amountCents,
+      p_ref: payment.sessionId,
+    })
+    if (error) {
+      console.error('stripe webhook: wallet_topup failed', error)
+      return text('write failed', 500)
+    }
+  } catch (err) {
+    console.error('stripe webhook: wallet_topup threw', err)
+    return text('write failed', 500)
+  }
+
+  return text('ok', 200)
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -35,6 +70,12 @@ export async function POST(request: Request): Promise<Response> {
   } catch {
     return text('bad json', 400)
   }
+
+  // Ветка разового платежа идёт первой и не трогает подписочную: checkout.session.completed
+  // в mode=payment это чужой тип для parseSubscriptionEvent (там разбирается только объект
+  // подписки), поэтому порядок веток тут не создаёт двусмысленности.
+  const oneTime = parseOneTimeEvent(raw)
+  if (oneTime !== null) return handleOneTime(oneTime)
 
   const upsert = parseSubscriptionEvent(raw)
   // Событие не наше или без metadata: ретраить его бессмысленно, отвечаем 200.

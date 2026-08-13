@@ -1,8 +1,10 @@
 'use client'
 
+import { ListingPanel } from '@/components/promo/ListingPanel'
 import { MerchMockups } from '@/components/promo/MerchMockups'
 import { PhotoSeries } from '@/components/promo/PhotoSeries'
 import { ReferenceShots } from '@/components/promo/ReferenceShots'
+import { VideoPanel } from '@/components/promo/VideoPanel'
 import { t } from '@/lib/i18n'
 import { useStudio } from '@/lib/store/studio'
 
@@ -19,6 +21,8 @@ export function PromoPanel() {
       <PhotoSeries />
       <ReferenceShots />
       <MerchMockups />
+      <ListingPanel />
+      <VideoPanel />
     </div>
   )
 }

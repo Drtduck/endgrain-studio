@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { AiVerdict } from '@/lib/ai/entitlements'
+import type { AiAccess } from '@/lib/ai/quota'
+import type { ImageOutcome, ImageProvider, ImageRequest, ImageTier } from '@/lib/ai/providers/types'
 import type { RateLimitVerdict } from '@/lib/promo/rateLimit'
 
 let gemini = true
@@ -9,10 +11,13 @@ let user: { id: string } | null = null
 let verdict: RateLimitVerdict = 'ok'
 const take = vi.fn<(key: string, limit: number, now: number) => RateLimitVerdict>(() => verdict)
 
-const GRANT: AiVerdict = { ok: true, userId: 'user-1', period: '2026-08', cost: 1, used: 1, remaining: 29 }
+const GRANT: AiVerdict = { ok: true, tier: 'pro', userId: 'user-1', period: '2026-08', cost: 1, used: 1, remaining: 29 }
 let aiVerdict: AiVerdict = GRANT
+const ACCESS_PRO: AiAccess = { state: 'pro', limit: 30, used: 1, remaining: 29, tier: 'pro' }
+let aiAccessResult: AiAccess = ACCESS_PRO
 const release = vi.fn()
 const allowed = vi.fn<(feature: string, units?: number) => void>()
+const accessCalled = vi.fn()
 
 // Сам гейт проверяется в lib/ai/entitlements.test.ts: здесь важно только то,
 // что действие его спрашивает, уважает отказ и возвращает резерв при пустой серии.
@@ -26,7 +31,17 @@ vi.mock('@/lib/ai/entitlements', () => ({
     return Promise.resolve()
   },
   isAiDemoMode: () => !gemini,
+  getAiAccess: () => {
+    accessCalled()
+    return Promise.resolve(aiAccessResult)
+  },
 }))
+
+// Провайдерская абстракция замокана целиком: сеть проверяется в
+// lib/ai/providers/*.test.ts, здесь важна только оркестрация действия.
+const generate = vi.fn<(req: ImageRequest) => Promise<ImageOutcome>>()
+const resolveImageProvider = vi.fn((tier: ImageTier) => ({ id: 'gemini', tier, generate }) as ImageProvider)
+vi.mock('@/lib/ai/providers', () => ({ resolveImageProvider: (tier: ImageTier) => resolveImageProvider(tier) }))
 
 // Загрузка макета в Storage: тест не должен ходить в Supabase.
 let uploaded: { path: string; url: string } | null = { path: 'user-1/a.png', url: 'https://cdn.example/a.png' }
@@ -65,47 +80,47 @@ const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB'
 const KINDS = ['hero', 'serving', 'macroOil', 'package']
 const INPUT = { boardPng: PNG, description: 'end-grain board, walnut and maple', kinds: KINDS }
 
-function geminiOk(): Response {
-  return {
-    ok: true,
-    json: () => Promise.resolve({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: 'AAAA' } }] } }] }),
-  } as unknown as Response
+function image(dataUrl = 'data:image/png;base64,AAAA'): ImageOutcome {
+  return { kind: 'image', dataUrl, provider: 'gemini' }
+}
+function blocked(): ImageOutcome {
+  return { kind: 'blocked', provider: 'gemini' }
+}
+function failed(retryable = true): ImageOutcome {
+  return { kind: 'failed', provider: 'gemini', retryable }
 }
 
-/** 200 без кандидатов: модель отказалась рисовать по своим правилам. */
-function geminiBlocked(): Response {
-  return { ok: true, json: () => Promise.resolve({ candidates: [] }) } as unknown as Response
+function resetCommon(): void {
+  gemini = true
+  printful = true
+  supabase = false
+  user = null
+  verdict = 'ok'
+  aiVerdict = GRANT
+  aiAccessResult = ACCESS_PRO
+  release.mockClear()
+  allowed.mockClear()
+  accessCalled.mockClear()
+  take.mockClear()
+  resolveImageProvider.mockClear()
+  generate.mockReset()
+  generate.mockResolvedValue(image())
+  vi.spyOn(console, 'error').mockImplementation(() => {})
 }
 
 describe('app/actions/promo: серия фото', () => {
-  beforeEach(() => {
-    gemini = true
-    printful = true
-    supabase = false
-    user = null
-    verdict = 'ok'
-    aiVerdict = GRANT
-    release.mockClear()
-    allowed.mockClear()
-    take.mockClear()
-    vi.unstubAllGlobals()
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-  })
+  beforeEach(resetCommon)
 
-  it('без ключа Gemini возвращает мок-режим, счётчик не трогает и в сеть не ходит', async () => {
+  it('без ключа Gemini возвращает мок-режим, счётчик не трогает и в провайдер не ходит', async () => {
     gemini = false
-    const fetchMock = vi.fn()
-    vi.stubGlobal('fetch', fetchMock)
     const { generatePromoShotsAction } = await import('./promo')
     const res = await generatePromoShotsAction(INPUT)
     expect(res).toEqual({ ok: true, mock: true, kinds: KINDS })
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(generate).not.toHaveBeenCalled()
     expect(take).not.toHaveBeenCalled()
   })
 
-  it('мусор на входе даёт invalid и в сеть не ходит', async () => {
-    const fetchMock = vi.fn()
-    vi.stubGlobal('fetch', fetchMock)
+  it('мусор на входе даёт invalid и в провайдер не ходит', async () => {
     const { generatePromoShotsAction } = await import('./promo')
     expect(await generatePromoShotsAction({ boardPng: 'https://example.com/a.png', description: 'x' })).toEqual({
       ok: false,
@@ -115,36 +130,30 @@ describe('app/actions/promo: серия фото', () => {
     // Пустой набор пресетов это тоже мусор: генерировать нечего.
     expect(await generatePromoShotsAction({ ...INPUT, kinds: [] })).toEqual({ ok: false, error: 'invalid' })
     expect(await generatePromoShotsAction({ ...INPUT, kinds: ['nope'] })).toEqual({ ok: false, error: 'invalid' })
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(generate).not.toHaveBeenCalled()
   })
 
   it('data-url без магии PNG отбивается как invalid', async () => {
-    const fetchMock = vi.fn()
-    vi.stubGlobal('fetch', fetchMock)
     const { generatePromoShotsAction } = await import('./promo')
     const res = await generatePromoShotsAction({ ...INPUT, boardPng: 'data:image/png;base64,AAAAAAAAAAAA' })
     expect(res).toEqual({ ok: false, error: 'invalid' })
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(generate).not.toHaveBeenCalled()
   })
 
   it('превышение лимита даёт rateLimited и ни одного платного запроса', async () => {
     verdict = 'ip'
-    const fetchMock = vi.fn()
-    vi.stubGlobal('fetch', fetchMock)
     const { generatePromoShotsAction } = await import('./promo')
     expect(await generatePromoShotsAction(INPUT)).toEqual({ ok: false, error: 'rateLimited' })
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(generate).not.toHaveBeenCalled()
   })
 
   it('дневной потолок тоже даёт rateLimited', async () => {
     verdict = 'daily'
-    vi.stubGlobal('fetch', vi.fn())
     const { generatePromoShotsAction } = await import('./promo')
     expect(await generatePromoShotsAction(INPUT)).toEqual({ ok: false, error: 'rateLimited' })
   })
 
   it('счётчик получает правый адрес цепочки x-forwarded-for и обычный лимит для гостя без Supabase', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(geminiOk()))
     const { generatePromoShotsAction } = await import('./promo')
     await generatePromoShotsAction(INPUT)
     expect(take).toHaveBeenCalledTimes(1)
@@ -155,32 +164,26 @@ describe('app/actions/promo: серия фото', () => {
 
   it('без Pro наружу не ходит и отдаёт код отказа', async () => {
     aiVerdict = { ok: false, reason: 'notPro', remaining: 0 }
-    const fetchMock = vi.fn()
-    vi.stubGlobal('fetch', fetchMock)
     const { generatePromoShotsAction } = await import('./promo')
     expect(await generatePromoShotsAction(INPUT)).toEqual({ ok: false, error: 'notPro' })
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(generate).not.toHaveBeenCalled()
     expect(release).not.toHaveBeenCalled()
   })
 
   it('аноним получает свой код отказа, а не общий сбой', async () => {
     aiVerdict = { ok: false, reason: 'anonymous', remaining: 0 }
-    vi.stubGlobal('fetch', vi.fn())
     const { generatePromoShotsAction } = await import('./promo')
     expect(await generatePromoShotsAction(INPUT)).toEqual({ ok: false, error: 'anonymous' })
   })
 
   it('выбранная квота отдаёт quota и ни одного платного запроса', async () => {
     aiVerdict = { ok: false, reason: 'quota', remaining: 0 }
-    const fetchMock = vi.fn()
-    vi.stubGlobal('fetch', fetchMock)
     const { generatePromoShotsAction } = await import('./promo')
     expect(await generatePromoShotsAction(INPUT)).toEqual({ ok: false, error: 'quota' })
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(generate).not.toHaveBeenCalled()
   })
 
   it('удачная серия возвращает остаток квоты и резерв не возвращает', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(geminiOk()))
     const { generatePromoShotsAction } = await import('./promo')
     const res = await generatePromoShotsAction(INPUT)
     if (!res.ok || res.mock) throw new Error('ожидались настоящие кадры')
@@ -188,8 +191,16 @@ describe('app/actions/promo: серия фото', () => {
     expect(release).not.toHaveBeenCalled()
   })
 
+  it('удачная серия подписывает провайдера, которым нарисован кадр', async () => {
+    generate.mockResolvedValue({ kind: 'image', dataUrl: 'data:image/png;base64,AAAA', provider: 'fal' })
+    const { generatePromoShotsAction } = await import('./promo')
+    const res = await generatePromoShotsAction(INPUT)
+    if (!res.ok || res.mock) throw new Error('ожидались настоящие кадры')
+    expect(res.provider).toBe('fal')
+  })
+
   it('серия без единого кадра возвращает списанную квоту обратно', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')))
+    generate.mockResolvedValue(failed())
     const { generatePromoShotsAction } = await import('./promo')
     expect(await generatePromoShotsAction(INPUT)).toEqual({ ok: false, error: 'failed' })
     expect(release).toHaveBeenCalledTimes(1)
@@ -198,64 +209,60 @@ describe('app/actions/promo: серия фото', () => {
 
   it('одного кадра достаточно, чтобы квота осталась списанной', async () => {
     let call = 0
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => {
+    generate.mockImplementation(() => {
       call += 1
-      return call === 1 ? Promise.resolve(geminiOk()) : Promise.reject(new Error('network down'))
-    }))
+      return Promise.resolve(call === 1 ? image() : failed())
+    })
     const { generatePromoShotsAction } = await import('./promo')
     const res = await generatePromoShotsAction(INPUT)
     expect(res.ok).toBe(true)
     expect(release).not.toHaveBeenCalled()
   })
 
-  it('Supabase настроен, а человек не вошёл: лимит жёстче', async () => {
+  it('Supabase настроен, а человек не вошёл: лимит гостя тоже пятёрка', async () => {
     supabase = true
     user = null
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(geminiOk()))
-    const { generatePromoShotsAction } = await import('./promo')
-    await generatePromoShotsAction(INPUT)
-    expect(take.mock.calls[0]?.[1]).toBe(2)
-  })
-
-  it('вошедший пользователь получает обычный лимит', async () => {
-    supabase = true
-    user = { id: 'user-1' }
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(geminiOk()))
     const { generatePromoShotsAction } = await import('./promo')
     await generatePromoShotsAction(INPUT)
     expect(take.mock.calls[0]?.[1]).toBe(5)
   })
 
-  it('с ключом делает четыре запроса, каждый с таймаутом, и отдаёт четыре кадра', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(geminiOk())
-    vi.stubGlobal('fetch', fetchMock)
+  it('вошедший пользователь получает обычный лимит', async () => {
+    supabase = true
+    user = { id: 'user-1' }
+    const { generatePromoShotsAction } = await import('./promo')
+    await generatePromoShotsAction(INPUT)
+    expect(take.mock.calls[0]?.[1]).toBe(5)
+  })
+
+  it('с провайдером делает четыре запроса и отдаёт четыре кадра', async () => {
     const { generatePromoShotsAction } = await import('./promo')
     const res = await generatePromoShotsAction(INPUT)
-    expect(fetchMock).toHaveBeenCalledTimes(4)
-    const init = fetchMock.mock.calls[0]?.[1] as RequestInit
-    expect(init.signal).toBeInstanceOf(AbortSignal)
+    expect(generate).toHaveBeenCalledTimes(4)
     if (!res.ok || res.mock) throw new Error('ожидались настоящие кадры')
     expect(res.images.map((i) => i.kind)).toEqual(KINDS)
     expect(res.images[0]?.dataUrl).toBe('data:image/png;base64,AAAA')
   })
 
-  it('ключ уезжает заголовком, а не в адресной строке', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(geminiOk())
-    vi.stubGlobal('fetch', fetchMock)
+  it('рендер доски уезжает провайдеру base64 без префикса data:', async () => {
     const { generatePromoShotsAction } = await import('./promo')
     await generatePromoShotsAction(INPUT)
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).not.toContain('test-gemini')
-    expect((init.headers as Record<string, string>)['x-goog-api-key']).toBe('test-gemini')
+    const req = generate.mock.calls[0]?.[0] as ImageRequest
+    expect(req.referencePngBase64).toBe('iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB')
   })
 
-  it('брошенный fetch на одном кадре не выбрасывает три остальных', async () => {
+  it('провайдер выбирается по тиру гранта: pro -> good', async () => {
+    const { generatePromoShotsAction } = await import('./promo')
+    await generatePromoShotsAction(INPUT)
+    expect(resolveImageProvider).toHaveBeenCalledWith('good')
+  })
+
+  it('брошенный вызов на одном кадре не выбрасывает три остальных', async () => {
     let call = 0
-    const fetchMock = vi.fn().mockImplementation(() => {
+    generate.mockImplementation(() => {
       call += 1
-      return call === 1 ? Promise.reject(new Error('network down')) : Promise.resolve(geminiOk())
+      return Promise.resolve(call === 1 ? failed() : image())
     })
-    vi.stubGlobal('fetch', fetchMock)
     const { generatePromoShotsAction } = await import('./promo')
     const res = await generatePromoShotsAction(INPUT)
     expect(res.ok).toBe(true)
@@ -263,109 +270,107 @@ describe('app/actions/promo: серия фото', () => {
     expect(res.images).toHaveLength(3)
   })
 
-  it('битый JSON на одном кадре тоже стоит только этого кадра', async () => {
-    let call = 0
-    const fetchMock = vi.fn().mockImplementation(() => {
-      call += 1
-      return Promise.resolve(
-        call === 1
-          ? ({ ok: true, json: () => Promise.reject(new Error('bad json')) } as unknown as Response)
-          : geminiOk(),
-      )
-    })
-    vi.stubGlobal('fetch', fetchMock)
-    const { generatePromoShotsAction } = await import('./promo')
-    const res = await generatePromoShotsAction(INPUT)
-    if (!res.ok || res.mock) throw new Error('ожидались настоящие кадры')
-    expect(res.images).toHaveLength(3)
-  })
-
-  it('HTTP-ошибка кадра не роняет серию', async () => {
-    let call = 0
-    const fetchMock = vi.fn().mockImplementation(() => {
-      call += 1
-      return Promise.resolve(
-        call === 1
-          ? ({ ok: false, status: 429, json: () => Promise.resolve({ error: { status: 'RESOURCE_EXHAUSTED' } }) } as unknown as Response)
-          : geminiOk(),
-      )
-    })
-    vi.stubGlobal('fetch', fetchMock)
-    const { generatePromoShotsAction } = await import('./promo')
-    const res = await generatePromoShotsAction(INPUT)
-    if (!res.ok || res.mock) throw new Error('ожидались настоящие кадры')
-    expect(res.images).toHaveLength(3)
-  })
-
   it('отказ модели на всех кадрах отличается от сетевого сбоя', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(geminiBlocked()))
+    generate.mockResolvedValue(blocked())
     const { generatePromoShotsAction } = await import('./promo')
     expect(await generatePromoShotsAction(INPUT)).toEqual({ ok: false, error: 'blocked' })
   })
 
   it('упавшая сеть на всех кадрах даёт failed, а не исключение', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')))
+    generate.mockResolvedValue(failed())
     const { generatePromoShotsAction } = await import('./promo')
     expect(await generatePromoShotsAction(INPUT)).toEqual({ ok: false, error: 'failed' })
   })
 
-  it('в лог не утекает ключ', async () => {
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500, json: () => Promise.resolve({}) }))
+  it('нет провайдера для тира (рассинхрон конфигурации): резерв возвращается, отказ unavailable', async () => {
+    resolveImageProvider.mockReturnValueOnce(null as unknown as ImageProvider)
+    const { generatePromoShotsAction } = await import('./promo')
+    expect(await generatePromoShotsAction(INPUT)).toEqual({ ok: false, error: 'unavailable' })
+    expect(generate).not.toHaveBeenCalled()
+    expect(release).toHaveBeenCalledWith(GRANT)
+  })
+})
+
+describe('app/actions/promo: пробный тир', () => {
+  beforeEach(resetCommon)
+
+  const TRIAL_GRANT: AiVerdict = {
+    ok: true,
+    tier: 'trial',
+    subjects: [{ kind: 'guest', id: 'g-1', limit: 3 }, { kind: 'ip', id: 'hash', limit: 10 }],
+    cost: 1,
+    remaining: 2,
+  }
+
+  it('во free-тире набор режется до одного кадра ещё до резерва квоты', async () => {
+    aiAccessResult = { state: 'trial', limit: 3, used: 1, remaining: 2, tier: 'trial' }
+    aiVerdict = TRIAL_GRANT
+    const { generatePromoShotsAction } = await import('./promo')
+    const res = await generatePromoShotsAction(INPUT)
+    expect(accessCalled).toHaveBeenCalledTimes(1)
+    expect(allowed).toHaveBeenCalledWith('promoShots', 1)
+    expect(generate).toHaveBeenCalledTimes(1)
+    if (!res.ok || res.mock) throw new Error('ожидались настоящие кадры')
+    expect(res.images).toHaveLength(1)
+    expect(res.images[0]?.kind).toBe(KINDS[0])
+  })
+
+  it('провайдер выбирается по тиру гранта: trial -> cheap', async () => {
+    aiAccessResult = { state: 'trial', limit: 3, used: 1, remaining: 2, tier: 'trial' }
+    aiVerdict = TRIAL_GRANT
     const { generatePromoShotsAction } = await import('./promo')
     await generatePromoShotsAction(INPUT)
-    for (const call of spy.mock.calls) expect(String(call[0])).not.toContain('test-gemini')
+    expect(resolveImageProvider).toHaveBeenCalledWith('cheap')
+  })
+
+  it('Pro не режет набор: тир pro отдаёт все выбранные кадры', async () => {
+    aiAccessResult = ACCESS_PRO
+    aiVerdict = GRANT
+    const { generatePromoShotsAction } = await import('./promo')
+    await generatePromoShotsAction(INPUT)
+    expect(allowed).toHaveBeenCalledWith('promoShots', KINDS.length)
+    expect(generate).toHaveBeenCalledTimes(KINDS.length)
+  })
+
+  it('исчерпанный пробный тир отдаёт trialSpent', async () => {
+    aiAccessResult = { state: 'trialSpent', limit: 3, used: 3, remaining: 0, tier: 'trial' }
+    aiVerdict = { ok: false, reason: 'trialSpent', remaining: 0 }
+    const { generatePromoShotsAction } = await import('./promo')
+    expect(await generatePromoShotsAction(INPUT)).toEqual({ ok: false, error: 'trialSpent' })
+    expect(generate).not.toHaveBeenCalled()
   })
 })
 
 describe('app/actions/promo: выбор пресетов', () => {
-  beforeEach(() => {
-    gemini = true
-    supabase = false
-    user = null
-    verdict = 'ok'
-    aiVerdict = GRANT
-    release.mockClear()
-    allowed.mockClear()
-    take.mockClear()
-    vi.unstubAllGlobals()
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-  })
+  beforeEach(resetCommon)
 
   it('генерирует ровно отмеченные кадры, а не весь список пресетов', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(geminiOk())
-    vi.stubGlobal('fetch', fetchMock)
     const { generatePromoShotsAction } = await import('./promo')
     const res = await generatePromoShotsAction({ ...INPUT, kinds: ['catalog', 'workbench'] })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(generate).toHaveBeenCalledTimes(2)
     if (!res.ok || res.mock) throw new Error('ожидались настоящие кадры')
     expect(res.images.map((i) => i.kind)).toEqual(['catalog', 'workbench'])
   })
 
   it('квота резервируется по числу кадров, а не по нажатию кнопки', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(geminiOk()))
     const { generatePromoShotsAction } = await import('./promo')
     await generatePromoShotsAction({ ...INPUT, kinds: ['hero', 'stack', 'island', 'edge', 'flatlay'] })
     expect(allowed).toHaveBeenCalledWith('promoShots', 5)
   })
 
   it('повтор пресета не оплачивается дважды и не рисуется дважды', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(geminiOk())
-    vi.stubGlobal('fetch', fetchMock)
     const { generatePromoShotsAction } = await import('./promo')
     await generatePromoShotsAction({ ...INPUT, kinds: ['hero', 'hero', 'hero'] })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(generate).toHaveBeenCalledTimes(1)
     expect(allowed).toHaveBeenCalledWith('promoShots', 1)
   })
 
   it('в промпт каждого кадра уезжает описание конкретной доски', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(geminiOk())
-    vi.stubGlobal('fetch', fetchMock)
     const { generatePromoShotsAction } = await import('./promo')
     await generatePromoShotsAction({ ...INPUT, kinds: ['hands', 'macroOil'] })
-    for (const call of fetchMock.mock.calls) {
-      const init = call[1] as RequestInit
-      expect(String(init.body)).toContain('walnut and maple')
+    for (const call of generate.mock.calls) {
+      const req = call[0] as ImageRequest
+      expect(req.prompt).toContain('walnut and maple')
     }
   })
 })
@@ -391,16 +396,8 @@ describe('app/actions/promo: разбор референса', () => {
   }
 
   beforeEach(() => {
-    gemini = true
-    supabase = false
-    user = null
-    verdict = 'ok'
-    aiVerdict = GRANT
-    release.mockClear()
-    allowed.mockClear()
-    take.mockClear()
+    resetCommon()
     vi.unstubAllGlobals()
-    vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
   it('без ключа Gemini отдаёт демо-разбор и в сеть не ходит', async () => {
@@ -471,38 +468,32 @@ describe('app/actions/promo: разбор референса', () => {
   })
 
   it('серия по референсу стоит дороже обычной и рисует запрошенное число кадров', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(geminiOk())
-    vi.stubGlobal('fetch', fetchMock)
     const { generateReferenceShotsAction } = await import('./promo')
     const res = await generateReferenceShotsAction({ boardPng: PNG, description: 'board', style: STYLE, count: 3 })
     expect(allowed).toHaveBeenCalledWith('referenceShots', 3)
-    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(generate).toHaveBeenCalledTimes(3)
     if (!res.ok || res.mock) throw new Error('ожидались настоящие кадры')
     expect(res.images).toHaveLength(3)
     // Кадры одной серии обязаны отличаться, иначе человек платит за копии.
-    const prompts = fetchMock.mock.calls.map((call) => String((call[1] as RequestInit).body))
+    const prompts = generate.mock.calls.map((call) => (call[0] as ImageRequest).prompt)
     expect(new Set(prompts).size).toBe(3)
   })
 
   it('в промпт по референсу уезжает наш предмет и разобранный свет', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(geminiOk())
-    vi.stubGlobal('fetch', fetchMock)
     const { generateReferenceShotsAction } = await import('./promo')
     await generateReferenceShotsAction({ boardPng: PNG, description: 'walnut board', style: STYLE, count: 1 })
-    const body = String((fetchMock.mock.calls[0]?.[1] as RequestInit).body)
-    expect(body).toContain('walnut board')
-    expect(body).toContain('Soft key from the left')
+    const req = generate.mock.calls[0]?.[0] as ImageRequest
+    expect(req.prompt).toContain('walnut board')
+    expect(req.prompt).toContain('Soft key from the left')
   })
 
   it('больше четырёх кадров по референсу не заказать', async () => {
-    const fetchMock = vi.fn()
-    vi.stubGlobal('fetch', fetchMock)
     const { generateReferenceShotsAction } = await import('./promo')
     expect(await generateReferenceShotsAction({ boardPng: PNG, description: 'b', style: STYLE, count: 9 })).toEqual({
       ok: false,
       error: 'invalid',
     })
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(generate).not.toHaveBeenCalled()
   })
 })
 
@@ -523,19 +514,9 @@ describe('app/actions/promo: мерч через Printful', () => {
   }
 
   beforeEach(() => {
-    gemini = true
-    printful = true
-    supabase = false
-    user = null
-    verdict = 'ok'
-    aiVerdict = { ok: true, userId: 'user-1', period: '2026-08', cost: 0, used: 0, remaining: 30 }
-    uploaded = { path: 'user-1/a.png', url: 'https://cdn.example/a.png' }
-    release.mockClear()
-    allowed.mockClear()
-    removed.mockClear()
-    take.mockClear()
+    resetCommon()
     vi.unstubAllGlobals()
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    uploaded = { path: 'user-1/a.png', url: 'https://cdn.example/a.png' }
   })
 
   it('без Pro отдаёт причину отказа и наружу не ходит', async () => {
@@ -586,6 +567,7 @@ describe('app/actions/promo: мерч через Printful', () => {
   })
 
   it('в Printful уходят только отмеченные товары, а не весь каталог', async () => {
+    aiVerdict = { ok: true, tier: 'pro', userId: 'user-1', period: '2026-08', cost: 0, used: 0, remaining: 30 }
     const fetchMock = printfulFetch()
     vi.stubGlobal('fetch', fetchMock)
     const { createMerchMockupsAction } = await import('./promo')
@@ -596,6 +578,7 @@ describe('app/actions/promo: мерч через Printful', () => {
   })
 
   it('лимит Printful это отдельный код busy, а не общий сбой', async () => {
+    aiVerdict = { ok: true, tier: 'pro', userId: 'user-1', period: '2026-08', cost: 0, used: 0, remaining: 30 }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false,
       status: 429,
@@ -606,6 +589,7 @@ describe('app/actions/promo: мерч через Printful', () => {
   })
 
   it('полный путь: макет в Storage, задача на каждый товар, поллинг и уборка', async () => {
+    aiVerdict = { ok: true, tier: 'pro', userId: 'user-1', period: '2026-08', cost: 0, used: 0, remaining: 30 }
     const fetchMock = printfulFetch()
     vi.stubGlobal('fetch', fetchMock)
     const { createMerchMockupsAction } = await import('./promo')
@@ -620,6 +604,7 @@ describe('app/actions/promo: мерч через Printful', () => {
   })
 
   it('в Printful уезжает публичный адрес макета, ключ заголовком и id магазина', async () => {
+    aiVerdict = { ok: true, tier: 'pro', userId: 'user-1', period: '2026-08', cost: 0, used: 0, remaining: 30 }
     const fetchMock = printfulFetch()
     vi.stubGlobal('fetch', fetchMock)
     const { createMerchMockupsAction } = await import('./promo')
@@ -637,6 +622,7 @@ describe('app/actions/promo: мерч через Printful', () => {
   })
 
   it('упавшая загрузка макета не даёт ни одного запроса в Printful', async () => {
+    aiVerdict = { ok: true, tier: 'pro', userId: 'user-1', period: '2026-08', cost: 0, used: 0, remaining: 30 }
     uploaded = null
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
@@ -646,6 +632,7 @@ describe('app/actions/promo: мерч через Printful', () => {
   })
 
   it('нехватка store_id объясняется отдельным кодом, а не общим сбоем', async () => {
+    aiVerdict = { ok: true, tier: 'pro', userId: 'user-1', period: '2026-08', cost: 0, used: 0, remaining: 30 }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false,
       status: 400,
@@ -659,12 +646,14 @@ describe('app/actions/promo: мерч через Printful', () => {
   })
 
   it('отбитый Printful не роняет вкладку: возвращается код причины, а не исключение', async () => {
+    aiVerdict = { ok: true, tier: 'pro', userId: 'user-1', period: '2026-08', cost: 0, used: 0, remaining: 30 }
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')))
     const { createMerchMockupsAction } = await import('./promo')
     expect(await createMerchMockupsAction(MERCH)).toEqual({ printful: true, error: 'failed' })
   })
 
   it('частичный успех отдаёт то, что вышло, а не общий отказ', async () => {
+    aiVerdict = { ok: true, tier: 'pro', userId: 'user-1', period: '2026-08', cost: 0, used: 0, remaining: 30 }
     let create = 0
     vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
       if (String(url).includes('create-task')) {
@@ -684,6 +673,7 @@ describe('app/actions/promo: мерч через Printful', () => {
   })
 
   it('в лог не утекает ключ Printful', async () => {
+    aiVerdict = { ok: true, tier: 'pro', userId: 'user-1', period: '2026-08', cost: 0, used: 0, remaining: 30 }
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false,

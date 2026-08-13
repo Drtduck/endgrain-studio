@@ -16,6 +16,22 @@ export const APP_SIGNUP_URL: string = `${APP_ORIGIN}/register?next=%2F`
 /** Canonical-путь лендинга внутри приложения. Корень сайта переписывается сюда. */
 export const LANDING_PATH = '/landing'
 
+/** Путь ленты блога. Отдельная константа, чтобы не разъезжалась строкой по коду. */
+export const BLOG_PATH = '/blog'
+
+/**
+ * Пути, которые обслуживает домен лендинга помимо корня. Всё остальное на этом
+ * домене уезжает в студию (см. proxy.ts). Единственное место, где записано,
+ * что ещё, кроме лендинга, живёт на endgrain.app.
+ */
+const SITE_PREFIXES: readonly string[] = [BLOG_PATH]
+
+/** Путь на корневом домене обслуживается лендингом напрямую, без редиректа в студию. */
+export function isSitePath(pathname: string): boolean {
+  if (pathname === '/' || pathname === LANDING_PATH) return true
+  return SITE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+}
+
 const SITE_HOSTS: readonly string[] = ['endgrain.app', 'www.endgrain.app']
 const APP_HOSTS: readonly string[] = ['app.endgrain.app']
 

@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import { presetConsent } from './helpers/consent'
+
+test.beforeEach(async ({ page }) => {
+  await presetConsent(page)
+})
 
 // Съёмка скриншотов для полосы лендинга. Не гоняется в CI и не влияет на 43 существующих
 // e2e: тот же приём, что уже применён к e2e/auth.spec.ts с E2E_AUTH.

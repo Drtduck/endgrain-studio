@@ -16,7 +16,7 @@ vi.mock('@/lib/stripe/config', () => ({
   hasPublicPrices: () => true,
 }))
 
-const supabase = { from: vi.fn() }
+const supabase = { from: vi.fn(), rpc: vi.fn() }
 vi.mock('@/lib/supabase/admin', () => ({
   isSupabaseAdminConfigured: () => true,
   getSupabaseAdmin: () => supabase,
@@ -178,5 +178,92 @@ describe('POST /api/stripe/webhook', () => {
     expect(res.status).toBe(200)
     expect(await res.text()).toBe('ignored')
     expect(sb.upsert).not.toHaveBeenCalled()
+  })
+})
+
+function topupEventBody(overrides: Record<string, unknown> = {}): string {
+  return JSON.stringify({
+    type: 'checkout.session.completed',
+    created: CREATED_SEC,
+    data: {
+      object: {
+        id: 'cs_1',
+        mode: 'payment',
+        payment_status: 'paid',
+        amount_total: 500,
+        currency: 'usd',
+        metadata: { supabase_user_id: 'user-1', kind: 'wallet_topup' },
+        ...overrides,
+      },
+    },
+  })
+}
+
+describe('POST /api/stripe/webhook: разовый платёж', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  it('пополнение с валидной подписью зовёт wallet_topup с p_ref = session.id', async () => {
+    mockSupabase()
+    supabase.rpc.mockResolvedValue({ data: 500, error: null })
+    const { POST } = await import('./route')
+
+    const res = await POST(signedRequest(topupEventBody()))
+
+    expect(res.status).toBe(200)
+    expect(await res.text()).toBe('ok')
+    expect(supabase.rpc).toHaveBeenCalledWith('wallet_topup', {
+      p_user_id: 'user-1',
+      p_amount: 500,
+      p_ref: 'cs_1',
+    })
+  })
+
+  it('повторная доставка того же события отвечает 200, а не 500 (идемпотентность в SQL)', async () => {
+    mockSupabase()
+    supabase.rpc.mockResolvedValue({ data: 500, error: null })
+    const { POST } = await import('./route')
+
+    const first = await POST(signedRequest(topupEventBody()))
+    const second = await POST(signedRequest(topupEventBody()))
+
+    expect(first.status).toBe(200)
+    expect(second.status).toBe(200)
+    expect(supabase.rpc).toHaveBeenCalledTimes(2)
+  })
+
+  it('ошибка базы при пополнении даёт 500: Stripe переотправит', async () => {
+    mockSupabase()
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'db down' } })
+    const { POST } = await import('./route')
+
+    const res = await POST(signedRequest(topupEventBody()))
+    expect(res.status).toBe(500)
+  })
+
+  it('событие подписки после новой ветки обрабатывается как раньше (регрессия)', async () => {
+    const sb = mockSupabase({ existing: null })
+    const { POST } = await import('./route')
+
+    const res = await POST(signedRequest(eventBody()))
+
+    expect(res.status).toBe(200)
+    expect(sb.upsert).toHaveBeenCalledTimes(1)
+    expect(supabase.rpc).not.toHaveBeenCalled()
+  })
+
+  it('gallery_purchase отвечает 200 и ничего не пишет', async () => {
+    mockSupabase()
+    const { POST } = await import('./route')
+
+    const res = await POST(
+      signedRequest(topupEventBody({ metadata: { supabase_user_id: 'user-1', kind: 'gallery_purchase', published_id: 'pub-1' } })),
+    )
+
+    expect(res.status).toBe(200)
+    expect(supabase.rpc).not.toHaveBeenCalled()
   })
 })
