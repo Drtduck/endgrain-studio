@@ -40,7 +40,7 @@ describe('buildLlmsTxt', () => {
 
   it('ссылки на продукт и тарифы абсолютные', () => {
     const txt = buildLlmsTxt([POST])
-    expect(txt).toContain('[Endgrain Studio](https://endgrain.app/)')
+    expect(txt).toContain('[Endgrain Studio](https://endgrain.app)')
     expect(txt).toContain('[Тарифы](https://app.endgrain.app/pricing)')
   })
 

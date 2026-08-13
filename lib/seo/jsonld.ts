@@ -8,8 +8,11 @@ import { siteUrl } from './metadata'
  * components/seo/JsonLd.tsx.
  */
 
-const ORG_ID = `${siteUrl('/')}#organization`
-const WEBSITE_ID = `${siteUrl('/')}#website`
+// siteUrl() без пути, не siteUrl('/'): Next.js Metadata API отдаёт canonical и
+// og:url корня без слеша на конце, JSON-LD должен указывать тот же адрес,
+// иначе Organization.url и canonical расходятся на один слеш.
+const ORG_ID = `${siteUrl()}#organization`
+const WEBSITE_ID = `${siteUrl()}#website`
 
 export interface BreadcrumbItem {
   readonly name: string
@@ -21,7 +24,7 @@ export function organizationJsonLd(): Record<string, unknown> {
     '@type': 'Organization',
     '@id': ORG_ID,
     name: 'Endgrain Studio',
-    url: siteUrl('/'),
+    url: siteUrl(),
     logo: siteUrl('/icon.svg'),
     description:
       'Производственный инструмент для торцевых разделочных досок: узор, схема распила и переклеек, расчёт материала и себестоимости.',
@@ -33,7 +36,7 @@ export function websiteJsonLd(): Record<string, unknown> {
     '@type': 'WebSite',
     '@id': WEBSITE_ID,
     name: 'Endgrain Studio',
-    url: siteUrl('/'),
+    url: siteUrl(),
     inLanguage: 'ru',
     publisher: { '@id': ORG_ID },
   }
@@ -126,7 +129,7 @@ export function postJsonLd(post: PostMeta): Record<string, unknown> {
     keywords: post.tags.join(', '),
   }
   const breadcrumb = breadcrumbListJsonLd([
-    { name: 'Endgrain Studio', url: siteUrl('/') },
+    { name: 'Endgrain Studio', url: siteUrl() },
     { name: 'Блог', url: siteUrl('/blog') },
     { name: post.title, url },
   ])
