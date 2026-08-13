@@ -1,9 +1,10 @@
 /**
- * Переход на другой origin. Вынесен отдельной функцией по двум причинам: роутер Next
- * такие переходы не делает, а window.location в тестовой среде не подменяется, и
- * мокать приходится именно модуль.
+ * Полная навигация браузером вместо клиентского перехода роутером.
+ * Нужна там, где переход зависит от свежезаписанной cookie: клиентский переход
+ * успевает уйти за RSC раньше, чем браузер закоммитит cookie сессии, и proxy
+ * возвращает человека обратно на форму входа. Вынесено в модуль, чтобы это
+ * можно было честно замокать в тестах: window.location в jsdom не переопределяется.
  */
-export function assignLocation(url: string): void {
-  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+export function hardNavigate(url: string): void {
   window.location.assign(url)
 }
