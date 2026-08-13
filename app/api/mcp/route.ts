@@ -1,33 +1,24 @@
 import { createMcpHandler, withMcpAuth } from 'mcp-handler'
-import type { AuthInfo, McpServer } from '@modelcontextprotocol/server'
 import { ENGINE_VERSION } from '@/lib/engine'
+import { verifyMcpToken } from '@/lib/api/auth'
+import { registerEndgrainTools } from '@/lib/api/mcpTools'
 
 /**
- * Первая версия роута: доказывает, что связка mcp-handler@2.1.0 +
- * @modelcontextprotocol/server@2.0.0 действительно работает в App Router до
- * того, как вокруг неё построится сервисный слой и полный набор инструментов.
- * verifyMcpToken здесь заглушка (принимает любой непустой Bearer-токен) и
- * заменяется на настоящую проверку из lib/api/auth.ts следующим коммитом,
- * когда появится таблица api_keys. Тул один, служебный, и исчезает вместе
- * с заглушкой.
+ * MCP-сервер поверх того же сервисного слоя, что REST v1 (lib/api/service.ts).
+ * verifyMcpToken (lib/api/auth.ts) - тот же конвейер шагов 1-5 раздела 3
+ * дизайн-документа, что использует REST; скоуп и квота у каждого инструмента
+ * свои и проверяются внутри него (lib/api/mcpTools.ts:requireCaller), потому
+ * что requiredScopes на уровне withMcpAuth здесь общий для всех инструментов
+ * быть не может.
+ *
+ * RFC 9728 и полный OAuth 2.1 не делаем: Bearer-ключ как токен - ровно то,
+ * что делает Stripe в своём MCP. Место для расширения оставлено тем, что
+ * withMcpAuth умеет resourceMetadataPath из коробки.
+ *
+ * delete_project сознательно отсутствует среди инструментов (раздел 7):
+ * удаление необратимо, агент с ключом на чтение и запись не должен уметь
+ * стереть работу одним неверно понятым запросом. Через REST удаление есть.
  */
-async function verifyMcpToken(_req: Request, bearerToken?: string): Promise<AuthInfo | undefined> {
-  if (!bearerToken) return undefined
-  return { token: bearerToken, clientId: 'stub', scopes: [] }
-}
-
-function registerEndgrainTools(server: McpServer): void {
-  server.registerTool(
-    'ping',
-    {
-      title: 'Ping',
-      description: 'Health check for the Endgrain Studio MCP server.',
-      inputSchema: {},
-    },
-    async () => ({ content: [{ type: 'text' as const, text: 'pong' }], structuredContent: { pong: true } }),
-  )
-}
-
 const handler = createMcpHandler(registerEndgrainTools, {
   serverInfo: { name: 'endgrain-studio', version: ENGINE_VERSION },
   verboseLogs: false,
