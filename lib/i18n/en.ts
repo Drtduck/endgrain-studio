@@ -841,6 +841,11 @@ const en: Record<keyof typeof ru, string> = {
   'blog.tag.description': 'Articles tagged "{tag}". See the full list in the blog.',
   'blog.tag.back': 'All articles',
   'blog.tag.empty': 'No articles with this tag yet.',
+  'blog.newsletter.title': 'Stories about boards and the people who make them',
+  'blog.newsletter.body':
+    "One letter every couple of weeks: someone's pattern taken apart glue-up by glue-up, a trick from the shop, and what changed in the app.",
+  'blog.translation.readEn': 'Read in English',
+  'blog.translation.readRu': 'Read in Russian',
   'consent.bannerAriaLabel': 'Cookie settings',
   'consent.optInText': 'We always use strictly necessary cookies, and analytics cookies only with your consent.',
   'consent.optOutText': 'We collect anonymized visit statistics, we do not sell personal data.',
