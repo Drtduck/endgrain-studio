@@ -43,22 +43,21 @@ test.describe('оплата без ключей', () => {
     await expect(page.getByTestId('landing-footer-pricing')).toHaveCount(1)
   })
 
-  test('обычный PNG качается, PNG для печати под замком', async ({ page }) => {
+  test('инструкция для печати открыта всем, подпись Endgrain снимается подпиской', async ({ page }) => {
     await openStudio(page)
 
-    // Анонимный человек без подписки: базовый экспорт открыт, кнопка работает.
-    const [file] = await Promise.all([
-      page.waitForEvent('download'),
-      page.getByTestId('export-png').click(),
+    // Анонимный человек без подписки: инструкция открывается целиком, ничего не заперто.
+    const [printed] = await Promise.all([
+      page.context().waitForEvent('page'),
+      page.getByTestId('export-print').click(),
     ])
-    expect(file.suggestedFilename()).toMatch(/\.png$/)
-    expect(await file.path()).not.toBeNull()
+    await printed.waitForLoadState()
+    await expect(printed.getByTestId('print-preview')).toBeVisible()
 
-    // PNG для печати показан с замком и ведёт на тарифы, а не прячется.
-    // Именно такое поведение задумано с тех пор, как Pro закрыл тяжёлый экспорт.
-    const hd = page.getByTestId('export-png-hd')
-    await expect(hd).toBeVisible()
-    await expect(hd).toHaveAttribute('href', '/pricing')
+    // Мягкий гейт вместо замка: без Pro в подвале остаётся одна ненавязчивая строка
+    // про Endgrain App, а сама инструкция не урезана ни на один раздел.
+    await expect(printed.getByTestId('print-steps')).toBeVisible()
+    await expect(printed.getByTestId('print-promo')).toBeVisible()
   })
 
   test('отмена оплаты показывает баннер на странице тарифов', async ({ page }) => {

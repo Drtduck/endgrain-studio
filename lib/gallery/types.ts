@@ -43,6 +43,8 @@ export interface GallerySummary {
 export interface GalleryCardAuthor {
   readonly id: string
   readonly displayName: string | null
+  /** Загруженный аватар автора; отсутствует или null - AuthorLine рисует инициал. */
+  readonly avatarUrl?: string | null
 }
 
 export interface GalleryCard {

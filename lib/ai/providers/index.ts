@@ -1,6 +1,6 @@
 import 'server-only'
 import { isFalConfigured, isGeminiConfigured } from '@/lib/promo/config'
-import { falProvider } from './fal'
+import { falProProvider, falProvider } from './fal'
 import { geminiProvider } from './gemini'
 import { mockProvider } from './mock'
 import type { ImageOutcome, ImageProvider, ImageRequest, ImageTier, ProviderId } from './types'
@@ -31,12 +31,18 @@ export function withFallback(primary: ImageProvider, secondary: ImageProvider): 
 /**
  * Таблица выбора провайдера по наличию ключей:
  *
- * | Ключи               | tier: good (Pro)          | tier: cheap (пробный)  |
- * |----------------------|---------------------------|-------------------------|
- * | нет ни одного        | mock                       | mock                    |
- * | только GEMINI_API_KEY | gemini                     | free-тир выключен (null)|
- * | только FAL_KEY        | fal                         | fal                     |
- * | оба                   | gemini с fallback на fal   | fal                     |
+ * | Ключи                 | tier: good (Pro)             | tier: cheap (пробный)   |
+ * |-----------------------|------------------------------|-------------------------|
+ * | нет ни одного         | mock                         | mock                    |
+ * | только GEMINI_API_KEY | gemini                       | free-тир выключен (null)|
+ * | только FAL_KEY        | fal nano banana 2            | fal flux/schnell        |
+ * | оба                   | fal nano banana 2 с fallback | fal flux/schnell        |
+ * |                       | на gemini                    |                         |
+ *
+ * Pro рисует на fal (nano banana 2), а не на Gemini: у Gemini нет оплаченного
+ * баланса, и связка «основной провайдер без денег плюс fallback» означала бы
+ * лишний неудачный запрос перед каждым кадром. Gemini остаётся вторым номером
+ * ровно на случай, когда fal лёг, и только если ключ заведён.
  *
  * null для tier: cheap без FAL_KEY принципиален: пускать бесплатных на
  * дорогую модель ради красивого продуктового обещания значит платить за
@@ -51,6 +57,6 @@ export function resolveImageProvider(tier: ImageTier): ImageProvider | null {
 
   if (tier === 'cheap') return falOn ? falProvider : null
 
-  if (gemini && falOn) return withFallback(geminiProvider, falProvider)
-  return gemini ? geminiProvider : falProvider
+  if (!falOn) return geminiProvider
+  return gemini ? withFallback(falProProvider, geminiProvider) : falProProvider
 }

@@ -64,15 +64,37 @@ describe('AppHeader', () => {
 
   it('набор разделов одинаков и для студии, и для остальных страниц', () => {
     const { unmount } = render(<AppHeader />)
-    const outside = ['app-shell-nav-gallery', 'app-shell-nav-pricing', 'app-blog-link']
+    const outside = ['app-shell-nav-gallery', 'app-blog-link']
     for (const id of outside) expect(screen.getByTestId(id)).toBeInTheDocument()
-    // Гостю ключи API не нужны: страница всё равно попросит войти.
-    expect(screen.queryByTestId('app-shell-nav-api')).toBeNull()
     unmount()
 
     render(<AppHeader tabs />)
     for (const id of outside) expect(screen.getByTestId(id)).toBeInTheDocument()
     // В студии ссылка «Студия» лишняя: туда ведут вкладки и логотип.
     expect(screen.queryByTestId('app-shell-nav-studio')).toBeNull()
+  })
+
+  it('тарифы, профиль и ключи API из шапки убраны: им место в меню аватара', () => {
+    renderHeader({ tabs: true, units: true })
+    expect(screen.queryByTestId('app-shell-nav-pricing')).toBeNull()
+    expect(screen.queryByTestId('studio-nav-account')).toBeNull()
+    expect(screen.queryByTestId('app-shell-nav-api')).toBeNull()
+  })
+
+  it('разделы стоят левее переключателя мер в обоих вариантах шапки', () => {
+    const { unmount } = renderHeader({ tabs: true, units: true })
+    const before = Node.DOCUMENT_POSITION_FOLLOWING
+    expect(screen.getByTestId('app-shell-nav-gallery').compareDocumentPosition(screen.getByTestId('unit-mm'))).toBe(
+      before,
+    )
+    expect(screen.getByTestId('app-blog-link').compareDocumentPosition(screen.getByTestId('unit-mm'))).toBe(before)
+    unmount()
+
+    // На app-страницах единиц нет, но порядок «студия -> галерея -> блог -> язык» держится.
+    renderHeader()
+    expect(screen.getByTestId('app-shell-nav-studio').compareDocumentPosition(screen.getByTestId('app-blog-link'))).toBe(
+      before,
+    )
+    expect(screen.getByTestId('app-blog-link').compareDocumentPosition(screen.getByTestId('locale-ru'))).toBe(before)
   })
 })

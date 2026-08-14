@@ -16,7 +16,7 @@ describe('чистая половина lib/export', () => {
   for (const file of PURE_FILES) {
     it(`${file} не тянет браузерные модули относительным импортом`, () => {
       const source = readFileSync(join(process.cwd(), 'lib/export', file), 'utf8')
-      for (const browserOnly of ['./png', './pdf', './download', './pdfFont']) {
+      for (const browserOnly of ['./png', './download']) {
         expect(source, `${file} содержит импорт ${browserOnly}`).not.toContain(browserOnly)
       }
     })

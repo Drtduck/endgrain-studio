@@ -9,7 +9,10 @@ vi.mock('@/lib/promo/config', () => ({
 }))
 
 vi.mock('./gemini', () => ({ geminiProvider: { id: 'gemini', tier: 'good', generate: vi.fn() } }))
-vi.mock('./fal', () => ({ falProvider: { id: 'fal', tier: 'cheap', generate: vi.fn() } }))
+vi.mock('./fal', () => ({
+  falProvider: { id: 'fal', tier: 'cheap', generate: vi.fn() },
+  falProProvider: { id: 'fal', tier: 'good', generate: vi.fn() },
+}))
 vi.mock('./mock', () => ({ mockProvider: { id: 'mock', tier: 'cheap', generate: vi.fn() } }))
 
 describe('lib/ai/providers/index: таблица выбора провайдера', () => {
@@ -31,20 +34,40 @@ describe('lib/ai/providers/index: таблица выбора провайдер
     expect(resolveImageProvider('cheap')).toBeNull()
   })
 
-  it('только FAL_KEY: fal на обоих тирах', async () => {
+  it('только FAL_KEY: fal на обоих тирах, на good это Pro-провайдер', async () => {
     falOn = true
     const { resolveImageProvider } = await import('./index')
     expect(resolveImageProvider('good')?.id).toBe('fal')
+    expect(resolveImageProvider('good')?.tier).toBe('good')
     expect(resolveImageProvider('cheap')?.id).toBe('fal')
+    expect(resolveImageProvider('cheap')?.tier).toBe('cheap')
   })
 
-  it('оба ключа: good это gemini с fallback на fal, cheap это fal', async () => {
+  it('оба ключа: good это fal Pro с fallback на gemini, cheap это fal', async () => {
     gemini = true
     falOn = true
     const { resolveImageProvider } = await import('./index')
     const good = resolveImageProvider('good')
-    expect(good?.id).toBe('gemini')
+    expect(good?.id).toBe('fal')
+    expect(good?.tier).toBe('good')
     expect(resolveImageProvider('cheap')?.id).toBe('fal')
+  })
+
+  it('оба ключа: упавший fal уводит good на gemini', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    gemini = true
+    falOn = true
+    const fal = await import('./fal')
+    const gem = await import('./gemini')
+    vi.mocked(fal.falProProvider.generate).mockResolvedValue({ kind: 'failed', provider: 'fal', retryable: true })
+    vi.mocked(gem.geminiProvider.generate).mockResolvedValue({
+      kind: 'image',
+      dataUrl: 'data:image/png;base64,AA',
+      provider: 'gemini',
+    })
+    const { resolveImageProvider } = await import('./index')
+    const outcome = await resolveImageProvider('good')!.generate({ prompt: 'x' })
+    expect(outcome).toEqual({ kind: 'image', dataUrl: 'data:image/png;base64,AA', provider: 'gemini' })
   })
 })
 

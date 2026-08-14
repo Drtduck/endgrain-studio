@@ -69,7 +69,7 @@ export const PROMO_DEFAULT_SHOTS: readonly PromoShotKind[] = ['hero', 'serving',
 /** Больше двенадцати кадров за раз не бывает: столько всего пресетов. */
 export const PROMO_MAX_SHOTS = PROMO_SHOTS.length
 
-/** Один готовый кадр: data:URI картинки, пришедшей от Gemini. */
+/** Один готовый кадр: data:URI картинки, пришедшей от модели. */
 export interface PromoImage {
   readonly kind: PromoShotKind
   readonly dataUrl: string

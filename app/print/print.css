@@ -1,0 +1,50 @@
+/*
+ * Печатная инструкция: один и тот же документ на экране и на бумаге.
+ * Лист всегда светлый, независимо от темы приложения: бумага не бывает тёмной,
+ * а превью должно совпадать с тем, что уйдёт в принтер.
+ */
+.print-doc {
+  color-scheme: light;
+  background: #ffffff;
+  color: #111111;
+}
+
+.print-preview svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+  }
+
+  /* Всё, что не документ, на бумаге не нужно: кнопки, баннер согласия, шапки. */
+  [data-print-hide],
+  [data-testid='consent-banner'] {
+    display: none !important;
+  }
+
+  .print-sheet {
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    max-width: none !important;
+  }
+
+  .print-page-break {
+    break-before: page;
+  }
+
+  .print-keep {
+    break-inside: avoid;
+  }
+}

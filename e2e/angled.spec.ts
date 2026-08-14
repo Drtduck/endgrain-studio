@@ -66,15 +66,19 @@ test('шаблон шеврона: вкладка 3D рисуется без о�
   await expect(page.getByTestId('view3d-unsupported')).toHaveCount(0)
 })
 
-test('шаблон шеврона: PDF выгружается непустым файлом', async ({ page }) => {
+test('шаблон шеврона: инструкция для печати собирается со схемой распила', async ({ page }) => {
   await openStudio(page)
   await page.getByTestId('tab-templates').click()
   await page.getByTestId('template-chevron-classic').click()
   await expect(page.getByTestId('board-canvas')).toBeVisible()
 
-  const [file] = await Promise.all([page.waitForEvent('download'), page.getByTestId('export-pdf').click()])
-  const path = await file.path()
-  expect(path).not.toBeNull()
+  const [printed] = await Promise.all([
+    page.context().waitForEvent('page'),
+    page.getByTestId('export-print').click(),
+  ])
+  await printed.waitForLoadState()
+  await expect(printed.getByTestId('print-cutmap')).toBeVisible()
+  await expect(printed.getByTestId('print-preview').locator('svg')).toBeVisible()
 })
 
 test('угол среза в инспекторе панели двигает отход в блоке материала', async ({ page }) => {

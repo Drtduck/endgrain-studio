@@ -156,10 +156,12 @@ test.describe('баннер - компактная карточка, не пер
   })
 })
 
-test('экспорт PDF кладёт pdf_exported в dataLayer', async ({ page }) => {
+test('открытие инструкции для печати кладёт pdf_exported в dataLayer', async ({ page }) => {
   await openStudio(page)
   await page.getByTestId('consent-accept').click()
-  await page.getByTestId('export-pdf').click()
+  // Имя события историческое: воронка «человек забрал инструкцию» осталась той же,
+  // сменился только носитель, с клиентского PDF на печать браузера.
+  await page.getByTestId('export-print').click()
   // gtag.js разбирает dataLayer в arguments-форме (['event', name, params]),
   // а не как объект {event: name, ...}: см. lib/analytics/gtag.ts.
   await expect

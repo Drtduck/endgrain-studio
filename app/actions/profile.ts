@@ -3,9 +3,11 @@
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { APP_ORIGIN } from '@/lib/routing/host'
+import { isOwnAvatarUrl } from '@/lib/profile/avatar'
 import { PROFILE_BIO_MAX, PROFILE_DISPLAY_NAME_MAX, PROFILE_DISPLAY_NAME_MIN, PROFILE_WEBSITE_MAX } from '@/lib/profile/types'
 import type { Profile } from '@/lib/profile/types'
 import { getAccountIdentity, getCurrentUser } from '@/lib/supabase/session'
+import { SUPABASE_URL } from '@/lib/supabase/config'
 import { getSupabaseServer } from '@/lib/supabase/server'
 import { getSupabaseService, isSupabaseServiceConfigured } from '@/lib/supabase/service'
 
@@ -93,7 +95,7 @@ export async function updateProfileAction(input: UpdateProfileInput): Promise<Pr
     // notify_email по-прежнему не в RETURNING: сервис-роль обходит RLS и грант,
     // но отдавать приватное поле обратно клиенту незачем - значение, которое
     // мы только что записали, и так известно из input.
-    .select('user_id, display_name, bio, website, created_at')
+    .select('user_id, display_name, bio, website, avatar_url, created_at')
     .single()
 
   if (error || !data) return { ok: false, error: 'failed' }
@@ -105,10 +107,44 @@ export async function updateProfileAction(input: UpdateProfileInput): Promise<Pr
       displayName: data.display_name === null ? null : String(data.display_name),
       bio: data.bio === null ? null : String(data.bio),
       website: data.website === null ? null : String(data.website),
+      avatarUrl: data.avatar_url === null || data.avatar_url === undefined ? null : String(data.avatar_url),
       notifyEmail: input.notifyEmail,
       createdAt: String(data.created_at),
     },
   }
+}
+
+/**
+ * Аватар: строка avatar_url отдельным действием, а не полем формы профиля.
+ * Картинка уезжает в Storage прямо из браузера (bucket avatars, политика
+ * avatars_insert_own пускает только в свою папку {user_id}/), сюда приходит
+ * уже готовая ссылка - значит она недоверенная и проверяется isOwnAvatarUrl:
+ * без проверки в profiles.avatar_url лёг бы произвольный чужой адрес, который
+ * потом грузился бы с каждой карточки галереи. null снимает картинку и
+ * возвращает инициал.
+ *
+ * Пишем тем же service-role клиентом, что и updateProfileAction, и по той же
+ * причине (RETURNING PostgREST-upsert требует table-level SELECT, которого у
+ * authenticated нет). user_id берётся из серверной сессии, upsert трогает
+ * только колонку avatar_url - остальные поля профиля остаются как были.
+ */
+export async function updateAvatarAction(avatarUrl: string | null): Promise<ProfileResult<string | null>> {
+  const user = await getCurrentUser()
+  if (!user) return { ok: false, error: 'unauthenticated' }
+
+  let value: string | null = null
+  if (avatarUrl !== null) {
+    const trimmed = avatarUrl.trim()
+    if (!isOwnAvatarUrl(trimmed, user.id, SUPABASE_URL)) return { ok: false, error: 'invalid' }
+    value = trimmed
+  }
+
+  if (!isSupabaseServiceConfigured()) return { ok: false, error: 'unavailable' }
+  const service = getSupabaseService()
+  const { error } = await service.from('profiles').upsert({ user_id: user.id, avatar_url: value }, { onConflict: 'user_id' })
+  if (error) return { ok: false, error: 'failed' }
+
+  return { ok: true, data: value }
 }
 
 /**

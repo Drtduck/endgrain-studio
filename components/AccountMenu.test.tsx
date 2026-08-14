@@ -64,6 +64,17 @@ describe('AccountMenu', () => {
     expect(signOut.getAttribute('role')).toBe('menuitem')
   })
 
+  it('под аватаром лежат профиль и MCP: из шапки эти разделы убраны', async () => {
+    renderWith(USER)
+    fireEvent.click(screen.getByTestId('account-menu-trigger'))
+
+    const profile = await screen.findByTestId('account-menu-profile')
+    expect(profile.getAttribute('href')).toBe('/account')
+    const mcp = screen.getByTestId('account-menu-mcp')
+    expect(mcp.getAttribute('href')).toBe('/account/api')
+    expect(mcp.textContent).toContain('MCP')
+  })
+
   it('бесплатному аккаунту первым пунктом даёт апгрейд на тарифы', async () => {
     renderWith(USER, { status: FREE, billingEnabled: true })
     fireEvent.click(screen.getByTestId('account-menu-trigger'))

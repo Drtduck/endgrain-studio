@@ -8,6 +8,8 @@ export interface Profile {
   readonly displayName: string | null
   readonly bio: string | null
   readonly website: string | null
+  /** Загруженная картинка аватара; null - показываем инициал (миграция 20260814170000). */
+  readonly avatarUrl: string | null
   readonly notifyEmail: boolean
   readonly createdAt: string
 }
@@ -18,6 +20,7 @@ export interface PublicProfile {
   readonly displayName: string | null
   readonly bio: string | null
   readonly website: string | null
+  readonly avatarUrl: string | null
   readonly createdAt: string
 }
 

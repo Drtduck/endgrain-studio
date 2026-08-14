@@ -84,7 +84,7 @@ export default async function GalleryProjectPage(props: PageProps<'/gallery/[id]
                 {species.length > 0 ? <p className="text-[13px] text-ink-secondary">{species.join(', ')}</p> : null}
               </div>
 
-              <AuthorLine locale={locale} author={{ id: row.author_id, displayName: authorProfile?.displayName ?? null }} />
+              <AuthorLine locale={locale} author={{ id: row.author_id, displayName: authorProfile?.displayName ?? null, avatarUrl: authorProfile?.avatarUrl ?? null }} />
 
               <PriceBadge locale={locale} priceCents={row.price_cents} />
 

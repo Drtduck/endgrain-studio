@@ -7,6 +7,7 @@ import { listByAuthorPublic } from '@/lib/gallery/list'
 import { t } from '@/lib/i18n'
 import { getLandingLocale } from '@/lib/landing/locale'
 import { getProfile } from '@/lib/profile/read'
+import { getCurrentUser } from '@/lib/supabase/session'
 
 export async function generateMetadata(props: PageProps<'/u/[id]'>): Promise<Metadata> {
   const { id } = await props.params
@@ -20,12 +21,27 @@ export async function generateMetadata(props: PageProps<'/u/[id]'>): Promise<Met
  * (человек никогда не заходил в /account) - это не 404: у него ещё могут
  * быть публичные работы в галерее, авторство определяется published_projects,
  * а не наличием строки в profiles.
+ *
+ * Обратный случай - владелец, у которого нет ни строки в profiles, ни
+ * публикаций. Раньше он получал 404 по ссылке «Как меня видят» со своей же
+ * страницы /account, и это выглядело как сломанное приложение. Проверить
+ * существование auth.users анонимным клиентом нельзя (таблица закрыта), но
+ * этого и не требуется: если id совпадает с id текущей сессии, пользователь
+ * заведомо существует - показываем ему пустую витрину. Анониму, пришедшему
+ * по ссылке на несуществующего или совсем пустого автора, по-прежнему
+ * отдаётся 404: выдумывать страницу под произвольный uuid незачем.
  */
 export default async function PublicProfilePage(props: PageProps<'/u/[id]'>) {
   const { id } = await props.params
-  const [locale, profile, works] = await Promise.all([getLandingLocale(), getProfile(id), listByAuthorPublic(id)])
+  const [locale, profile, works, viewer] = await Promise.all([
+    getLandingLocale(),
+    getProfile(id),
+    listByAuthorPublic(id),
+    getCurrentUser(),
+  ])
 
-  if (profile === null && works.length === 0) notFound()
+  const isOwner = viewer?.id === id
+  if (profile === null && works.length === 0 && !isOwner) notFound()
 
   const label = profile?.displayName ?? t(locale, 'author.empty')
 
@@ -35,7 +51,7 @@ export default async function PublicProfilePage(props: PageProps<'/u/[id]'>) {
       <main className="px-4 py-10">
         <div className="mx-auto flex max-w-4xl flex-col gap-6">
           <div className="flex items-center gap-3">
-            <Avatar seed={id} label={label} size="lg" />
+            <Avatar seed={id} label={label} url={profile?.avatarUrl ?? null} size="lg" />
             <div className="flex flex-col gap-1">
               <h1 className="font-display text-2xl font-semibold text-ink" data-testid="public-profile-name">
                 {label}
