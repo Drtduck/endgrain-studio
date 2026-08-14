@@ -538,6 +538,7 @@ const en: Record<keyof typeof ru, string> = {
   'developer.period': 'per month, billed yearly',
   'developer.note': '$200 a year or $20 a month. Two months free.',
   'developer.cta': 'Get API access: from $16.67 a month',
+  'developer.checkoutHint': 'Switch to yearly on the next screen: two months free.',
   'developer.f.requests': '2000 API requests a day',
   'developer.f.keys': 'Up to 10 keys',
   'developer.f.mcp': 'MCP server',

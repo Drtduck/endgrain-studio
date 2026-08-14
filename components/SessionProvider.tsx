@@ -7,9 +7,16 @@ export interface SessionValue {
   readonly user: SessionUser | null
   /** false, когда переменные Supabase не заданы: весь UI аккаунта скрыт. */
   readonly enabled: boolean
+  /**
+   * profiles.avatar_url текущего пользователя для аватара в шапке. Живёт
+   * рядом с user, а не в SessionUser: SessionUser - узкий идентификатор из
+   * auth, а картинка приезжает из таблицы profiles. Поле необязательное,
+   * чтобы старые вызовы провайдера (тесты, сторибуки) не ломались.
+   */
+  readonly avatarUrl?: string | null
 }
 
-const SessionContext = createContext<SessionValue>({ user: null, enabled: false })
+const SessionContext = createContext<SessionValue>({ user: null, enabled: false, avatarUrl: null })
 
 export function SessionProvider({ value, children }: { value: SessionValue; children: ReactNode }) {
   return <SessionContext value={value}>{children}</SessionContext>

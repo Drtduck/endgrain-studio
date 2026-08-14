@@ -19,7 +19,7 @@ vi.mock('@/lib/stripe/config', () => ({
 }))
 
 vi.mock('@/lib/stripe/plans', () => ({
-  checkoutPriceFor: (product: string) => (product === 'api' ? 'price_api_yearly' : 'price_pro_yearly'),
+  checkoutPriceFor: (product: string) => (product === 'api' ? 'price_api_monthly' : 'price_pro_yearly'),
 }))
 
 const getSubscriptionStatus = vi.fn()
