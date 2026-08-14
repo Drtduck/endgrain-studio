@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { AppHeader } from '@/components/AppHeader'
 import { GalleryGrid } from '@/components/gallery/GalleryGrid'
 import { GalleryPager } from '@/components/gallery/GalleryPager'
 import { parseGalleryParams } from '@/lib/gallery/query'
@@ -38,7 +37,6 @@ export default async function GalleryPage(props: PageProps<'/gallery'>) {
 
   return (
     <div className="min-h-screen bg-app">
-      <AppHeader />
       <main className="px-4 py-10">
         <div className="mx-auto flex max-w-6xl flex-col gap-6">
           <div className="flex flex-col gap-1">

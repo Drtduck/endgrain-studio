@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { AppHeader } from '@/components/AppHeader'
 import { AuthorLine } from '@/components/gallery/AuthorLine'
 import { CopyToMyProjects } from '@/components/gallery/CopyToMyProjects'
 import { LikeButton } from '@/components/gallery/LikeButton'
@@ -55,7 +54,6 @@ export default async function GalleryProjectPage(props: PageProps<'/gallery/[id]
 
   return (
     <div className="min-h-screen bg-app">
-      <AppHeader />
       <main className="px-4 py-10">
         <div className="mx-auto flex max-w-4xl flex-col gap-6">
           <Link href="/gallery" data-testid="gallery-project-back" className="text-[13px] text-accent hover:underline">

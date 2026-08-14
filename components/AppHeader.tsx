@@ -7,12 +7,29 @@ import { LocaleToggle } from '@/components/LocaleToggle'
 import { useSession } from '@/components/SessionProvider'
 import { StudioTabs } from '@/components/StudioTabs'
 import { Separator } from '@/components/ui/separator'
-import { t } from '@/lib/i18n'
-import { SITE_ORIGIN } from '@/lib/routing/host'
+import { t, type MessageKey } from '@/lib/i18n'
+import { BLOG_PATH, SITE_ORIGIN } from '@/lib/routing/host'
 import { rememberLocale } from '@/lib/store/locale'
 import { useStudio } from '@/lib/store/studio'
 import type { UnitSystem } from '@/lib/units'
 import { cn } from '@/lib/utils'
+
+const NAV_LINK_CLASS =
+  'rounded-sm px-2 py-1.5 text-sm font-medium text-ink-secondary transition-colors duration-hover hover:bg-app hover:text-ink'
+
+/** Разделы приложения. Один список на все страницы, чтобы меню нигде не расходилось. */
+const NAV_LINKS: readonly {
+  readonly href: string
+  readonly labelKey: MessageKey
+  readonly testId: string
+  readonly authOnly?: boolean
+}[] = [
+  { href: '/', labelKey: 'appShell.nav.studio', testId: 'app-shell-nav-studio' },
+  { href: '/gallery', labelKey: 'appShell.nav.gallery', testId: 'app-shell-nav-gallery' },
+  { href: '/pricing', labelKey: 'pricing.navTitle', testId: 'app-shell-nav-pricing' },
+  { href: '/account', labelKey: 'account.profile', testId: 'studio-nav-account', authOnly: true },
+  { href: '/account/api', labelKey: 'apiKeys.navTitle', testId: 'app-shell-nav-api', authOnly: true },
+]
 
 /**
  * Единственная шапка приложения. Раньше она жила внутри StudioShell, поэтому
@@ -24,6 +41,7 @@ import { cn } from '@/lib/utils'
  * страницах они бы ничего не делали, поэтому включаются пропсами и по
  * умолчанию выключены. Логотип всегда ведёт на главную приложения.
  */
+
 export function AppHeader({
   tabs = false,
   units = false,
@@ -82,42 +100,24 @@ export function AppHeader({
         </div>
       ) : null}
 
-      {/* Разделы за пределами студии: блог живёт на домене лендинга, остальное рядом. */}
-      <a
-        href={`${SITE_ORIGIN}/blog`}
-        data-testid="app-blog-link"
-        className="hidden font-sans text-sm text-ink-secondary transition-colors duration-hover hover:text-ink sm:inline"
-      >
-        {t(locale, 'blog.navTitle')}
-      </a>
+      {/*
+        Один и тот же набор разделов на всех страницах приложения. Ключи API нужны
+        только вошедшему, остальное открыто. Блог живёт на домене лендинга, поэтому
+        он обычная ссылка, а не next/link.
+      */}
+      <nav aria-label={t(locale, 'appShell.nav.aria')} className="flex flex-wrap items-center gap-1">
+        {NAV_LINKS.map((link) =>
+          (link.authOnly && !(enabled && user)) || (tabs && link.href === '/') ? null : (
+            <Link key={link.testId} href={link.href} data-testid={link.testId} className={NAV_LINK_CLASS}>
+              {t(locale, link.labelKey)}
+            </Link>
+          ),
+        )}
 
-      <Link
-        href="/gallery"
-        data-testid="studio-nav-gallery"
-        className="rounded-sm px-2 py-1.5 text-sm font-medium text-ink-secondary transition-colors duration-hover hover:bg-app hover:text-ink"
-      >
-        {t(locale, 'appShell.nav.gallery')}
-      </Link>
-
-      {enabled && user ? (
-        <Link
-          href="/account"
-          data-testid="studio-nav-account"
-          className="rounded-sm px-2 py-1.5 text-sm font-medium text-ink-secondary transition-colors duration-hover hover:bg-app hover:text-ink"
-        >
-          {t(locale, 'account.profile')}
-        </Link>
-      ) : null}
-
-      {enabled && user ? (
-        <Link
-          href="/account/api"
-          data-testid="studio-nav-api"
-          className="rounded-sm px-2 py-1.5 text-sm font-medium text-ink-secondary transition-colors duration-hover hover:bg-app hover:text-ink"
-        >
-          {t(locale, 'apiKeys.navTitle')}
-        </Link>
-      ) : null}
+        <a href={`${SITE_ORIGIN}${BLOG_PATH}`} data-testid="app-blog-link" className={NAV_LINK_CLASS}>
+          {t(locale, 'blog.navTitle')}
+        </a>
+      </nav>
 
       <LocaleToggle
         locale={locale}

@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { AppHeader } from '@/components/AppHeader'
 import { TrackOnMount } from '@/components/analytics/TrackOnMount'
 import { CheckoutBanner } from '@/components/CheckoutBanner'
 import { PricingPlans } from '@/components/pricing/PricingPlans'
@@ -50,7 +49,6 @@ export default async function PricingPage(props: PageProps<'/pricing'>) {
 
   return (
     <div className="min-h-screen bg-app">
-      <AppHeader />
       <main className="px-4 py-10">
         <JsonLd data={pricingJsonLd()} />
         <TrackOnMount event="pricing_viewed" />
