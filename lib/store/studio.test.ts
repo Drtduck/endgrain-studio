@@ -212,9 +212,9 @@ describe('studio store: settings, selection, history', () => {
 })
 
 describe('вкладки студии', () => {
-  it('стартует в редакторе и переключается', () => {
+  it('стартует на главной и переключается', () => {
     const store = createStudioStore(baseDesign())
-    expect(store.getState().view).toBe('editor')
+    expect(store.getState().view).toBe('home')
     store.getState().setView('view3d')
     expect(store.getState().view).toBe('view3d')
   })
@@ -225,7 +225,7 @@ describe('вкладки студии', () => {
     store.getState().loadDesign(makeCheckerboard({ cols: 2, rows: 2 }))
     expect(store.getState().view).toBe('view3d')
     store.getState().resetStudio()
-    expect(store.getState().view).toBe('editor')
+    expect(store.getState().view).toBe('home')
   })
 })
 
@@ -236,9 +236,9 @@ describe('состояние вкладок генератора и фото', (
     expect(store.getState().photo).toBe(null)
   })
 
-  it('знает про пять вкладок', () => {
+  it('знает про вкладки студии', () => {
     const store = createStudioStore()
-    for (const view of ['editor', 'templates', 'generate', 'photo', 'view3d'] as const) {
+    for (const view of ['home', 'editor', 'templates', 'generate', 'photo', 'view3d'] as const) {
       store.getState().setView(view)
       expect(store.getState().view).toBe(view)
     }
@@ -274,7 +274,7 @@ describe('состояние вкладок генератора и фото', (
     store.getState().resetStudio()
     expect(store.getState().generator).toBe(null)
     expect(store.getState().photo).toBe(null)
-    expect(store.getState().view).toBe('editor')
+    expect(store.getState().view).toBe('home')
   })
 
   it('setPhoto(null) очищает картинку', () => {

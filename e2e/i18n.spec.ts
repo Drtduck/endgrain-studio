@@ -8,12 +8,12 @@ test.beforeEach(async ({ page }) => {
 const CYRILLIC = /[Ѐ-ӿ]/
 
 /** Вкладки студии, кроме тех, что требуют аккаунта или ключей: их содержимое всё равно пустое. */
-const TABS = ['editor', 'templates', 'generate', 'photo', 'view3d', 'books', 'promo'] as const
+const TABS = ['home', 'editor', 'templates', 'generate', 'photo', 'view3d', 'books', 'promo'] as const
 
 async function openStudio(page: Page, locale: 'ru' | 'en'): Promise<void> {
   await page.context().addCookies([{ name: 'eg-locale', value: locale, url: 'http://127.0.0.1:3100' }])
   await page.addInitScript(() => window.localStorage.clear())
-  await page.goto('/')
+  await page.goto('/?tab=editor')
   await expect(page.getByTestId('board-canvas')).toBeVisible()
 }
 

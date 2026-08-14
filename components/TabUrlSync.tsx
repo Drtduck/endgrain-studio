@@ -39,7 +39,7 @@ export function TabUrlSync() {
   useEffect(() => {
     if (!isStudioView(tabParam)) return
     // Вкладка облачных проектов существует только для вошедшего пользователя (см. StudioTabs):
-    // гостю с ?tab=projects откатываем на редактор ниже, во write-эффекте.
+    // гостю с ?tab=projects откатываем на главную ниже, во write-эффекте.
     if (tabParam === 'projects' && !(enabled && user)) return
     if (tabParam === useStudio.getState().view) return
     suppressWriteRef.current = true
@@ -55,12 +55,12 @@ export function TabUrlSync() {
     }
     if (pathname === null) return
     // Сессия слетела, пока была открыта вкладка проектов (например, вышли из
-    // аккаунта): откатываем и store, и URL на редактор.
+    // аккаунта): откатываем и store, и URL на главную.
     if (view === 'projects' && !(enabled && user)) {
-      setView('editor')
+      setView('home')
       return
     }
-    const desiredParam = view === 'editor' ? null : view
+    const desiredParam = view === 'home' ? null : view
     const currentParam = searchParams.get('tab')
     if (currentParam === desiredParam) return
     const params = new URLSearchParams(searchParams.toString())

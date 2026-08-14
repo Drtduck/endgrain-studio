@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
 async function openStudio(page: Page): Promise<void> {
   await page.addInitScript(() => window.localStorage.clear())
   await page.goto('/')
-  await expect(page.getByTestId('board-canvas')).toBeVisible()
+  await expect(page.getByTestId('home-view')).toBeVisible()
 }
 
 test('клик по вкладке пишет ?tab= в адресную строку', async ({ page }) => {
@@ -23,9 +23,13 @@ test('клик по вкладке пишет ?tab= в адресную стро
   await expect(page.getByTestId('view3d')).toBeVisible()
   await expect(page).toHaveURL(/[?&]tab=view3d(&|$)/)
 
-  // Редактор - вкладка по умолчанию, ?tab= в адресной строке для неё не нужен.
   await page.getByTestId('tab-editor').click()
   await expect(page.getByTestId('board-canvas')).toBeVisible()
+  await expect(page).toHaveURL(/[?&]tab=editor(&|$)/)
+
+  // Главная - вкладка по умолчанию, ?tab= в адресной строке для неё не нужен.
+  await page.getByTestId('tab-home').click()
+  await expect(page.getByTestId('home-view')).toBeVisible()
   await expect(page).not.toHaveURL(/tab=/)
 })
 
@@ -36,10 +40,10 @@ test('прямой заход по ссылке с ?tab= открывает ну
   await expect(page.getByTestId('tab-templates')).toHaveAttribute('aria-selected', 'true')
 })
 
-test('неизвестное значение ?tab= откатывает на редактор', async ({ page }) => {
+test('неизвестное значение ?tab= откатывает на главную', async ({ page }) => {
   await page.addInitScript(() => window.localStorage.clear())
   await page.goto('/?tab=nonsense')
-  await expect(page.getByTestId('board-canvas')).toBeVisible()
+  await expect(page.getByTestId('home-view')).toBeVisible()
   await expect(page).not.toHaveURL(/tab=/)
 })
 
@@ -49,12 +53,12 @@ test('кнопка «назад» восстанавливает вкладку 
   // проверяем через переход по прямым ссылкам - именно так появляются записи истории.
   await page.addInitScript(() => window.localStorage.clear())
   await page.goto('/')
-  await expect(page.getByTestId('board-canvas')).toBeVisible()
+  await expect(page.getByTestId('home-view')).toBeVisible()
 
   await page.goto('/?tab=templates')
   await expect(page.getByTestId('template-gallery')).toBeVisible()
 
   await page.goBack()
-  await expect(page.getByTestId('board-canvas')).toBeVisible()
+  await expect(page.getByTestId('home-view')).toBeVisible()
   await expect(page).not.toHaveURL(/tab=/)
 })

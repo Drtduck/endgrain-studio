@@ -18,6 +18,18 @@ describe('StudioShell', () => {
     // Сброс больше не трогает язык (это настройка человека), поэтому локаль ставим явно.
     useStudio.getState().setLocale('ru')
     useStudio.getState().setUnit('mm')
+    // Студия открывается на главной, а тесты ниже про рабочие панели: уводим в редактор явно.
+    useStudio.getState().setView('editor')
+  })
+
+  it('по умолчанию открывает главную, а не редактор', () => {
+    useStudio.getState().setView('home')
+    render(<StudioShell />)
+    expect(screen.getByTestId('home-view')).toBeDefined()
+    expect(screen.queryByTestId('board-canvas')).toBe(null)
+
+    fireEvent.click(screen.getByTestId('home-card-editor'))
+    expect(screen.getByTestId('board-canvas')).toBeDefined()
   })
 
   it('собирает холст, палитру, инспекторы, параметры, счётчик и проверки', () => {

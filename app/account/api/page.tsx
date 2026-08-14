@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { AppHeader } from '@/components/AppHeader'
 import { listApiKeysAction } from '@/app/actions/apiKeys'
 import { ApiKeysPanel } from '@/components/account/ApiKeysPanel'
 import { t } from '@/lib/i18n'
@@ -31,18 +31,18 @@ export default async function ApiKeysPage() {
   const keys = result.ok ? result.data : []
 
   return (
-    <main className="min-h-screen bg-app px-4 py-10">
-      <div className="mx-auto flex max-w-4xl flex-col gap-6">
-        <div className="flex flex-col gap-1">
-          <Link href="/" data-testid="api-keys-back" className="text-[13px] text-accent hover:underline">
-            {t(locale, 'app.title')}
-          </Link>
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-ink">{t(locale, 'apiKeys.title')}</h1>
-          <p className="max-w-[60ch] text-ink-secondary">{t(locale, 'apiKeys.subtitle')}</p>
-        </div>
+    <div className="min-h-screen bg-app">
+      <AppHeader />
+      <main className="px-4 py-10">
+        <div className="mx-auto flex max-w-4xl flex-col gap-6">
+          <div className="flex flex-col gap-1">
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-ink">{t(locale, 'apiKeys.title')}</h1>
+            <p className="max-w-[60ch] text-ink-secondary">{t(locale, 'apiKeys.subtitle')}</p>
+          </div>
 
-        <ApiKeysPanel locale={locale} initialKeys={keys} />
-      </div>
-    </main>
+          <ApiKeysPanel locale={locale} initialKeys={keys} />
+        </div>
+      </main>
+    </div>
   )
 }

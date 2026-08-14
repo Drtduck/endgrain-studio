@@ -812,6 +812,28 @@ const ru = {
   'consent.settings.toggleLabel': 'Разрешить обезличенную аналитику',
 
   'legal.updatedAt': 'Обновлено: {date}',
+
+  'tabs.home': 'Главная',
+  'home.greeting': 'С возвращением, {name}',
+  'home.greetingGuest': 'Здравствуйте',
+  'home.subtitle': 'Здесь собирают узор торцевой доски и считают распил, материал и себестоимость.',
+  'home.sections': 'Разделы',
+  'home.card.editor.title': 'Редактор',
+  'home.card.editor.body': 'Собираете узор из полос и рядов: ширина, порода, толщина. Рядом габарит доски и проверки изготовимости.',
+  'home.card.templates.title': 'Шаблоны',
+  'home.card.templates.body': 'Готовые узоры вроде шахматки и кирпича. Берёте за основу и правите под свой размер.',
+  'home.card.generate.title': 'Генератор',
+  'home.card.generate.body': 'Крутите варианты узора и забираете понравившийся в редактор.',
+  'home.card.photo.title': 'Фото',
+  'home.card.photo.body': 'Загружаете картинку, она раскладывается на полосы и породы. Из фотографии выходит рабочая схема.',
+  'home.card.view3d.title': 'Доска в 3D',
+  'home.card.view3d.body': 'Крутите доску до распила: видно, как узор ляжет на торце и по бокам.',
+  'home.card.books.title': 'Литература',
+  'home.card.books.body': 'Книги и разборы по торцевым доскам: что почитать перед первой склейкой.',
+  'home.card.promo.title': 'Промо',
+  'home.card.promo.body': 'Материалы для продажи доски: снимки узора и макеты под печать.',
+  'home.card.projects.title': 'Мои проекты',
+  'home.card.projects.body': 'Сохранённые доски: открыть, продолжить, снять копию.',
 } as const
 
 export default ru

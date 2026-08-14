@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { useStudio, type StudioView } from '@/lib/store/studio'
 
 const TABS: readonly { readonly view: StudioView; readonly labelKey: MessageKey }[] = [
+  { view: 'home', labelKey: 'tabs.home' },
   { view: 'editor', labelKey: 'tabs.editor' },
   { view: 'templates', labelKey: 'tabs.templates' },
   { view: 'generate', labelKey: 'tabs.generate' },

@@ -230,7 +230,7 @@ test('форма подписки требует согласие и валид�
 
 test('студия на корне не изменилась', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByTestId('board-canvas')).toBeVisible()
+  await expect(page.getByTestId('home-view')).toBeVisible()
   await expect(page.getByTestId('landing')).toHaveCount(0)
 })
 
@@ -275,4 +275,14 @@ test('ленты едут в разные стороны', async ({ page }) => {
 test('клик по узору ведёт в студию', async ({ page }) => {
   await openLanding(page)
   await expect(page.getByTestId('landing-pattern-checkerboard-classic')).toHaveAttribute('href', /app\.endgrain\.app/)
+})
+
+test('логотип в шапке лендинга ведёт на главную', async ({ page }) => {
+  await openLanding(page)
+  const home = page.getByTestId('landing-home')
+  await expect(home).toHaveAttribute('href', '/')
+  await page.goto('/landing#shots')
+  await home.click()
+  await expect(page).toHaveURL(/\/(landing)?$/)
+  await expect(page.getByTestId('landing')).toBeVisible()
 })
