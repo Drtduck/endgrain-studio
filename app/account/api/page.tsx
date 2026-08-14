@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { AppHeader } from '@/components/AppHeader'
 import { listApiKeysAction } from '@/app/actions/apiKeys'
 import { ApiKeysPanel } from '@/components/account/ApiKeysPanel'
 import { t } from '@/lib/i18n'
@@ -32,7 +31,6 @@ export default async function ApiKeysPage() {
 
   return (
     <div className="min-h-screen bg-app">
-      <AppHeader />
       <main className="px-4 py-10">
         <div className="mx-auto flex max-w-4xl flex-col gap-6">
           <div className="flex flex-col gap-1">
