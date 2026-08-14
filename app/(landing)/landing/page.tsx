@@ -22,7 +22,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const description = t(locale, 'landing.hero.subtitle')
   return {
     metadataBase: new URL(siteUrl('/')),
-    ...pageMetadata({ title, description, canonical: siteUrl('/'), locale }),
+    // canonical без слеша: так его реально отдаёт Next.js Metadata API для
+    // корня, JSON-LD и sitemap приведены к тому же виду.
+    ...pageMetadata({ title, description, canonical: siteUrl(), locale }),
     title: { absolute: title },
   }
 }

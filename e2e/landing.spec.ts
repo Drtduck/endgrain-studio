@@ -30,13 +30,13 @@ test('витрина показывает фото досок', async ({ page })
   const grid = page.getByTestId('landing-pattern-marquee')
   await expect(grid).toBeVisible()
   const shots = grid.locator('img')
-  // 16 шаблонов, каждый отрисован дважды ради бесшовной петли ленты.
-  await expect(shots).toHaveCount(32)
+  // 20 шаблонов, каждый отрисован дважды ради бесшовной петли ленты.
+  await expect(shots).toHaveCount(40)
 
   // Оригиналы несут осмысленный alt, клоны петли идут пустым alt и скрыты от читалки:
-  // ровно 16 картинок с подписью и ровно 16 aria-hidden, иначе лента озвучится дважды.
-  await expect(grid.locator('img[alt]:not([alt=""])')).toHaveCount(16)
-  await expect(grid.locator('img[alt=""]')).toHaveCount(16)
+  // ровно 20 картинок с подписью и ровно 20 aria-hidden, иначе лента озвучится дважды.
+  await expect(grid.locator('img[alt]:not([alt=""])')).toHaveCount(20)
+  await expect(grid.locator('img[alt=""]')).toHaveCount(20)
   const first = shots.first()
   await expect(first).toHaveAttribute('alt', /.{10,}/)
 

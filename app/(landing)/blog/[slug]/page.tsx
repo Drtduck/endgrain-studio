@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PostHeader } from '@/components/blog/PostHeader'
 import { JsonLd } from '@/components/seo/JsonLd'
-import { allPosts, postBySlug } from '@/lib/blog/posts'
+import { allPosts, postBySlug, translationOf } from '@/lib/blog/posts'
 import { t } from '@/lib/i18n'
 import { getLandingLocale } from '@/lib/landing/locale'
 import { postJsonLd } from '@/lib/seo/jsonld'
@@ -24,6 +24,7 @@ export async function generateMetadata(props: PageProps<'/blog/[slug]'>): Promis
   const { slug } = await props.params
   const post = postBySlug(slug)
   if (!post) return {}
+  const translation = translationOf(post)
   return pageMetadata({
     title: post.title,
     description: post.description,
@@ -31,7 +32,20 @@ export async function generateMetadata(props: PageProps<'/blog/[slug]'>): Promis
     locale: post.lang,
     type: 'article',
     image: siteUrl(post.cover),
-    alternates: { types: { 'application/rss+xml': siteUrl('/blog/rss.xml') } },
+    alternates: {
+      types: { 'application/rss+xml': siteUrl('/blog/rss.xml') },
+      // Пара языков связана hreflang в обе стороны: у каждой статьи из пары
+      // languages указывает и на себя, и на перевод, иначе Google считает
+      // связку неполной и игнорирует её.
+      ...(translation
+        ? {
+            languages: {
+              [post.lang]: siteUrl(`/blog/${post.slug}`),
+              [translation.lang]: siteUrl(`/blog/${translation.slug}`),
+            },
+          }
+        : {}),
+    },
   })
 }
 
@@ -41,6 +55,7 @@ export default async function BlogPostPage(props: PageProps<'/blog/[slug]'>) {
   if (!post) notFound()
 
   const locale = await getLandingLocale()
+  const translation = translationOf(post)
   const { default: PostBody } = await import(`@/content/blog/${slug}.mdx`)
 
   return (
@@ -69,6 +84,18 @@ export default async function BlogPostPage(props: PageProps<'/blog/[slug]'>) {
       {/* lang явно на <article>: <html lang> определяется кукой и может не совпадать с языком статьи. */}
       <article lang={post.lang} className="mx-auto w-full max-w-2xl">
         <PostHeader post={post} locale={locale} />
+        {translation ? (
+          <p className="mt-3">
+            <Link
+              href={`/blog/${translation.slug}`}
+              hrefLang={translation.lang}
+              data-testid="blog-translation-link"
+              className="inline-flex items-center gap-1.5 font-sans text-sm font-medium text-accent hover:text-accent-hover"
+            >
+              {t(locale, translation.lang === 'en' ? 'blog.translation.readEn' : 'blog.translation.readRu')}
+            </Link>
+          </p>
+        ) : null}
         <PostBody />
       </article>
     </main>

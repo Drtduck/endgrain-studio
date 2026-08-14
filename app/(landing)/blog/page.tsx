@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { PostCard } from '@/components/blog/PostCard'
 import { JsonLd } from '@/components/seo/JsonLd'
-import { allPosts } from '@/lib/blog/posts'
+import { feedPosts } from '@/lib/blog/posts'
 import { t } from '@/lib/i18n'
 import { getLandingLocale } from '@/lib/landing/locale'
 import { blogJsonLd } from '@/lib/seo/jsonld'
@@ -14,13 +14,17 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t(locale, 'blog.feed.description'),
     canonical: siteUrl('/blog'),
     locale,
+    // Явная картинка: без неё OG/twitter карточка ленты блога уходила пустой -
+    // openGraph-объект с явными полями подавляет автоподхват файловой
+    // конвенции opengraph-image, поэтому картинку нужно указывать самим.
+    image: siteUrl('/opengraph-image.png'),
     alternates: { types: { 'application/rss+xml': siteUrl('/blog/rss.xml') } },
   })
 }
 
 export default async function BlogFeedPage() {
   const locale = await getLandingLocale()
-  const posts = allPosts()
+  const posts = feedPosts(locale)
 
   return (
     <main className="flex flex-col gap-8 px-6 py-12" data-testid="blog-feed">

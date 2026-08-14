@@ -97,7 +97,7 @@ describe('PanelInspector', () => {
     expect(screen.getByTestId('strip-A-1').className).not.toContain('border-accent-border')
   })
 
-  it('показывает вложенный срез только для чтения', () => {
+  it('вложенный срез не показывает поля обычной полосы, но подписан текстом', () => {
     useStudio.getState().resetStudio(
       baseDesign({
         panels: [
@@ -110,5 +110,66 @@ describe('PanelInspector', () => {
     render(<PanelInspector />)
     expect(screen.getByTestId('strip-B-0').textContent).toContain('Срез панели A')
     expect(screen.queryByTestId('strip-B-0-width')).toBe(null)
+    expect(screen.queryByTestId('strip-B-0-species')).toBe(null)
+  })
+
+  it('поле угла среза видно только на SliceRef, а не на обычной полосе', () => {
+    useStudio.getState().resetStudio(
+      baseDesign({
+        panels: [
+          { id: 'A', elements: [{ kind: 'strip', speciesId: 'maple', widthMm: 25 }] },
+          { id: 'B', elements: [{ kind: 'sliceRef', panelId: 'A', thicknessMm: 12, angleDeg: 30, offsetMm: 0 }] },
+        ],
+        rows: [{ id: 'r1', panelId: 'B', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+      }),
+    )
+    render(<PanelInspector />)
+    expect(screen.queryByTestId('strip-A-0-angle')).toBe(null)
+    const angleInput = screen.getByTestId('strip-B-0-angle') as HTMLInputElement
+    expect(angleInput.value).toBe('30')
+  })
+
+  it('правка угла среза в инспекторе доезжает до документа', () => {
+    useStudio.getState().resetStudio(
+      baseDesign({
+        panels: [
+          { id: 'A', elements: [{ kind: 'strip', speciesId: 'maple', widthMm: 25 }] },
+          { id: 'B', elements: [{ kind: 'sliceRef', panelId: 'A', thicknessMm: 12, angleDeg: 0, offsetMm: 0 }] },
+        ],
+        rows: [{ id: 'r1', panelId: 'B', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+      }),
+    )
+    render(<PanelInspector />)
+    const panelB = () => useStudio.getState().history.present.panels.find((p) => p.id === 'B')
+    const angleInput = screen.getByTestId('strip-B-0-angle') as HTMLInputElement
+    fireEvent.change(angleInput, { target: { value: '25' } })
+    fireEvent.blur(angleInput)
+    expect(panelB()?.elements[0]).toMatchObject({ angleDeg: 25 })
+
+    fireEvent.click(screen.getByTestId('strip-B-0-flip'))
+    expect(panelB()?.elements[0]).toMatchObject({ flip: true })
+
+    const offsetInput = screen.getByTestId('strip-B-0-offset') as HTMLInputElement
+    fireEvent.change(offsetInput, { target: { value: '15' } })
+    fireEvent.blur(offsetInput)
+    expect(panelB()?.elements[0]).toMatchObject({ offsetMm: 15 })
+  })
+
+  it('угол среза зажимается в MAX_SLICE_ANGLE_DEG', () => {
+    useStudio.getState().resetStudio(
+      baseDesign({
+        panels: [
+          { id: 'A', elements: [{ kind: 'strip', speciesId: 'maple', widthMm: 25 }] },
+          { id: 'B', elements: [{ kind: 'sliceRef', panelId: 'A', thicknessMm: 12, angleDeg: 0, offsetMm: 0 }] },
+        ],
+        rows: [{ id: 'r1', panelId: 'B', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+      }),
+    )
+    render(<PanelInspector />)
+    const panelB = () => useStudio.getState().history.present.panels.find((p) => p.id === 'B')
+    const angleInput = screen.getByTestId('strip-B-0-angle') as HTMLInputElement
+    fireEvent.change(angleInput, { target: { value: '90' } })
+    fireEvent.blur(angleInput)
+    expect(panelB()?.elements[0]).toMatchObject({ angleDeg: 60 })
   })
 })

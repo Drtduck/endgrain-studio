@@ -20,6 +20,7 @@
     "shots": "SHOTS=1 playwright test e2e/shots.spec.ts",
     "brand:icons": "node scripts/brand-icons.mjs",
     "blog:covers": "node scripts/blog-covers.mjs",
+    "blog:images": "node scripts/blog-images.mjs",
     "newsletter": "node scripts/newsletter.ts"
   },
   "dependencies": {

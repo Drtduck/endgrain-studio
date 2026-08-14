@@ -4,7 +4,7 @@ import { FAMILIES, familyById, toDesign } from './families'
 import { FAMILY_IDS, randomGenome } from './genome'
 
 describe('FAMILIES', () => {
-  it('перечисляет ровно восемь семейств из FAMILY_IDS', () => {
+  it('перечисляет все семейства из FAMILY_IDS', () => {
     expect(FAMILIES.map((f) => f.id).sort()).toEqual([...FAMILY_IDS].sort())
   })
 

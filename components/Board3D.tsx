@@ -4,6 +4,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, type ElementRef, type RefO
 import { Canvas, useThree } from '@react-three/fiber'
 import { ContactShadows, OrbitControls } from '@react-three/drei'
 import {
+  BufferAttribute,
+  BufferGeometry as ThreeBufferGeometry,
   Color,
   InstancedBufferAttribute,
   Matrix4,
@@ -15,7 +17,7 @@ import {
 } from 'three'
 import type { BoardModel } from '@/lib/engine'
 import { jitteredHex } from '@/lib/render3d/color'
-import { buildInstances, cameraDistance, type SpeciesGroup } from '@/lib/render3d/instances'
+import { buildInstances, cameraDistance, type MergedSpeciesGroup, type SpeciesGroup } from '@/lib/render3d/instances'
 
 const NO_ROTATION = new Quaternion()
 
@@ -74,6 +76,40 @@ function SpeciesInstances({ group }: { group: SpeciesGroup }) {
 }
 
 /**
+ * Одна порода = одна слитая геометрия (угловой узор). Позиции и нормали уже посчитаны в
+ * `buildInstances`, здесь только цвет: `jitter` на вершину плюс порода превращаются в
+ * вершинный цвет, тот же трюк, что и `instanceColor` у боксов, только на уровне вершин.
+ */
+function SpeciesMergedMesh({ group }: { group: MergedSpeciesGroup }) {
+  const geometry = useMemo(() => {
+    const geo = new ThreeBufferGeometry()
+    geo.setAttribute('position', new BufferAttribute(group.positions, 3))
+    geo.setAttribute('normal', new BufferAttribute(group.normals, 3))
+    const color = new Color()
+    const vertexCount = group.positions.length / 3
+    const colors = new Float32Array(vertexCount * 3)
+    for (let i = 0; i < vertexCount; i += 1) {
+      color.set(jitteredHex(group.hex, group.jitters[i] ?? 0))
+      colors[i * 3] = color.r
+      colors[i * 3 + 1] = color.g
+      colors[i * 3 + 2] = color.b
+    }
+    geo.setAttribute('color', new BufferAttribute(colors, 3))
+    return geo
+  }, [group])
+
+  // Геометрия пересоздаётся на каждую смену group (useMemo выше), а Three.js не освобождает
+  // GPU-буферы сам - без явного dispose() при каждой смене узора накапливается утечка видеопамяти.
+  useEffect(() => () => geometry.dispose(), [geometry])
+
+  return (
+    <mesh geometry={geometry} castShadow receiveShadow>
+      <meshStandardMaterial roughness={0.72} metalness={0.02} vertexColors />
+    </mesh>
+  )
+}
+
+/**
  * Camera prop у <Canvas> применяется только при монтировании (R3F так устроен), поэтому смена
  * размера доски без пересоздания сцены оставляла камеру на старом расстоянии. Этот компонент
  * живёт внутри Canvas и явно переносит камеру и цель контролов при каждом изменении cameraDistance.
@@ -124,10 +160,14 @@ export function Board3D({ model, label }: { model: BoardModel; label: string }) 
         castShadow
         shadow-mapSize={[1024, 1024]}
       />
-      {instances.groups.map((group) => (
-        // Число инстансов - аргумент конструктора, поэтому смена размера доски пересоздаёт меш.
-        <SpeciesInstances key={`${group.speciesId}:${group.items.length}`} group={group} />
-      ))}
+      {instances.kind === 'instanced'
+        ? instances.groups.map((group) => (
+            // Число инстансов - аргумент конструктора, поэтому смена размера доски пересоздаёт меш.
+            <SpeciesInstances key={`${group.speciesId}:${group.items.length}`} group={group} />
+          ))
+        : instances.groups.map((group) => (
+            <SpeciesMergedMesh key={`${group.speciesId}:${group.cellCount}`} group={group} />
+          ))}
       <ContactShadows position={[0, -0.002, 0]} opacity={0.42} scale={shadowScale} blur={2.2} far={1.5} />
       <OrbitControls
         ref={controlsRef}

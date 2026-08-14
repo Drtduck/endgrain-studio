@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { baseDesign, validate } from '@/lib/engine'
+import { baseDesign, isSliceRef, validate, type Design } from '@/lib/engine'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import { seedPopulation } from '@/lib/generators'
 import { FAMILY_IDS } from '@/lib/generators/genome'
@@ -287,5 +287,91 @@ describe('состояние вкладок генератора и фото', (
     })
     store.getState().setPhoto(null)
     expect(store.getState().photo).toBe(null)
+  })
+})
+
+/**
+ * Панель MAIN из 4 колонок SliceRef на INNER: та же раскладка, что и chevronMain
+ * (lib/designs/templates.ts) - толщина 70 мм, угол чередуется 45/-45/45/-45, offsetMm по
+ * канонической сцепке base_{k+1} = base_k + t_k * tan(phi_k) при base_0 = 0.
+ */
+function chevronLikeDesign(): Design {
+  const angles = [45, -45, 45, -45]
+  const elements: Array<{ kind: 'sliceRef'; panelId: string; thicknessMm: number; angleDeg: number; offsetMm: number }> = []
+  let base = 0
+  for (const angleDeg of angles) {
+    elements.push({ kind: 'sliceRef', panelId: 'INNER', thicknessMm: 70, angleDeg, offsetMm: base })
+    base += 70 * Math.tan((angleDeg * Math.PI) / 180)
+  }
+  return baseDesign({
+    panels: [
+      { id: 'INNER', elements: [{ kind: 'strip', speciesId: 'walnut', widthMm: 250 }] },
+      { id: 'MAIN', elements },
+    ],
+    rows: [{ id: 'r1', panelId: 'MAIN', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+  })
+}
+
+describe('setSliceAngle: пересчёт offsetMm хвоста цепочки', () => {
+  it('смена угла колонки 0 пересчитывает offsetMm колонок 1-3 по правилу сцепки, колонку 0 не трогает', () => {
+    const store = createStudioStore(chevronLikeDesign())
+    store.getState().setSliceAngle('MAIN', 0, 30)
+
+    const main = selectDesign(store.getState()).panels.find((p) => p.id === 'MAIN')!
+    const refs = main.elements.filter(isSliceRef)
+    expect(refs).toHaveLength(4)
+
+    const rad30 = (30 * Math.PI) / 180
+    const rad45 = (45 * Math.PI) / 180
+    expect(refs[0]!.angleDeg).toBe(30)
+    expect(refs[0]!.offsetMm).toBe(0) // офсет самой изменённой колонки не пересчитывается
+
+    const expected1 = 0 + 70 * Math.tan(rad30)
+    const expected2 = expected1 + 70 * Math.tan(-rad45) // колонка 1 сохранила свой угол -45
+    const expected3 = expected2 + 70 * Math.tan(rad45) // колонка 2 сохранила свой угол 45
+    expect(refs[1]!.offsetMm).toBeCloseTo(expected1, 9)
+    expect(refs[2]!.offsetMm).toBeCloseTo(expected2, 9)
+    expect(refs[3]!.offsetMm).toBeCloseTo(expected3, 9)
+    // Углы соседей не меняются - меняется только offsetMm хвоста.
+    expect(refs[1]!.angleDeg).toBe(-45)
+    expect(refs[2]!.angleDeg).toBe(45)
+    expect(refs[3]!.angleDeg).toBe(-45)
+  })
+
+  it('смена угла средней колонки не трогает offsetMm колонок ДО неё', () => {
+    const store = createStudioStore(chevronLikeDesign())
+    const before = selectDesign(store.getState())
+      .panels.find((p) => p.id === 'MAIN')!
+      .elements.filter(isSliceRef)
+      .map((r) => r.offsetMm)
+
+    store.getState().setSliceAngle('MAIN', 2, 10)
+
+    const after = selectDesign(store.getState())
+      .panels.find((p) => p.id === 'MAIN')!
+      .elements.filter(isSliceRef)
+    expect(after[0]!.offsetMm).toBe(before[0])
+    expect(after[1]!.offsetMm).toBe(before[1])
+    expect(after[2]!.angleDeg).toBe(10)
+    expect(after[2]!.offsetMm).toBe(before[2]) // офсет изменённой колонки не пересчитывается
+
+    const rad10 = (10 * Math.PI) / 180
+    const radMinus45 = (-45 * Math.PI) / 180
+    const expected3 = before[2]! + 70 * Math.tan(rad10)
+    expect(after[3]!.offsetMm).toBeCloseTo(expected3, 9)
+    expect(after[3]!.angleDeg).toBe(-45)
+    void radMinus45
+  })
+
+  it('записывает один шаг истории (undo откатывает всю цепочку разом)', () => {
+    const store = createStudioStore(chevronLikeDesign())
+    expect(selectCanUndo(store.getState())).toBe(false)
+    store.getState().setSliceAngle('MAIN', 0, 30)
+    expect(selectCanUndo(store.getState())).toBe(true)
+    store.getState().undo()
+    const main = selectDesign(store.getState()).panels.find((p) => p.id === 'MAIN')!
+    const refs = main.elements.filter(isSliceRef)
+    expect(refs[0]!.angleDeg).toBe(45)
+    expect(refs[1]!.offsetMm).toBeCloseTo(70, 9)
   })
 })

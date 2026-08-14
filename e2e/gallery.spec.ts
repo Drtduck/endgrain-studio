@@ -14,6 +14,14 @@ test('галерея открывается анонимом без редире
   await expect(page).toHaveURL(/\/gallery/)
 })
 
+test('на /gallery есть общая шапка и подвал app-домена (AppShell)', async ({ page }) => {
+  await page.goto('/gallery')
+  await expect(page.getByTestId('app-shell-header')).toBeVisible()
+  await expect(page.getByTestId('app-shell-footer')).toBeVisible()
+  await expect(page.getByTestId('app-shell-nav-gallery')).toBeVisible()
+  await expect(page.getByTestId('app-shell-nav-api')).toBeVisible()
+})
+
 test('без Supabase галерея честно показывает пустое состояние', async ({ page }) => {
   await page.goto('/gallery')
   await expect(page.getByTestId('gallery-empty')).toBeVisible()

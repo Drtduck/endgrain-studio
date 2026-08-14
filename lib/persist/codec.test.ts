@@ -6,6 +6,7 @@ import {
   decodeDesignFromHash,
   deserializeDesign,
   encodeDesignToHash,
+  fromCompact,
   loadFromLocalStorage,
   saveToLocalStorage,
   serializeDesign,
@@ -15,7 +16,7 @@ import {
 const nested: Design = baseDesign({
   panels: [
     stripsPanel('Q', ['walnut', 'maple'], 12),
-    { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 24, angleDeg: 0, offsetMm: 6 }] },
+    { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 24, angleDeg: 0, offsetMm: 6, flip: false }] },
   ],
   rows: [{ id: 'r1', panelId: 'P', thicknessMm: 30, angleDeg: 0, flip: true, mirror: false, trimMm: 5 }],
 })
@@ -56,9 +57,44 @@ describe('codec', () => {
     expect(c['s']).toEqual(['walnut', 'maple'])
     expect(c['p']).toEqual([
       ['Q', [0, 0, 12], [0, 1, 12]],
-      ['P', [1, 0, 24, 0, 6]],
+      ['P', [1, 0, 24, 0, 6, 0]],
     ])
     expect(c['r']).toEqual([['r1', 1, 30, 0, 1, 5]])
+  })
+
+  it('переживает круговой рейс документ с углом и флипом среза', () => {
+    const angled: Design = baseDesign({
+      panels: [
+        stripsPanel('Q', ['walnut', 'maple'], 12),
+        { id: 'P', elements: [{ kind: 'sliceRef', panelId: 'Q', thicknessMm: 24, angleDeg: 32.5, offsetMm: 6, flip: true }] },
+      ],
+      rows: [{ id: 'r1', panelId: 'P', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+    })
+    expect(deserializeDesign(serializeDesign(angled))).toEqual(angled)
+    expect(decodeDesignFromHash(encodeDesignToHash(angled))).toEqual(angled)
+  })
+
+  it('компактный массив SliceRef из пяти элементов (без флипа) читается как flip: false', () => {
+    // Так выглядела ссылка/localStorage, сохранённые до появления углов: шестого элемента нет.
+    const legacyCompact = {
+      v: CURRENT_SCHEMA_VERSION,
+      i: 'fixture',
+      n: '',
+      nk: 'design.default',
+      s: ['walnut', 'maple'],
+      p: [
+        ['Q', [0, 0, 12], [0, 1, 12]],
+        ['P', [1, 0, 24, 0, 6]],
+      ],
+      r: [['r1', 1, 30, 0, 1, 5]],
+      b: [50, 60, 40],
+      k: 3,
+      a: 3,
+      w: 330,
+    }
+    const design = fromCompact(legacyCompact)
+    const sliceRef = design.panels[1]!.elements[0]
+    expect(sliceRef).toMatchObject({ kind: 'sliceRef', flip: false })
   })
 
   it('keeps a typical share link under 2 kilobytes', () => {
@@ -99,6 +135,14 @@ describe('migrations', () => {
     expect(migrated['schemaVersion']).toBe(CURRENT_SCHEMA_VERSION)
     expect(migrated['planerWidthMm']).toBe(330)
     expect(() => parseDesign(legacy)).not.toThrow()
+  })
+
+  it('поднимает документ v2 до v3, не меняя смысл проекта', () => {
+    // Настоящий документ v2, сохранённый до появления углов, версии schemaVersion=2.
+    const v2Doc = { ...baseDesign(), schemaVersion: 2 }
+    const migrated = parseDesign(v2Doc)
+    expect(migrated.schemaVersion).toBe(3)
+    expect(migrated).toEqual(baseDesign())
   })
 })
 

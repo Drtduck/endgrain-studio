@@ -10,7 +10,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const blogLastModified = posts[0] ? (posts[0].updated ?? posts[0].date) : undefined
 
   return [
-    { url: `${SITE_ORIGIN}/`, priority: 1.0, changeFrequency: 'weekly' },
+    // Без слеша на конце: Next.js Metadata API сам отдаёт canonical и og:url
+    // корня без слеша (см. lib/seo/jsonld.ts), sitemap должен совпадать с тем,
+    // что реально видит краулер, иначе три источника расходятся на один символ.
+    { url: SITE_ORIGIN, priority: 1.0, changeFrequency: 'weekly' },
     {
       url: `${SITE_ORIGIN}/blog`,
       priority: 0.7,

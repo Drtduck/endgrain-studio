@@ -1,4 +1,4 @@
-import type { Design, Panel, Row, SpeciesId } from '@/lib/engine'
+import { SCHEMA_VERSION, type Design, type Panel, type Row, type SpeciesId } from '@/lib/engine'
 import { DEFAULT_NAME_KEY } from './name'
 
 export interface CheckerboardOptions {
@@ -34,7 +34,7 @@ export function makeCheckerboard(opts: CheckerboardOptions = {}): Design {
   }))
 
   return {
-    schemaVersion: 2,
+    schemaVersion: SCHEMA_VERSION,
     id: 'sample-checkerboard',
     name: '',
     nameKey: DEFAULT_NAME_KEY,

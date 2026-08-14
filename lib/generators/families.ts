@@ -2,6 +2,7 @@ import type { Design } from '@/lib/engine'
 import { makeGridDesign } from '@/lib/designs/grid'
 import type { MessageKey } from '@/lib/i18n'
 import type { CellFn } from './cells'
+import { chevronDesign, diamondDesign, tumblingDesign } from './angled'
 import { FAMILY_IDS, genomeKey, type FamilyId, type Genome } from './genome'
 import { inlayDesign } from './inlay'
 import { brickCells, gradientCells, stripesCells } from './parametric'
@@ -48,6 +49,9 @@ export const FAMILIES: readonly GeneratorFamily[] = [
   gridFamily('gradient', gradientCells),
   gridFamily('chaos', chaosCells),
   { id: 'inlay', nameKey: 'gen.family.inlay' as MessageKey, build: inlayDesign },
+  { id: 'chevron', nameKey: 'gen.family.chevron' as MessageKey, build: chevronDesign },
+  { id: 'diamond', nameKey: 'gen.family.diamond' as MessageKey, build: diamondDesign },
+  { id: 'tumbling', nameKey: 'gen.family.tumbling' as MessageKey, build: tumblingDesign },
 ]
 
 export function familyById(id: FamilyId): GeneratorFamily {

@@ -4,9 +4,11 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { AccountMenu } from '@/components/AccountMenu'
 import { LocaleToggle } from '@/components/LocaleToggle'
+import { useSession } from '@/components/SessionProvider'
 import { StudioTabs } from '@/components/StudioTabs'
 import { Separator } from '@/components/ui/separator'
 import { t } from '@/lib/i18n'
+import { SITE_ORIGIN } from '@/lib/routing/host'
 import { rememberLocale } from '@/lib/store/locale'
 import { useStudio } from '@/lib/store/studio'
 import type { UnitSystem } from '@/lib/units'
@@ -36,6 +38,7 @@ export function AppHeader({
   const unit = useStudio((s) => s.unit)
   const setUnit = useStudio((s) => s.setUnit)
   const setLocale = useStudio((s) => s.setLocale)
+  const { user, enabled } = useSession()
 
   return (
     <header
@@ -77,6 +80,33 @@ export function AppHeader({
             </button>
           ))}
         </div>
+      ) : null}
+
+      {/* Разделы за пределами студии: блог живёт на домене лендинга, остальное рядом. */}
+      <a
+        href={`${SITE_ORIGIN}/blog`}
+        data-testid="app-blog-link"
+        className="hidden font-sans text-sm text-ink-secondary transition-colors duration-hover hover:text-ink sm:inline"
+      >
+        {t(locale, 'blog.navTitle')}
+      </a>
+
+      <Link
+        href="/gallery"
+        data-testid="studio-nav-gallery"
+        className="rounded-sm px-2 py-1.5 text-sm font-medium text-ink-secondary transition-colors duration-hover hover:bg-app hover:text-ink"
+      >
+        {t(locale, 'appShell.nav.gallery')}
+      </Link>
+
+      {enabled && user ? (
+        <Link
+          href="/account/api"
+          data-testid="studio-nav-api"
+          className="rounded-sm px-2 py-1.5 text-sm font-medium text-ink-secondary transition-colors duration-hover hover:bg-app hover:text-ink"
+        >
+          {t(locale, 'apiKeys.navTitle')}
+        </Link>
       ) : null}
 
       <LocaleToggle

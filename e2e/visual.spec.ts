@@ -75,6 +75,28 @@ for (const { tab, marker } of TABS) {
   })
 }
 
+test('визуальный кадр углового шаблона (шеврон)', async ({ page }) => {
+  await openStudio(page)
+  await page.getByTestId('tab-templates').click()
+  await expect(page.getByTestId('template-gallery')).toBeVisible()
+  await page.getByTestId('template-chevron-classic').click()
+  await expect(page.getByTestId('board-canvas')).toBeVisible()
+  // Угловая ячейка рисуется полигоном - кадр ловит регресс, если превью тихо откатится
+  // на прямоугольники (см. components/BoardSvg.tsx).
+  await expect(page.locator('[data-testid="board-canvas"] polygon[data-cell]').first()).toBeVisible()
+
+  await page.evaluate(() => document.fonts.ready)
+  await page.setViewportSize(DESKTOP)
+  const scroll = await page.evaluate(() => ({
+    width: document.documentElement.scrollWidth,
+    height: document.documentElement.scrollHeight,
+  }))
+  await page.screenshot({
+    path: 'test-results/visual/angled-chevron-1280.png',
+    clip: { x: 0, y: 0, width: DESKTOP.width, height: scroll.height },
+  })
+})
+
 test('вычисленные стили: токены дизайн-системы применены', async ({ page }) => {
   await openStudio(page)
   await page.evaluate(() => document.fonts.ready)

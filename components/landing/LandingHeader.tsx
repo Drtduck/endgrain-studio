@@ -19,6 +19,14 @@ export function LandingHeader({ locale }: { locale: Locale }) {
 
       <div className="flex-1" />
 
+      <Link
+        href="/blog"
+        data-testid="landing-header-blog"
+        className="font-sans text-sm text-ink-secondary hover:text-ink"
+      >
+        {t(locale, 'blog.navTitle')}
+      </Link>
+
       <LandingLocaleToggle locale={locale} />
 
       <AuthCta

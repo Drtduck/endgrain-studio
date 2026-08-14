@@ -13,6 +13,36 @@ test('лента блога открывается без логина и пок
   }
 })
 
+test('лента блога на английской локали показывает английские версии статей', async ({ page }) => {
+  await page.context().addCookies([{ name: 'eg-locale', value: 'en', url: 'http://127.0.0.1:3100' }])
+  await page.goto('/blog')
+  const cards = page.getByTestId('blog-post-card')
+  await expect(cards).toHaveCount(3)
+  // Ни одна карточка не помечена бейджем «на другом языке»: для всех трёх тем
+  // нашёлся английский перевод, оригиналы на русском в ленту не попадают.
+  await expect(page.getByTestId('blog-post-card-lang-badge')).toHaveCount(0)
+})
+
+test('на статье с переводом есть двусторонняя ссылка «читать на другом языке»', async ({ page }) => {
+  await page.goto('/blog/kerf-i-pripuski')
+  const link = page.getByTestId('blog-translation-link')
+  await expect(link).toBeVisible()
+  await expect(link).toHaveAttribute('href', '/blog/kerf-i-pripuski-en')
+
+  await link.click()
+  await expect(page).toHaveURL(/\/blog\/kerf-i-pripuski-en$/)
+  const back = page.getByTestId('blog-translation-link')
+  await expect(back).toHaveAttribute('href', '/blog/kerf-i-pripuski')
+})
+
+test('hreflang-alternate статьи указывает на пару языков', async ({ page }) => {
+  await page.goto('/blog/kerf-i-pripuski')
+  await expect(page.locator('link[rel="alternate"][hreflang="en"]')).toHaveAttribute(
+    'href',
+    'https://endgrain.app/blog/kerf-i-pripuski-en',
+  )
+})
+
 test('переход по карточке ведёт на статью с H1, блоком-ответом, хлебными крошками и датой обновления', async ({
   page,
 }) => {
@@ -56,13 +86,15 @@ test('страница тега отдаёт подмножество стате
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/)
 })
 
-test('rss.xml парсится как XML и содержит три item', async ({ request }) => {
+test('rss.xml парсится как XML и содержит все статьи, ru и en вместе', async ({ request }) => {
   const response = await request.get('/blog/rss.xml')
   expect(response.ok()).toBe(true)
   expect(response.headers()['content-type']).toContain('application/rss+xml')
   const xml = await response.text()
   expect(xml).toContain('<rss version="2.0">')
-  expect((xml.match(/<item>/g) ?? []).length).toBe(3)
+  // Фид отдаёт все статьи разом (обе локали): у него нет читателя с локалью,
+  // а лента /blog фильтрует по языку только в интерфейсе.
+  expect((xml.match(/<item>/g) ?? []).length).toBe(6)
 })
 
 test('несуществующий slug статьи отдаёт 404', async ({ page }) => {

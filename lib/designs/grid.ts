@@ -1,4 +1,4 @@
-import { DEFAULT_PLANER_WIDTH_MM, type Design, type Panel, type Row, type SpeciesId, type Strip } from '@/lib/engine'
+import { DEFAULT_PLANER_WIDTH_MM, SCHEMA_VERSION, type Design, type Panel, type Row, type SpeciesId, type Strip } from '@/lib/engine'
 import { SPECIES } from '@/lib/species'
 
 export const GRID_THICKNESS_MM = 40
@@ -85,7 +85,7 @@ export function makeGridDesign(spec: GridSpec): Design {
   const sum = (list: readonly number[]): number => list.reduce((acc, value) => acc + value, 0)
 
   return {
-    schemaVersion: 2,
+    schemaVersion: SCHEMA_VERSION,
     id: spec.id,
     name: '',
     nameKey: spec.nameKey,

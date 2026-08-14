@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import type { Design, Panel } from './types'
-import { elementExtentMm, getPanel, panelWidthMm, slicesOfPanel, panelLengthMm } from './panels'
+import fc from 'fast-check'
+import { SCHEMA_VERSION, type Design, type Panel } from './types'
+import { elementExtentMm, getPanel, panelWidthMm, slicesOfPanel, panelLengthMm, sliceLengthMm, angledWasteMm2 } from './panels'
 import { EngineError } from './errors'
+import { baseDesign, stripsPanel } from './fixtures'
 
 const panelA: Panel = {
   id: 'A',
@@ -12,7 +14,7 @@ const panelA: Panel = {
 }
 
 const design: Design = {
-  schemaVersion: 2,
+  schemaVersion: SCHEMA_VERSION,
   id: 'd1',
   name: 'тест',
   species: ['walnut', 'maple'],
@@ -48,5 +50,141 @@ describe('panels helpers', () => {
   it('applies the panel length formula', () => {
     // 2 среза: (30+3) * 2 + kerf 3 * (2-1) + trim 5 * 2 = 66 + 3 + 10 = 79
     expect(panelLengthMm(design, 'A')).toBeCloseTo(79, 6)
+  })
+
+  it('fills sourceWidthMm with the width of the sliced panel for every slice', () => {
+    const slices = slicesOfPanel(design, 'A')
+    expect(slices.every((s) => s.sourceWidthMm === 50)).toBe(true)
+  })
+})
+
+describe('угловая арифметика', () => {
+  function withAngle(angleDeg: number): Design {
+    return baseDesign({
+      panels: [stripsPanel('A', ['walnut', 'maple'], 25)],
+      rows: [{ id: 'r1', panelId: 'A', thicknessMm: 30, angleDeg, flip: false, mirror: false, trimMm: 5 }],
+    })
+  }
+
+  it('at phi=0 numbers match today exactly (regression)', () => {
+    // одна панель, один срез: (30+3+5) + kerf*0 = 38, как и до угловой поддержки
+    expect(panelLengthMm(withAngle(0), 'A')).toBeCloseTo(38, 9)
+    expect(angledWasteMm2(withAngle(0), 'A')).toBe(0)
+  })
+
+  it('panelLengthMm(phi) >= panelLengthMm(0) и монотонно растёт по |phi|', () => {
+    fc.assert(
+      fc.property(fc.double({ min: 0, max: 55, noNaN: true, noDefaultInfinity: true }), (angleDeg) => {
+        const base = panelLengthMm(withAngle(0), 'A')
+        const at = panelLengthMm(withAngle(angleDeg), 'A')
+        expect(at).toBeGreaterThanOrEqual(base - 1e-9)
+      }),
+      { numRuns: 200 },
+    )
+    // монотонность по модулю: чем больше угол, тем длиннее щит
+    const lens = [0, 10, 20, 30, 40, 50].map((a) => panelLengthMm(withAngle(a), 'A'))
+    for (let i = 1; i < lens.length; i += 1) {
+      expect(lens[i]!).toBeGreaterThan(lens[i - 1]!)
+    }
+  })
+
+  it('phi=45: длина щита с одним срезом равна (t + allow + trim) * sqrt(2) + W', () => {
+    const d = withAngle(45)
+    const t = 30
+    const allow = d.planingAllowanceMm
+    const trim = 5
+    const W = 50
+    const expected = (t + allow + trim) * Math.SQRT2 + W * Math.abs(Math.tan((45 * Math.PI) / 180))
+    expect(panelLengthMm(d, 'A')).toBeCloseTo(expected, 9)
+  })
+
+  it('sliceLengthMm at phi=60 equals 2W', () => {
+    const slice = slicesOfPanel(withAngle(60), 'A')[0]!
+    expect(sliceLengthMm(slice)).toBeCloseTo(2 * 50, 9)
+  })
+
+  it('angledWasteMm2 групирует резы по различному углу, но переходы между 2+ углами стоят дороже одного клина', () => {
+    // Резы сортируются по углу (-30 идёт первым): первый переход в сортированной
+    // последовательности - треугольник W^2*|tan|/2, второй (переход к другому углу) - вдвое
+    // дороже, W^2*|tan| (клин снимается уже с обеих сторон стыка настроек).
+    const d = baseDesign({
+      panels: [stripsPanel('A', ['walnut', 'maple'], 25)],
+      rows: [
+        { id: 'r1', panelId: 'A', thicknessMm: 20, angleDeg: 30, flip: false, mirror: false, trimMm: 5 },
+        { id: 'r2', panelId: 'A', thicknessMm: 20, angleDeg: 30, flip: false, mirror: false, trimMm: 5 },
+        { id: 'r3', panelId: 'A', thicknessMm: 20, angleDeg: -30, flip: false, mirror: false, trimMm: 5 },
+      ],
+    })
+    const W = 50
+    const wedge = (W * W * Math.abs(Math.tan((30 * Math.PI) / 180))) / 2
+    const expected = wedge /* первый переход, index 0 */ + 2 * wedge /* второй переход, index 1 */
+    expect(angledWasteMm2(d, 'A')).toBeCloseTo(expected, 9)
+  })
+
+  it('angledWasteMm2 при единственном ненулевом угле не меняется (регрессия): факторы 1/2 совпадают со старой формулой', () => {
+    const d = baseDesign({
+      panels: [stripsPanel('A', ['walnut', 'maple'], 25)],
+      rows: [
+        { id: 'r1', panelId: 'A', thicknessMm: 20, angleDeg: 30, flip: false, mirror: false, trimMm: 5 },
+        { id: 'r2', panelId: 'A', thicknessMm: 20, angleDeg: 30, flip: false, mirror: false, trimMm: 5 },
+      ],
+    })
+    const W = 50
+    const expected = (W * W * Math.abs(Math.tan((30 * Math.PI) / 180))) / 2
+    expect(angledWasteMm2(d, 'A')).toBeCloseTo(expected, 9)
+  })
+})
+
+describe('усадка формулы на chevron-classic (сид-точный контрольный кейс)', () => {
+  /**
+   * Панель INNER шаблона chevron-classic (lib/designs/templates.ts): 4 среза толщиной 70 мм,
+   * снятых с щита шириной 250 мм (10 полос по 25 мм), угол чередуется 45/-45/45/-45.
+   * kerf = GRID_KERF_MM = 3, планинг = GRID_ALLOWANCE_MM = 3, обрезка среза (SliceRef) = 0.
+   * Точные цифры выведены и перепроверены вручную в ревью задачи, см. PR/коммит.
+   */
+  function chevronClassicInner(): Design {
+    const innerPanel = {
+      id: 'INNER',
+      elements: Array.from({ length: 10 }, (_, i) => ({
+        kind: 'strip' as const,
+        speciesId: i % 2 === 0 ? ('walnut' as const) : ('maple' as const),
+        widthMm: 25,
+      })),
+    }
+    return baseDesign({
+      panels: [
+        innerPanel,
+        {
+          id: 'MAIN',
+          elements: [45, -45, 45, -45].map((angleDeg, index) => ({
+            kind: 'sliceRef' as const,
+            panelId: 'INNER',
+            thicknessMm: 70,
+            angleDeg,
+            offsetMm: index, // офсет тут не участвует в формуле длины/отхода, значение неважно
+          })),
+        },
+      ],
+      rows: [{ id: 'r1', panelId: 'MAIN', thicknessMm: 30, angleDeg: 0, flip: false, mirror: false, trimMm: 5 }],
+      kerfMm: 3,
+      planingAllowanceMm: 3,
+    })
+  }
+
+  it('endWaste (длина торцевых клиньев) = 750 мм при группировке резов по углу', () => {
+    const d = chevronClassicInner()
+    // сортировка: -45 первым (index 0, фактор 1) -> W*tan45 = 250; 45 вторым (index 1, фактор 2) -> 2*W*tan45 = 500
+    expect(250 * Math.abs(Math.tan((45 * Math.PI) / 180)) + 2 * 250 * Math.abs(Math.tan((45 * Math.PI) / 180))).toBeCloseTo(750, 9)
+    const slices = slicesOfPanel(d, 'INNER')
+    expect(slices).toHaveLength(4)
+    // Сама формула из panels.ts (через panelLengthMm) должна использовать это же значение отхода.
+    const cut = 4 * (70 + 3 + 0) * Math.SQRT2
+    const kerfSum = 3 * (4 - 1) * Math.SQRT2
+    expect(panelLengthMm(d, 'INNER')).toBeCloseTo(cut + kerfSum + 750, 6)
+  })
+
+  it('panelLengthMm(INNER) ≈ 1175.68 мм (сверено вручную по формуле)', () => {
+    const d = chevronClassicInner()
+    expect(panelLengthMm(d, 'INNER')).toBeCloseTo(1175.678, 2)
   })
 })

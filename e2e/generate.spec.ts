@@ -16,11 +16,13 @@ async function openGenerator(page: Page): Promise<void> {
 test('генератор показывает девять вариантов', async ({ page }) => {
   await openGenerator(page)
   await expect(page.locator('[data-testid^="gen-card-"]')).toHaveCount(9)
-  // В каждой карточке настоящая доска, а не заглушка.
+  // В каждой карточке настоящая доска, а не заглушка. Угловые семейства (шеврон, ромб,
+  // кубики) рисуют ячейки полигонами, а не прямоугольниками (см. components/BoardSvg.tsx),
+  // поэтому считаем обе фигуры вместе.
   for (let index = 0; index < 9; index += 1) {
-    const rects = page.locator(`[data-testid="gen-card-${index}"] svg rect`)
-    await expect(rects.first()).toBeVisible()
-    expect(await rects.count()).toBeGreaterThan(10)
+    const cells = page.locator(`[data-testid="gen-card-${index}"] svg [data-cell]`)
+    await expect(cells.first()).toBeVisible()
+    expect(await cells.count()).toBeGreaterThan(10)
   }
   await expect(page.getByTestId('gen-generation')).toContainText('1')
 })

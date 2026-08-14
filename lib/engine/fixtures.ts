@@ -1,4 +1,4 @@
-import type { Design, Panel, SpeciesId } from './types'
+import { SCHEMA_VERSION, type Design, type Panel, type SpeciesId } from './types'
 
 export function stripsPanel(id: string, speciesIds: SpeciesId[], widthMm = 25): Panel {
   return { id, elements: speciesIds.map((speciesId) => ({ kind: 'strip', speciesId, widthMm })) }
@@ -6,7 +6,7 @@ export function stripsPanel(id: string, speciesIds: SpeciesId[], widthMm = 25): 
 
 export function baseDesign(overrides: Partial<Design> = {}): Design {
   return {
-    schemaVersion: 2,
+    schemaVersion: SCHEMA_VERSION,
     id: 'fixture',
     name: '',
     nameKey: 'design.default',

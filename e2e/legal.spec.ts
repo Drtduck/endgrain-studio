@@ -15,6 +15,13 @@ for (const path of PATHS) {
     const sections = page.getByTestId('legal-section')
     expect(await sections.count()).toBeGreaterThan(0)
   })
+
+  test(`${path} несёт общую шапку и подвал app-домена (AppShell)`, async ({ page }) => {
+    await page.goto(path)
+    await expect(page.getByTestId('app-shell-header')).toBeVisible()
+    await expect(page.getByTestId('app-shell-footer')).toBeVisible()
+    await expect(page.getByTestId('app-shell-nav-studio')).toBeVisible()
+  })
 }
 
 test('переключение eg-locale на en меняет заголовок', async ({ page }) => {

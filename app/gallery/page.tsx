@@ -8,6 +8,7 @@ import { listGallery } from '@/lib/gallery/list'
 import { GALLERY_SORTS } from '@/lib/gallery/types'
 import { t } from '@/lib/i18n'
 import { getLandingLocale } from '@/lib/landing/locale'
+import { appUrl, pageMetadata } from '@/lib/seo/metadata'
 import { cn } from '@/lib/utils'
 
 // Кэш на минуту: лайк и публикация зовут revalidatePath('/gallery') сами,
@@ -16,7 +17,17 @@ export const revalidate = 60
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLandingLocale()
-  return { title: t(locale, 'gallery.navTitle'), description: t(locale, 'gallery.subtitle') }
+  // Страница в sitemap.ts, но раньше не отдавала canonical/OG/twitter -
+  // единственная публичная страница без них.
+  return pageMetadata({
+    title: t(locale, 'gallery.navTitle'),
+    description: t(locale, 'gallery.subtitle'),
+    canonical: appUrl('/gallery'),
+    locale,
+    // Явная картинка: openGraph-объект с явными полями подавляет автоподхват
+    // файловой конвенции opengraph-image, без image OG-карточка была бы пустой.
+    image: appUrl('/opengraph-image.png'),
+  })
 }
 
 export default async function GalleryPage(props: PageProps<'/gallery'>) {

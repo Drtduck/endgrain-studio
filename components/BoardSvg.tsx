@@ -1,8 +1,18 @@
 import { Fragment } from 'react'
-import type { BoardModel, ColBand, RowBand } from '@/lib/engine'
+import { cellPolygon, insetConvex, type BoardModel, type Cell, type ColBand, type RowBand } from '@/lib/engine'
 import { t, type Locale } from '@/lib/i18n'
 import { boardLayout } from '@/lib/render2d/layout'
 import { speciesHex } from '@/lib/species'
+
+/**
+ * Точки полигона ячейки под угловым резом, сжатого на клеевой зазор и сдвинутого в координаты
+ * svg (marginMm - та же поправка, что у прямоугольной ветки). Пустой результат insetConvex
+ * (ячейка тоньше зазора) возвращает пустую строку - вызывающий код такую ячейку пропускает.
+ */
+function polygonPoints(cell: Cell, marginMm: number, halfGapMm: number): string {
+  const inset = insetConvex(cellPolygon(cell), halfGapMm)
+  return inset.map(([x, y]) => `${x + marginMm},${y}`).join(' ')
+}
 
 export function BoardSvg({
   model,
@@ -57,6 +67,32 @@ export function BoardSvg({
       {model.cells.map((cell) => {
         const isActive = cell.id === selectedCellId || cell.id === highlightCellId
         const isUntouched = touchedCellIds !== undefined && !touchedCellIds.has(cell.id)
+
+        if (cell.poly !== undefined) {
+          // Угловая ячейка: точная геометрия полигоном, зазор через insetConvex. Пустой
+          // результат (ячейка тоньше зазора) пропускается целиком, как и её подсветка.
+          const points = polygonPoints(cell, marginMm, halfGapMm)
+          if (points === '') return null
+          return (
+            <Fragment key={cell.id}>
+              <polygon
+                data-cell={cell.id}
+                points={points}
+                fill={speciesHex(cell.speciesId)}
+                {...(isActive ? { stroke: 'var(--selection)', strokeWidth: selectionStrokeMm } : {})}
+              />
+              {isUntouched ? (
+                <polygon
+                  data-testid="cell-untouched"
+                  points={points}
+                  fill="var(--touched-highlight)"
+                  pointerEvents="none"
+                />
+              ) : null}
+            </Fragment>
+          )
+        }
+
         const x = cell.xMm + marginMm + halfGapMm
         const y = cell.yMm + halfGapMm
         const width = Math.max(0, cell.widthMm - gapMm)

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { BoardModel } from '@/lib/engine'
+import { cellPolygon, polygonAreaMm2, type BoardModel } from '@/lib/engine'
 import { speciesByShare } from '@/lib/promo/describe'
 import { SPECIES_BY_ID } from '@/lib/species'
 import type { GallerySummary } from './types'
@@ -14,7 +14,7 @@ import type { GallerySummary } from './types'
 export function buildSummary(model: BoardModel): GallerySummary {
   const byArea = new Map<string, number>()
   for (const cell of model.cells) {
-    const area = cell.widthMm * cell.heightMm
+    const area = polygonAreaMm2(cellPolygon(cell))
     byArea.set(cell.speciesId, (byArea.get(cell.speciesId) ?? 0) + area)
   }
   const species = [...byArea.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id)

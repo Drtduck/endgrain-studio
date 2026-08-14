@@ -19,6 +19,9 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t(locale, 'pricing.subtitle'),
     canonical: appUrl('/pricing'),
     locale,
+    // Явная картинка: openGraph-объект с явными полями подавляет автоподхват
+    // файловой конвенции opengraph-image, без image OG-карточка была пустой.
+    image: appUrl('/opengraph-image.png'),
   })
 }
 

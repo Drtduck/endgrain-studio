@@ -1,11 +1,15 @@
 import {
+  angledTransitionWasteMm,
+  angledWasteMm2,
   compile,
   isSliceRef,
   isStrip,
   panelLengthMm,
   panelWidthMm,
   rowBandsMm,
+  sliceLengthMm,
   slicesOfPanel,
+  sortedByAngle,
   type Design,
   type Panel,
   type PanelId,
@@ -29,6 +33,10 @@ export interface SlicePiece {
   readonly sourcePanelId: PanelId
   readonly thicknessMm: number
   readonly offsetMm: number
+  /** Угол реза, под которым срез снят с исходной панели. 0 у прямого среза. */
+  readonly angleDeg: number
+  /** Зеркалит порядок полос внутри среза перед вклейкой. */
+  readonly flip: boolean
 }
 export type PanelPiece = StripPiece | SlicePiece
 
@@ -42,6 +50,10 @@ export interface SpeciesTally {
 export interface Crosscut {
   readonly thicknessMm: number
   readonly trimMm: number
+  /** Угол реза, градусы. 0 у прямого поперечного реза. */
+  readonly angleDeg: number
+  /** Длина заготовки вдоль реза, мм: sourceWidthMm / cos(angleDeg). Прямой рез даёт ширину щита. */
+  readonly lengthMm: number
   /** Номер ряда доски (1-based, нумерация rowBandsMm) либо null для вклейки. */
   readonly rowNumber: number | null
   readonly consumer: PanelSlice['consumer']
@@ -60,6 +72,10 @@ export interface PanelCutPlan {
   readonly crosscuts: readonly Crosscut[]
   /** Есть ли внутри вклеенные срезы: определяет порядок шагов. */
   readonly hasInlay: boolean
+  /** Площадь торцевых клиньев, теряемых на щите при угловых резах, мм². 0 для прямых узоров. */
+  readonly angledWasteMm2: number
+  /** Длина торцевых клиньев вдоль щита (сумма по различным ненулевым углам резов), мм. */
+  readonly endWasteMm: number
 }
 
 export interface RowPlan {
@@ -85,6 +101,8 @@ export interface CutPlan {
   readonly boardThicknessMm: number
   readonly stripCount: number
   readonly crosscutCount: number
+  /** true, если хотя бы один поперечный рез проекта выполняется под углом. */
+  readonly hasAngledCuts: boolean
 }
 
 /**
@@ -114,7 +132,15 @@ function pieces(panel: Panel): PanelPiece[] {
   return panel.elements.map((el, elementIndex) =>
     isStrip(el)
       ? { kind: 'strip', elementIndex, speciesId: el.speciesId, widthMm: el.widthMm }
-      : { kind: 'sliceRef', elementIndex, sourcePanelId: el.panelId, thicknessMm: el.thicknessMm, offsetMm: el.offsetMm },
+      : {
+          kind: 'sliceRef',
+          elementIndex,
+          sourcePanelId: el.panelId,
+          thicknessMm: el.thicknessMm,
+          offsetMm: el.offsetMm,
+          angleDeg: el.angleDeg,
+          flip: el.flip ?? false,
+        },
   )
 }
 
@@ -146,9 +172,15 @@ export function buildCutPlan(design: Design, locale: Locale): CutPlan {
   })
 
   const panels: PanelCutPlan[] = manufacturingOrder(design).map((panel) => {
-    const crosscuts: Crosscut[] = slicesOfPanel(design, panel.id).map((slice: PanelSlice) => ({
+    const widthMm = panelWidthMm(panel)
+    // Резы идут в порядке фактического изготовления: сгруппированы по углу (sortedByAngle -
+    // тот же принцип, что и в panelLengthMm/angledWasteMm2 из lib/engine/panels.ts), иначе
+    // список резов в инструкции противоречил бы шагам angled-setup и цифрам материала.
+    const crosscuts: Crosscut[] = sortedByAngle(slicesOfPanel(design, panel.id)).map((slice: PanelSlice) => ({
       thicknessMm: slice.thicknessMm,
       trimMm: slice.trimMm,
+      angleDeg: slice.angleDeg,
+      lengthMm: sliceLengthMm(slice),
       rowNumber: slice.consumer.kind === 'row' ? rowNumberById.get(slice.consumer.rowId) ?? null : null,
       consumer: slice.consumer,
     }))
@@ -156,11 +188,13 @@ export function buildCutPlan(design: Design, locale: Locale): CutPlan {
       panelId: panel.id,
       pieces: pieces(panel),
       bySpecies: tally(panel),
-      widthMm: panelWidthMm(panel),
+      widthMm,
       lengthMm: panelLengthMm(design, panel.id),
       planedThicknessMm: design.board.thicknessMm + design.planingAllowanceMm,
       crosscuts,
       hasInlay: panel.elements.some(isSliceRef),
+      angledWasteMm2: angledWasteMm2(design, panel.id),
+      endWasteMm: angledTransitionWasteMm(widthMm, crosscuts.map((c) => c.angleDeg)).lengthMm,
     }
   })
 
@@ -175,10 +209,20 @@ export function buildCutPlan(design: Design, locale: Locale): CutPlan {
     boardThicknessMm: design.board.thicknessMm,
     stripCount: panels.reduce((s, p) => s + p.pieces.filter((x) => x.kind === 'strip').length, 0),
     crosscutCount: panels.reduce((s, p) => s + p.crosscuts.length, 0),
+    hasAngledCuts: panels.some((p) => p.crosscuts.some((c) => c.angleDeg !== 0)),
   }
 }
 
-export type GlueUpStepKind = 'rip' | 'inlay' | 'glue-panel' | 'plane' | 'crosscut' | 'arrange' | 'final-glue' | 'flatten'
+export type GlueUpStepKind =
+  | 'rip'
+  | 'inlay'
+  | 'glue-panel'
+  | 'plane'
+  | 'angled-setup'
+  | 'crosscut'
+  | 'arrange'
+  | 'final-glue'
+  | 'flatten'
 
 export interface GlueUpStep {
   readonly number: number
@@ -214,7 +258,9 @@ export function buildGlueUpSteps(plan: CutPlan, locale: Locale): readonly GlueUp
 
     for (const piece of panel.pieces) {
       if (piece.kind !== 'sliceRef') continue
-      push('inlay', 'steps.inlay', {
+      // Перевёрнутый срез (SliceRef.flip) вклеивается зеркально: отдельный текст шага,
+      // а не приписка к существующему, чтобы перевод оставался цельным предложением.
+      push('inlay', piece.flip ? 'steps.inlayFlipped' : 'steps.inlay', {
         source: piece.sourcePanelId,
         panel: panel.panelId,
         thickness: bothUnits(piece.thicknessMm, locale),
@@ -237,12 +283,36 @@ export function buildGlueUpSteps(plan: CutPlan, locale: Locale): readonly GlueUp
       thickness: bothUnits(panel.planedThicknessMm, locale),
     }, panel.panelId)
 
-    push('crosscut', 'steps.crosscut', {
+    // Угловые резы этой панели: один шаг angled-setup на каждый различный угол в порядке
+    // отсортированной по углу последовательности (panel.crosscuts уже сгруппированы -
+    // сначала все резы одного угла подряд, салазки выставляются один раз на группу).
+    // Клин на переходе к настройке считается тем же принципом, что и angledTransitionWasteMm
+    // в lib/engine/panels.ts: первая настройка в последовательности - один клин W·tan φ,
+    // каждая следующая (в том числе переход обратно к 0°) - вдвое больше, 2·W·tan φ,
+    // потому что клин снимается уже с обеих сторон стыка настроек.
+    const distinctAngles = [...new Set(panel.crosscuts.map((c) => c.angleDeg))]
+    distinctAngles.forEach((angleDeg, index) => {
+      if (angleDeg === 0) return
+      const wedgeMm = panel.widthMm * Math.abs(Math.tan((angleDeg * Math.PI) / 180))
+      const factor = index === 0 ? 1 : 2
+      push('angled-setup', 'steps.angledSetup', {
+        panel: panel.panelId,
+        angleDeg,
+        waste: bothUnits(factor * wedgeMm, locale),
+      }, panel.panelId)
+    })
+
+    const hasAngled = panel.crosscuts.some((c) => c.angleDeg !== 0)
+    push('crosscut', hasAngled ? 'steps.crosscutAngled' : 'steps.crosscut', {
       panel: panel.panelId,
       count: panel.crosscuts.length,
       countWord: plural(locale, panel.crosscuts.length, { ru: ['срез', 'среза', 'срезов'], en: ['slice', 'slices'] }),
       list: panel.crosscuts
-        .map((c) => (c.rowNumber === null ? bothUnits(c.thicknessMm, locale) : `${bothUnits(c.thicknessMm, locale)} -> ${c.rowNumber}`))
+        .map((c) => {
+          const base = c.rowNumber === null ? bothUnits(c.thicknessMm, locale) : `${bothUnits(c.thicknessMm, locale)} -> ${c.rowNumber}`
+          if (c.angleDeg === 0) return base
+          return `${base} (${t(locale, 'cut.angleColumn', { angleDeg: c.angleDeg })}, ${bothUnits(c.lengthMm, locale)})`
+        })
         .join('; '),
       kerf: bothUnits(plan.kerfMm, locale),
     }, panel.panelId)

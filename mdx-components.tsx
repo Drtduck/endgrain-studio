@@ -2,6 +2,8 @@ import type { MDXComponents } from 'mdx/types'
 import Image, { type ImageProps } from 'next/image'
 import Link from 'next/link'
 import type { AnchorHTMLAttributes, HTMLAttributes, TableHTMLAttributes } from 'react'
+import { ArticleFigure } from '@/components/blog/ArticleFigure'
+import { NewsletterBreak } from '@/components/blog/NewsletterBreak'
 
 /**
  * Next 16 требует этот файл в корне проекта для @next/mdx в App Router:
@@ -114,6 +116,11 @@ const components: MDXComponents = {
     />
   ),
   hr: (props: HTMLAttributes<HTMLHRElement>) => <hr className="mt-8 border-line" {...props} />,
+  // Компоненты редакционного конвейера блога: фото статьи в рамке с атрибуцией
+  // Pexels и врезка подписки. Доступны прямо в MDX как <ArticleFigure ... />
+  // и <NewsletterBreak locale="ru" /> без импорта в каждой статье.
+  ArticleFigure,
+  NewsletterBreak,
 }
 
 export function useMDXComponents(): MDXComponents {
