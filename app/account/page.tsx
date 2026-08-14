@@ -34,7 +34,7 @@ export default async function AccountPage() {
       <main className="px-4 py-10">
         <div className="mx-auto flex max-w-2xl flex-col gap-6">
           <div className="flex items-center gap-3">
-            <Avatar seed={user.id} label={profile?.displayName ?? user.email} size="lg" />
+            <Avatar seed={user.id} label={profile?.displayName ?? user.email} url={profile?.avatarUrl ?? null} size="lg" />
             <div className="flex flex-col gap-0.5">
               <h1 className="font-display text-2xl font-semibold text-ink" data-testid="account-page-title">
                 {profile?.displayName ?? user.email}
@@ -50,8 +50,10 @@ export default async function AccountPage() {
           <ProfileForm
             locale={locale}
             userId={user.id}
+            fallbackLabel={user.email}
             initial={{
               displayName: profile?.displayName ?? null,
+              avatarUrl: profile?.avatarUrl ?? null,
               bio: profile?.bio ?? null,
               website: profile?.website ?? null,
               notifyEmail: profile?.notifyEmail ?? true,

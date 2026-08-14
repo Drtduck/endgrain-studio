@@ -27,7 +27,7 @@ const updateUser = vi.fn()
 let serviceConfigured = true
 const serviceFrom = vi.fn()
 
-vi.mock('@/lib/supabase/config', () => ({ isSupabaseConfigured: () => true }))
+vi.mock('@/lib/supabase/config', () => ({ isSupabaseConfigured: () => true, SUPABASE_URL: 'https://abcdefgh.supabase.co' }))
 vi.mock('@/lib/supabase/server', () => ({
   getSupabaseServer: async () => ({
     auth: { getUser, signInWithPassword, updateUser },
@@ -71,7 +71,14 @@ describe('app/actions/profile updateProfileAction', () => {
   it('пишет через service-role (не через cookie-сессию), RETURNING не запрашивает notify_email', async () => {
     mockUser()
     upsertSelectSingle.mockResolvedValue({
-      data: { user_id: 'user-1', display_name: 'Стас', bio: null, website: null, created_at: '2026-08-14T00:00:00.000Z' },
+      data: {
+        user_id: 'user-1',
+        display_name: 'Стас',
+        bio: null,
+        website: null,
+        avatar_url: null,
+        created_at: '2026-08-14T00:00:00.000Z',
+      },
       error: null,
     })
     const { updateProfileAction } = await import('./profile')
@@ -85,6 +92,7 @@ describe('app/actions/profile updateProfileAction', () => {
         displayName: 'Стас',
         bio: null,
         website: null,
+        avatarUrl: null,
         notifyEmail: false,
         createdAt: '2026-08-14T00:00:00.000Z',
       },
@@ -98,7 +106,7 @@ describe('app/actions/profile updateProfileAction', () => {
     expect(upsertArg.user_id).toBe('user-1')
     // RETURNING-список не содержит notify_email: колонка не в select-гранте authenticated,
     // а лишний select клиенту тут и не нужен.
-    expect(upsertSelect).toHaveBeenCalledWith('user_id, display_name, bio, website, created_at')
+    expect(upsertSelect).toHaveBeenCalledWith('user_id, display_name, bio, website, avatar_url, created_at')
   })
 
   it('чужой user_id подставить нельзя: запись всегда идёт в строку из сессии', async () => {
@@ -191,5 +199,83 @@ describe('app/actions/profile changePasswordAction', () => {
 
     expect(res).toEqual({ ok: false, error: 'invalid' })
     expect(signInWithPassword).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * updateAvatarAction: ссылка приходит от клиента (файл грузится в Storage прямо
+ * из браузера), поэтому проверка «свой bucket, своя папка» - единственное, что
+ * стоит между profiles.avatar_url и произвольным чужим адресом.
+ */
+describe('app/actions/profile updateAvatarAction', () => {
+  const OWN = 'https://abcdefgh.supabase.co/storage/v1/object/public/avatars/user-1/avatar.png'
+  const bareUpsert = vi.fn()
+
+  beforeEach(() => {
+    getUser.mockReset()
+    from.mockReset()
+    serviceFrom.mockReset()
+    bareUpsert.mockReset()
+    serviceConfigured = true
+    bareUpsert.mockResolvedValue({ error: null })
+    serviceFrom.mockImplementation((table: string) => {
+      if (table === 'profiles') return { upsert: bareUpsert }
+      throw new Error(`unexpected table ${table}`)
+    })
+  })
+
+  it('своя ссылка сохраняется, пишется только колонка avatar_url', async () => {
+    mockUser({ id: 'user-1' })
+    const { updateAvatarAction } = await import('./profile')
+
+    const res = await updateAvatarAction(`${OWN}?v=1700000000000`)
+
+    expect(res).toEqual({ ok: true, data: `${OWN}?v=1700000000000` })
+    expect(bareUpsert).toHaveBeenCalledWith(
+      { user_id: 'user-1', avatar_url: `${OWN}?v=1700000000000` },
+      { onConflict: 'user_id' },
+    )
+  })
+
+  it('чужой путь того же bucket не проходит и в базу не уходит', async () => {
+    mockUser({ id: 'user-1' })
+    const { updateAvatarAction } = await import('./profile')
+
+    const res = await updateAvatarAction('https://abcdefgh.supabase.co/storage/v1/object/public/avatars/user-2/avatar.png')
+
+    expect(res).toEqual({ ok: false, error: 'invalid' })
+    expect(bareUpsert).not.toHaveBeenCalled()
+  })
+
+  it('чужой хост и javascript: не проходят', async () => {
+    mockUser({ id: 'user-1' })
+    const { updateAvatarAction } = await import('./profile')
+
+    const foreign = await updateAvatarAction('https://evil.example.com/storage/v1/object/public/avatars/user-1/avatar.png')
+    const script = await updateAvatarAction('javascript:alert(1)')
+
+    expect(foreign).toEqual({ ok: false, error: 'invalid' })
+    expect(script).toEqual({ ok: false, error: 'invalid' })
+    expect(bareUpsert).not.toHaveBeenCalled()
+  })
+
+  it('null снимает картинку и возвращает инициал', async () => {
+    mockUser({ id: 'user-1' })
+    const { updateAvatarAction } = await import('./profile')
+
+    const res = await updateAvatarAction(null)
+
+    expect(res).toEqual({ ok: true, data: null })
+    expect(bareUpsert).toHaveBeenCalledWith({ user_id: 'user-1', avatar_url: null }, { onConflict: 'user_id' })
+  })
+
+  it('без сессии база не трогается', async () => {
+    getUser.mockResolvedValue({ data: { user: null } })
+    const { updateAvatarAction } = await import('./profile')
+
+    const res = await updateAvatarAction(OWN)
+
+    expect(res).toEqual({ ok: false, error: 'unauthenticated' })
+    expect(serviceFrom).not.toHaveBeenCalled()
   })
 })

@@ -1,7 +1,7 @@
 import type { BoardModel } from '@/lib/engine'
 import { renderBoardSvg } from '@/lib/export'
 
-/** Сторона рендера доски, который уходит в промпт. Больше 1024 Gemini всё равно ужмёт сам. */
+/** Сторона рендера доски, который уходит в промпт. Больше 1024 модель всё равно ужмёт сама. */
 export const REFERENCE_PX = 1024
 
 export function blobToDataUrl(blob: Blob): Promise<string> {

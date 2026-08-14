@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { updateProfileAction, type ProfileError } from '@/app/actions/profile'
+import { AvatarPicker } from '@/components/account/AvatarPicker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -18,11 +19,13 @@ const ERROR_KEYS: Readonly<Partial<Record<ProfileError, MessageKey>>> = {
 export interface ProfileFormProps {
   readonly locale: Locale
   readonly userId: string
-  readonly initial: Pick<Profile, 'displayName' | 'bio' | 'website' | 'notifyEmail'>
+  readonly initial: Pick<Profile, 'displayName' | 'bio' | 'website' | 'avatarUrl' | 'notifyEmail'>
+  /** Подпись под инициалом аватара, пока имя не заполнено: почта аккаунта. */
+  readonly fallbackLabel: string
 }
 
 /** Публичный профиль (display_name/bio/website) плюс notify_email одной формой. */
-export function ProfileForm({ locale, userId, initial }: ProfileFormProps) {
+export function ProfileForm({ locale, userId, initial, fallbackLabel }: ProfileFormProps) {
   const [displayName, setDisplayName] = useState(initial.displayName ?? '')
   const [bio, setBio] = useState(initial.bio ?? '')
   const [website, setWebsite] = useState(initial.website ?? '')
@@ -57,6 +60,13 @@ export function ProfileForm({ locale, userId, initial }: ProfileFormProps) {
           {t(locale, 'profile.viewPublic')}
         </Link>
       </div>
+
+      <AvatarPicker
+        locale={locale}
+        userId={userId}
+        label={displayName.trim().length > 0 ? displayName : fallbackLabel}
+        initialUrl={initial.avatarUrl}
+      />
 
       <div className="flex flex-col gap-1">
         <label htmlFor="profile-display-name" className="text-xs text-ink-secondary">

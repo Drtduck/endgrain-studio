@@ -22,8 +22,8 @@ test('подсказка палитры открывается и закрыва
   await expect(content).toBeHidden()
 })
 
-test('подсказка экспорта говорит про цех', async ({ page }) => {
+test('подсказка экспорта говорит про печать инструкции', async ({ page }) => {
   await openStudio(page)
   await page.getByTestId('help-export').click()
-  await expect(page.getByTestId('help-content-export')).toContainText('в цех')
+  await expect(page.getByTestId('help-content-export')).toContainText('печати')
 })

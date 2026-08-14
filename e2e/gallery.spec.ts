@@ -21,8 +21,9 @@ test('на /gallery ровно одна шапка - единый AppHeader', as
   await expect(page.getByTestId('app-shell-header')).toHaveCount(0)
   await expect(page.getByTestId('app-shell-footer')).toBeVisible()
   await expect(page.getByTestId('app-shell-nav-gallery')).toBeVisible()
-  await expect(page.getByTestId('app-shell-nav-pricing')).toBeVisible()
-  // Ключи API и профиль нужны только вошедшему, гостю эти ссылки ничего не дают.
+  // Тарифы, профиль и ключи API из шапки ушли: на /pricing ведут «Улучшить» и меню
+  // аватара, профиль с MCP лежат под аватаром.
+  await expect(page.getByTestId('app-shell-nav-pricing')).toHaveCount(0)
   await expect(page.getByTestId('app-shell-nav-api')).toHaveCount(0)
   await expect(page.getByTestId('studio-nav-account')).toHaveCount(0)
 })

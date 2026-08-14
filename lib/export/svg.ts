@@ -43,7 +43,7 @@ function num(value: number): string {
 
 /**
  * Самостоятельный SVG-документ доски: открывается в браузере и в Inkscape,
- * годится как вход для растровой конвертации в PNG и для svg2pdf (PDF).
+ * годится как вход для растровой конвертации в PNG и как превью в печатной инструкции.
  * Чистая функция: ни одного обращения к DOM, поэтому тестируется в vitest напрямую.
  */
 export function renderBoardSvg(model: BoardModel, options: BoardSvgOptions = {}): RenderedSvg {

@@ -1,10 +1,10 @@
 'use client'
 
-import Link from 'next/link'
 import { useTransition } from 'react'
-import { CreditCard, LogIn, LogOut, Sparkles, User } from 'lucide-react'
+import { CreditCard, LogIn, LogOut, Plug, Sparkles, User } from 'lucide-react'
 import { signOutAction } from '@/app/actions/auth'
 import { Avatar } from '@/components/account/Avatar'
+import { NavLink } from '@/components/NavLink'
 import { useSession } from '@/components/SessionProvider'
 import { UpgradeButton } from '@/components/UpgradeButton'
 import { usePro } from '@/components/ProProvider'
@@ -32,7 +32,7 @@ export function AccountMenu() {
       <>
         <UpgradeButton />
         {enabled ? (
-          <Button variant="outline" size="sm" data-testid="account-login" render={<Link href="/login" />}>
+          <Button variant="outline" size="sm" data-testid="account-login" render={<NavLink href="/login" />}>
             <LogIn data-icon="inline-start" />
             {t(locale, 'account.signIn')}
           </Button>
@@ -75,16 +75,23 @@ export function AccountMenu() {
 
         <MenuSeparator />
 
-        <MenuLinkItem data-testid="account-menu-profile" render={<Link href="/account" />}>
+        <MenuLinkItem data-testid="account-menu-profile" render={<NavLink href="/account" />}>
           <User />
           {t(locale, 'account.profile')}
+        </MenuLinkItem>
+
+        {/* Ключи API нужны, только когда человек подключает студию к своему агенту,
+            поэтому в шапке им места нет: раздел живёт под аватаром рядом с профилем. */}
+        <MenuLinkItem data-testid="account-menu-mcp" render={<NavLink href="/account/api" />}>
+          <Plug />
+          {t(locale, 'account.mcp')}
         </MenuLinkItem>
 
         <MenuSeparator />
 
         {billingEnabled ? (
           status.pro ? (
-            <MenuLinkItem data-testid="account-menu-billing" render={<Link href="/pricing" />}>
+            <MenuLinkItem data-testid="account-menu-billing" render={<NavLink href="/pricing" />}>
               <CreditCard />
               {t(locale, 'account.billing')}
             </MenuLinkItem>
@@ -94,7 +101,7 @@ export function AccountMenu() {
             <MenuLinkItem
               data-testid="account-menu-upgrade"
               className="font-semibold text-accent data-highlighted:bg-accent-soft"
-              render={<Link href="/pricing" />}
+              render={<NavLink href="/pricing" />}
             >
               <Sparkles />
               {t(locale, 'account.upgrade')}

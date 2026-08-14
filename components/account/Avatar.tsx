@@ -38,6 +38,8 @@ export interface AvatarProps {
   readonly seed: string
   /** Буква инициала - обычно имя или почта. */
   readonly label: string
+  /** Загруженная картинка (profiles.avatar_url). null или пусто - рисуем инициал. */
+  readonly url?: string | null
   readonly size?: 'sm' | 'md' | 'lg'
 }
 
@@ -47,11 +49,29 @@ const SIZE_CLASS: Readonly<Record<NonNullable<AvatarProps['size']>, string>> = {
   lg: 'size-16 text-xl',
 }
 
-export function Avatar({ seed, label, size = 'md' }: AvatarProps) {
+export function Avatar({ seed, label, url = null, size = 'md' }: AvatarProps) {
+  // next/image здесь не годится: адрес приходит с хоста Supabase Storage
+  // конкретного проекта, а он берётся из переменных окружения - в
+  // remotePatterns его не прописать статически. Размер фиксирован классом,
+  // картинка всегда квадрат 256 px после ресайза на клиенте.
+  if (url !== null && url.length > 0) {
+    return (
+      <img
+        data-testid="avatar"
+        data-avatar-kind="image"
+        src={url}
+        alt=""
+        aria-hidden="true"
+        className={`shrink-0 rounded-full bg-surface-raised object-cover ${SIZE_CLASS[size]}`}
+      />
+    )
+  }
+
   const initial = avatarInitial(label)
   return (
     <span
       data-testid="avatar"
+      data-avatar-kind="initial"
       aria-hidden="true"
       className={`flex shrink-0 items-center justify-center rounded-full font-display font-semibold text-white ${SIZE_CLASS[size]}`}
       style={{ backgroundColor: avatarColor(seed) }}

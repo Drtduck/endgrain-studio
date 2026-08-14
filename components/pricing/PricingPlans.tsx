@@ -84,13 +84,33 @@ function formatDate(iso: string, locale: Locale): string {
   return new Date(iso).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US')
 }
 
+/** Общие классы карточки: равная высота в ряду и защита от распирания сетки длинным словом. */
+const CARD_BASE = 'flex h-full min-w-0 flex-col gap-3 rounded-lg p-5'
+
+/**
+ * Кнопка в карточке не имеет права вылезать за её border: текст CTA длинный
+ * («Оформить Pro: от $7.50 в месяц»), а базовый Button - whitespace-nowrap и
+ * фиксированной высоты. Поэтому здесь разрешаем перенос и растим высоту.
+ */
+const CARD_BUTTON = 'h-auto min-h-[30px] w-full py-1.5 text-center leading-snug whitespace-normal'
+
+/** Цена и период на одной базовой линии, перенос - целыми словами, а не посреди строки цены. */
+function PlanPrice({ price, period }: { price: string; period?: string }) {
+  return (
+    <span className="flex flex-wrap items-baseline gap-x-1.5 font-mono text-2xl tabular-nums text-ink">
+      <span>{price}</span>
+      {period === undefined ? null : <span className="font-sans text-sm text-ink-secondary">{period}</span>}
+    </span>
+  )
+}
+
 function FeatureList({ locale, keys }: { locale: Locale; keys: readonly MessageKey[] }) {
   return (
-    <ul className="flex flex-col gap-1.5">
+    <ul className="flex flex-1 flex-col gap-1.5">
       {keys.map((key) => (
         <li key={key} className="flex items-start gap-2 text-[13px] text-ink-secondary">
           <Check className="mt-[3px] size-3.5 shrink-0 text-accent" aria-hidden />
-          <span>{t(locale, key)}</span>
+          <span className="min-w-0 break-words">{t(locale, key)}</span>
         </li>
       ))}
     </ul>
@@ -126,14 +146,14 @@ function PlanCta(props: {
 
   if (!signedIn) {
     return (
-      <Button size="sm" data-testid={needAuthTestId} render={<a href={needAuthHref} />}>
+      <Button size="sm" className={CARD_BUTTON} data-testid={needAuthTestId} render={<a href={needAuthHref} />}>
         {t(locale, 'pricing.cta.needAuth')}
       </Button>
     )
   }
 
   return (
-    <Button size="sm" data-testid={buyTestId} disabled={busy} onClick={onBuy}>
+    <Button size="sm" className={CARD_BUTTON} data-testid={buyTestId} disabled={busy} onClick={onBuy}>
       {busy ? t(locale, 'pricing.busy') : t(locale, ctaKey)}
     </Button>
   )
@@ -184,14 +204,14 @@ export function PricingPlans(props: PricingPlansProps) {
 
   return (
     <div data-testid="pricing-plans" className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <section
           data-testid="pricing-free"
-          className="flex flex-col gap-3 rounded-lg border border-line-subtle bg-surface-raised p-5"
+          className={`${CARD_BASE} border border-line-subtle bg-surface-raised`}
         >
           <div className="flex flex-col gap-0.5">
             <span className="font-display text-lg font-semibold text-ink">{t(locale, 'pricing.free.name')}</span>
-            <span className="font-mono text-2xl tabular-nums text-ink">{t(locale, 'pricing.free.price')}</span>
+            <PlanPrice price={t(locale, 'pricing.free.price')} />
             <span className="text-xs text-ink-muted">{t(locale, 'pricing.free.note')}</span>
           </div>
           <FeatureList locale={locale} keys={FREE_FEATURES} />
@@ -200,17 +220,17 @@ export function PricingPlans(props: PricingPlansProps) {
         {!passEnabled ? null : (
           <section
             data-testid="pricing-pass"
-            className="flex flex-col gap-3 rounded-lg border border-line-subtle bg-surface-raised p-5"
+            className={`${CARD_BASE} border border-line-subtle bg-surface-raised`}
           >
             <div className="flex flex-col gap-0.5">
               <span className="font-display text-lg font-semibold text-ink">{t(locale, 'pricing.pass.name')}</span>
-              <span className="font-mono text-2xl tabular-nums text-ink">{t(locale, 'pricing.pass.price')}</span>
+              <PlanPrice price={t(locale, 'pricing.pass.price')} />
               <span className="text-xs text-ink-muted">{t(locale, 'pricing.pass.note')}</span>
             </div>
             <FeatureList locale={locale} keys={PASS_FEATURES} />
 
             {mode === 'link' ? null : (
-              <div className="mt-1 flex flex-col gap-2">
+              <div className="mt-auto flex flex-col gap-2 pt-1">
                 {passExpiresAt !== null ? (
                   <span data-testid="pricing-pass-until" className="text-[13px] text-ink-secondary">
                     {t(locale, 'pricing.pass.until', { date: formatDate(passExpiresAt, locale) })}
@@ -237,21 +257,26 @@ export function PricingPlans(props: PricingPlansProps) {
 
         <section
           data-testid="pricing-pro"
-          className="flex flex-col gap-3 rounded-lg border border-accent-border bg-accent-soft p-5"
+          className={`${CARD_BASE} border border-accent-border bg-accent-soft`}
         >
           <div className="flex flex-col gap-0.5">
             <span className="font-display text-lg font-semibold text-ink">{t(locale, 'pricing.pro.name')}</span>
-            <span className="font-mono text-2xl tabular-nums text-ink">
-              {t(locale, 'pricing.pro.monthlyPrice')}{' '}
-              <span className="font-sans text-sm text-ink-secondary">{t(locale, 'pricing.pro.monthlyPeriod')}</span>
-            </span>
+            <PlanPrice
+              price={t(locale, 'pricing.pro.monthlyPrice')}
+              period={t(locale, 'pricing.pro.monthlyPeriod')}
+            />
             <span className="text-xs text-ink-muted">{t(locale, 'pricing.pro.note')}</span>
           </div>
           <FeatureList locale={locale} keys={PRO_FEATURES} />
 
-          <div className="mt-1 flex flex-col gap-2">
+          <div className="mt-auto flex flex-col gap-2 pt-1">
             {mode === 'link' ? (
-              <Button size="sm" data-testid="pricing-open-app" render={<a href={`${APP_ORIGIN}/pricing`} />}>
+              <Button
+                size="sm"
+                className={CARD_BUTTON}
+                data-testid="pricing-open-app"
+                render={<a href={`${APP_ORIGIN}/pricing`} />}
+              >
                 {t(locale, 'pricing.cta.open')}
               </Button>
             ) : proSubscribed ? (
@@ -304,15 +329,12 @@ export function PricingPlans(props: PricingPlansProps) {
 
         <section
           data-testid="pricing-developer"
-          className="flex flex-col gap-3 rounded-lg border border-line-subtle bg-surface-raised p-5"
+          className={`${CARD_BASE} border border-line-subtle bg-surface-raised`}
         >
           <div className="flex flex-col gap-0.5">
             <span className="font-display text-lg font-semibold text-ink">{t(locale, 'developer.name')}</span>
             {apiEnabled ? (
-              <span className="font-mono text-2xl tabular-nums text-ink">
-                {t(locale, 'developer.price')}{' '}
-                <span className="font-sans text-sm text-ink-secondary">{t(locale, 'developer.period')}</span>
-              </span>
+              <PlanPrice price={t(locale, 'developer.price')} period={t(locale, 'developer.period')} />
             ) : (
               <span data-testid="pricing-developer-status" className="font-mono text-2xl tabular-nums text-ink-secondary">
                 {t(locale, 'developer.status')}
@@ -323,17 +345,17 @@ export function PricingPlans(props: PricingPlansProps) {
           <FeatureList locale={locale} keys={DEVELOPER_FEATURES} />
 
           {!apiEnabled ? (
-            <p className="mt-1 rounded-md border border-line bg-surface px-3 py-[11px] text-[13px] text-ink-secondary">
+            <p className="mt-auto rounded-md border border-line bg-surface px-3 py-[11px] text-[13px] text-ink-secondary">
               <a href="mailto:hello@endgrain.app" className="text-accent hover:underline">
                 {t(locale, 'developer.emailNote')}
               </a>
             </p>
           ) : mode === 'link' ? null : apiSubscribed ? (
-            <span data-testid="pricing-api-current" className="mt-1 text-[13px] font-semibold text-ink">
+            <span data-testid="pricing-api-current" className="mt-auto text-[13px] font-semibold text-ink">
               {t(locale, 'pricing.current')}
             </span>
           ) : (
-            <div className="mt-1">
+            <div className="mt-auto pt-1">
               <PlanCta
                 locale={locale}
                 enabled={billingEnabled}

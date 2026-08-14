@@ -8,7 +8,10 @@ test.beforeEach(async ({ page }) => {
 // Сценарии описывают поведение без ключей: панели показывают заглушки и честно называют
 // недостающую переменную. С настоящим ключом в окружении генерация платная и ответ другой,
 // поэтому такие прогоны пропускаем (тот же приём, что в auth.spec.ts с E2E_AUTH).
-const noKeys = (process.env['GEMINI_API_KEY'] ?? '') === '' && (process.env['PRINTFUL_API_KEY'] ?? '') === ''
+const noKeys =
+  (process.env['GEMINI_API_KEY'] ?? '') === '' &&
+  (process.env['FAL_KEY'] ?? '') === '' &&
+  (process.env['PRINTFUL_API_KEY'] ?? '') === ''
 
 async function openStudio(page: Page): Promise<void> {
   await page.addInitScript(() => window.localStorage.clear())
@@ -24,7 +27,7 @@ test('вкладка «Промо» открывается и показывае
   await expect(page.getByTestId('promo-merch')).toBeVisible()
 })
 
-test('без ключа Gemini видна мок-галерея набора по умолчанию с честной подписью', async ({ page }) => {
+test('без ключей генерации видна мок-галерея набора по умолчанию с честной подписью', async ({ page }) => {
   test.skip(!noKeys, 'в окружении есть ключ: генерация платная и отвечает не заглушками')
   await openStudio(page)
   await page.getByTestId('tab-promo').click()
@@ -37,11 +40,11 @@ test('без ключа Gemini видна мок-галерея набора п�
   // Неотмеченный пресет в сетке не рисуется: за него никто не платил.
   await expect(page.getByTestId('promo-shot-catalog')).toHaveCount(0)
   // До нажатия кнопки панель не имеет права утверждать, что ключа нет: она этого не знает.
-  await expect(page.getByTestId('promo-note')).not.toContainText('GEMINI_API_KEY')
+  await expect(page.getByTestId('promo-note')).not.toContainText('ключ генерации')
 
   await page.getByTestId('promo-generate').click()
   // Без ключа действие возвращает мок-режим: галерея остаётся на месте и ошибки нет.
-  await expect(page.getByTestId('promo-note')).toContainText('GEMINI_API_KEY')
+  await expect(page.getByTestId('promo-note')).toContainText('ключ генерации')
   await expect(page.getByTestId('promo-error')).toHaveCount(0)
   await expect(page.getByTestId('promo-shot-hero')).toBeVisible()
 })

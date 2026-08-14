@@ -82,14 +82,14 @@ describe('PromoPanel', () => {
 
   it('до нажатия кнопки обе панели молчат про недостающие ключи', () => {
     render(<PromoPanel />)
-    expect(screen.getByTestId('promo-note').textContent).not.toContain('GEMINI_API_KEY')
+    expect(screen.getByTestId('promo-note').textContent).not.toContain('ключ генерации')
     expect(screen.getByTestId('merch-note').textContent).not.toContain('PRINTFUL_API_KEY')
   })
 
-  it('мок-ответ про ключ Gemini появляется только после генерации', async () => {
+  it('мок-ответ про недостающий ключ генерации появляется только после генерации', async () => {
     render(<PromoPanel />)
     fireEvent.click(screen.getByTestId('promo-generate'))
-    await waitFor(() => expect(screen.getByTestId('promo-note').textContent).toContain('GEMINI_API_KEY'))
+    await waitFor(() => expect(screen.getByTestId('promo-note').textContent).toContain('ключ генерации'))
   })
 
   it('после настоящей серии подписи про ключ нет', async () => {
@@ -97,7 +97,7 @@ describe('PromoPanel', () => {
     render(<PromoPanel />)
     fireEvent.click(screen.getByTestId('promo-generate'))
     await waitFor(() => expect(screen.getByTestId('promo-shot-hero').querySelector('img')).toBeTruthy())
-    expect(screen.getByTestId('promo-note').textContent).not.toContain('GEMINI_API_KEY')
+    expect(screen.getByTestId('promo-note').textContent).not.toContain('ключ генерации')
   })
 
   it('без ключа Printful кнопки «Открыть в Printful» нет, а после ответа появляется подпись про ключ', async () => {
@@ -116,7 +116,7 @@ describe('PromoPanel', () => {
     expect(screen.getByTestId('merch-note').textContent).not.toContain('PRINTFUL_API_KEY')
   })
 
-  it('настоящие кадры от Gemini заменяют заглушки картинками', async () => {
+  it('настоящие кадры от модели заменяют заглушки картинками', async () => {
     promoResult.current = {
       ok: true,
       mock: false,

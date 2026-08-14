@@ -17,7 +17,7 @@ export function AuthorLine({ locale, author }: { readonly locale: Locale; readon
       data-testid="author-line"
       className="flex items-center gap-1.5 text-[12px] text-ink-secondary transition-colors duration-hover hover:text-ink"
     >
-      <Avatar seed={author.id} label={label} size="sm" />
+      <Avatar seed={author.id} label={label} url={author.avatarUrl ?? null} size="sm" />
       <span className="truncate">
         {t(locale, 'author.by')} {label}
       </span>

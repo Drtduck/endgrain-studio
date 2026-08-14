@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { bitter, golos, jetbrains } from "./fonts";
 import { Analytics } from "@/components/Analytics";
 import { ConsentBanner } from "@/components/ConsentBanner";
 import { ConsentProvider } from "@/components/ConsentProvider";
 import { GoogleAuthProvider } from "@/components/GoogleAuthProvider";
 import { LocaleBootstrap } from "@/components/LocaleBootstrap";
+import { NavProgress } from "@/components/NavProgress";
 import { ProProvider } from "@/components/ProProvider";
 import { SessionProvider } from "@/components/SessionProvider";
 import { getAiAccess } from "@/lib/ai/entitlements";
@@ -53,6 +55,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${bitter.variable} ${golos.variable} ${jetbrains.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
+        {/* Полоска перехода поверх всего документа: клик по меню обязан давать
+            реакцию раньше, чем сервер отдаст следующий экран. Suspense нужен,
+            потому что внутри читаются searchParams. */}
+        <Suspense fallback={null}>
+          <NavProgress />
+        </Suspense>
         <Analytics regime={consent.regime} initialDecision={consent.decision} />
         <SessionProvider value={{ user, enabled: isSupabaseConfigured() }}>
           <GoogleAuthProvider value={googleAuthAvailable}>

@@ -50,7 +50,7 @@ function toCard(row: CardRow, profiles: ReadonlyMap<string, PublicProfile>): Gal
     status: row.status as GalleryCard['status'],
     summary,
     createdAt: String(row.created_at),
-    author: { id: authorId, displayName: profile?.displayName ?? null },
+    author: { id: authorId, displayName: profile?.displayName ?? null, avatarUrl: profile?.avatarUrl ?? null },
   }
 }
 

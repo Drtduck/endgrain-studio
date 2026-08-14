@@ -42,9 +42,17 @@ test.describe('страница API-ключей', () => {
     await expect(page.getByTestId('api-guide-mcp-tools')).toBeVisible()
   })
 
-  test('студия под логином показывает ссылки на галерею и API', async ({ page }) => {
+  test('в шапке галерея, а MCP лежит в меню аватара и ведёт на ключи', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByTestId('app-shell-nav-gallery')).toBeVisible()
-    await expect(page.getByTestId('app-shell-nav-api')).toBeVisible()
+    await expect(page.getByTestId('app-shell-nav-api')).toHaveCount(0)
+
+    await page.getByTestId('account-menu-trigger').click()
+    const mcp = page.getByTestId('account-menu-mcp')
+    await expect(mcp).toBeVisible()
+    await expect(mcp).toHaveAttribute('href', '/account/api')
+    await mcp.click()
+    await expect(page).toHaveURL(/\/account\/api$/)
+    await expect(page.getByTestId('api-keys-panel')).toBeVisible()
   })
 })

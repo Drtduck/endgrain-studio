@@ -10,13 +10,14 @@ import type { Profile, PublicProfile } from './types'
  * авторам в галерее service-role тут не нужен, это то же самое, что и
  * getPublishedProject в lib/gallery/list.ts.
  */
-const PUBLIC_COLUMNS = 'user_id, display_name, bio, website, created_at'
+const PUBLIC_COLUMNS = 'user_id, display_name, bio, website, avatar_url, created_at'
 
 interface ProfileRow {
   readonly user_id: unknown
   readonly display_name: unknown
   readonly bio: unknown
   readonly website: unknown
+  readonly avatar_url: unknown
   readonly created_at: unknown
 }
 
@@ -26,6 +27,7 @@ function toPublicProfile(row: ProfileRow): PublicProfile {
     displayName: row.display_name === null ? null : String(row.display_name),
     bio: row.bio === null ? null : String(row.bio),
     website: row.website === null ? null : String(row.website),
+    avatarUrl: row.avatar_url === null || row.avatar_url === undefined ? null : String(row.avatar_url),
     createdAt: String(row.created_at),
   }
 }
@@ -46,7 +48,7 @@ export async function getOwnProfile(userId: string): Promise<Profile | null> {
     const sb = getSupabaseService()
     const { data, error } = await sb
       .from('profiles')
-      .select('user_id, display_name, bio, website, notify_email, created_at')
+      .select('user_id, display_name, bio, website, avatar_url, notify_email, created_at')
       .eq('user_id', userId)
       .maybeSingle()
     if (error || !data) return null
@@ -55,6 +57,7 @@ export async function getOwnProfile(userId: string): Promise<Profile | null> {
       displayName: data.display_name === null ? null : String(data.display_name),
       bio: data.bio === null ? null : String(data.bio),
       website: data.website === null ? null : String(data.website),
+      avatarUrl: data.avatar_url === null || data.avatar_url === undefined ? null : String(data.avatar_url),
       notifyEmail: Boolean(data.notify_email),
       createdAt: String(data.created_at),
     }
