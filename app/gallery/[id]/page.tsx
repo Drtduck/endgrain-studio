@@ -1,16 +1,19 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { AuthorLine } from '@/components/gallery/AuthorLine'
 import { CopyToMyProjects } from '@/components/gallery/CopyToMyProjects'
 import { LikeButton } from '@/components/gallery/LikeButton'
 import { PriceBadge } from '@/components/gallery/PriceBadge'
+import { PurchaseButton } from '@/components/gallery/PurchaseButton'
 import { Button } from '@/components/ui/button'
 import { compile } from '@/lib/engine'
 import { renderBoardSvg } from '@/lib/export'
-import { getPublishedProject, getPublishedProjectDesign, hasLiked } from '@/lib/gallery/list'
+import { getPublishedProject, getPublishedProjectDesign, hasLiked, hasPurchased } from '@/lib/gallery/list'
 import { parseSummary, speciesDisplayNames } from '@/lib/gallery/summary'
 import { t } from '@/lib/i18n'
 import { getLandingLocale } from '@/lib/landing/locale'
+import { getProfile } from '@/lib/profile/read'
 import { getCurrentUser } from '@/lib/supabase/session'
 
 const PROJECT_PX = 720
@@ -44,6 +47,10 @@ export default async function GalleryProjectPage(props: PageProps<'/gallery/[id]
   }
   const species = summary === null ? [] : speciesDisplayNames(summary.species, locale)
   const liked = user === null ? false : await hasLiked(user.id, row.id)
+  const isOwner = user !== null && user.id === row.author_id
+  const purchased = user === null || isOwner ? false : await hasPurchased(user.id, row.id)
+  const authorProfile = await getProfile(row.author_id)
+  const canOpen = row.price_cents === 0 || isOwner || purchased
 
   return (
     <div className="min-h-screen bg-app">
@@ -77,18 +84,26 @@ export default async function GalleryProjectPage(props: PageProps<'/gallery/[id]
                 {species.length > 0 ? <p className="text-[13px] text-ink-secondary">{species.join(', ')}</p> : null}
               </div>
 
+              <AuthorLine locale={locale} author={{ id: row.author_id, displayName: authorProfile?.displayName ?? null }} />
+
               <PriceBadge locale={locale} priceCents={row.price_cents} />
 
               <div className="flex flex-wrap items-center gap-2">
                 <LikeButton locale={locale} publishedId={row.id} initialLiked={liked} initialCount={row.likes_count} />
               </div>
 
-              {row.price_cents === 0 ? (
+              {canOpen ? (
                 <CopyToMyProjects locale={locale} publishedId={row.id} />
-              ) : (
-                <Button size="sm" disabled data-testid="gallery-purchase-soon">
-                  {t(locale, 'gallery.purchaseSoon')}
+              ) : user === null ? (
+                <Button
+                  size="sm"
+                  data-testid="gallery-purchase-login"
+                  render={<Link href={`/login?next=${encodeURIComponent(`/gallery/${row.id}`)}`} />}
+                >
+                  {t(locale, 'gallery.purchaseLogin')}
                 </Button>
+              ) : (
+                <PurchaseButton locale={locale} publishedId={row.id} priceCents={row.price_cents} />
               )}
             </div>
           </div>

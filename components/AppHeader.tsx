@@ -27,6 +27,7 @@ const NAV_LINKS: readonly {
   { href: '/', labelKey: 'appShell.nav.studio', testId: 'app-shell-nav-studio' },
   { href: '/gallery', labelKey: 'appShell.nav.gallery', testId: 'app-shell-nav-gallery' },
   { href: '/pricing', labelKey: 'pricing.navTitle', testId: 'app-shell-nav-pricing' },
+  { href: '/account', labelKey: 'account.profile', testId: 'studio-nav-account', authOnly: true },
   { href: '/account/api', labelKey: 'apiKeys.navTitle', testId: 'app-shell-nav-api', authOnly: true },
 ]
 

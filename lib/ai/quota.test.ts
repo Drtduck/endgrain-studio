@@ -115,8 +115,8 @@ describe('константы бесплатного тира', () => {
 })
 
 describe('AI_TRIAL_FEATURES', () => {
-  it('только серия фото и серия по референсу входят в пробный тир', () => {
-    expect(AI_TRIAL_FEATURES).toEqual(['promoShots', 'referenceShots'])
+  it('серия фото, серия по референсу и карточка товара входят в пробный тир', () => {
+    expect(AI_TRIAL_FEATURES).toEqual(['promoShots', 'referenceShots', 'saleListing'])
   })
 
   it('разбор референса и мокапы мерча остаются Pro-фичами', () => {

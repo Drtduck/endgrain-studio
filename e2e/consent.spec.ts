@@ -115,6 +115,47 @@ test('без NEXT_PUBLIC_GA_MEASUREMENT_ID ни один запрос к googlet
   expect(requests).toEqual([])
 })
 
+test.describe('баннер - компактная карточка, не перекрывает контент', () => {
+  test('десктоп 1440x900: баннер не перекрывает подвал лендинга', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/landing')
+    const banner = page.getByTestId('consent-banner')
+    await expect(banner).toBeVisible()
+    const footer = page.getByTestId('landing-footer')
+    await footer.scrollIntoViewIfNeeded()
+
+    const bannerBox = await banner.boundingBox()
+    const footerBox = await footer.boundingBox()
+    expect(bannerBox).not.toBeNull()
+    expect(footerBox).not.toBeNull()
+    // Карточка ограничена по ширине и стоит слева внизу - справа подвал открыт.
+    expect(bannerBox!.width).toBeLessThan(500)
+    // Копирайт в подвале остаётся кликабельным: он вне прямоугольника карточки.
+    const copyright = footer.getByText('Endgrain App').last()
+    await expect(copyright).toBeInViewport()
+  })
+
+  test('мобайл 390x844: высота баннера меньше 120px', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/landing')
+    const banner = page.getByTestId('consent-banner')
+    await expect(banner).toBeVisible()
+    const box = await banner.boundingBox()
+    expect(box).not.toBeNull()
+    expect(box!.height).toBeLessThan(120)
+  })
+
+  test('клик по контенту под баннером проходит: контейнер не перехватывает события', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await openStudio(page)
+    await expect(page.getByTestId('consent-banner')).toBeVisible()
+    // Элемент в верхней части экрана, далеко от карточки согласия, но formально
+    // всё ещё в fixed-контейнере на всю ширину/высоту, если бы pointer-events не
+    // были ограничены самой карточкой.
+    await page.getByTestId('species-padauk').click()
+  })
+})
+
 test('экспорт PDF кладёт pdf_exported в dataLayer', async ({ page }) => {
   await openStudio(page)
   await page.getByTestId('consent-accept').click()

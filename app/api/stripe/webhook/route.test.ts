@@ -11,9 +11,15 @@ vi.mock('@/lib/stripe/config', () => ({
   STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET,
   STRIPE_PRICE_MONTHLY: PRICE_MONTHLY,
   STRIPE_PRICE_YEARLY: 'price_yearly',
+  STRIPE_PRICE_API_MONTHLY: 'price_api_monthly',
+  STRIPE_PRICE_API_YEARLY: 'price_api_yearly',
+  STRIPE_PRICE_PASS: 'price_pass',
+  STRIPE_PRO_DEFAULT_PRICE: 'yearly',
   STRIPE_PORTAL_URL: '',
   isStripeConfigured: () => true,
   hasPublicPrices: () => true,
+  hasApiPrices: () => true,
+  hasPassPrice: () => true,
 }))
 
 const supabase = { from: vi.fn(), rpc: vi.fn() }
@@ -34,11 +40,14 @@ function mockSupabase(options: SbOptions = {}) {
     data: options.existing ?? null,
     error: options.readError ?? null,
   })
-  const eq = vi.fn().mockReturnValue({ maybeSingle })
+  // Прочтение существующей строки идёт .eq('user_id', ...).eq('product', ...).maybeSingle():
+  // второй .eq возвращает объект с maybeSingle, первый - объект со вторым .eq.
+  const eq2 = vi.fn().mockReturnValue({ maybeSingle })
+  const eq = vi.fn().mockReturnValue({ eq: eq2 })
   const select = vi.fn().mockReturnValue({ eq })
   const upsert = vi.fn().mockResolvedValue({ error: options.upsertError ?? null })
   supabase.from.mockReturnValue({ select, upsert })
-  return { select, eq, maybeSingle, upsert }
+  return { select, eq, eq2, maybeSingle, upsert }
 }
 
 const CREATED_SEC = 1_760_000_000
@@ -91,7 +100,8 @@ describe('POST /api/stripe/webhook', () => {
     expect(row['stripe_subscription_id']).toBe('sub_B')
     expect(row['plan']).toBe('monthly')
     expect(row['status']).toBe('active')
-    expect(sb.upsert.mock.calls[0]?.[1]).toEqual({ onConflict: 'user_id' })
+    expect(row['product']).toBe('pro')
+    expect(sb.upsert.mock.calls[0]?.[1]).toEqual({ onConflict: 'user_id,product' })
   })
 
   it('ошибка чтения last_event_at даёт 500 и ничего не пишет', async () => {
@@ -255,15 +265,179 @@ describe('POST /api/stripe/webhook: разовый платёж', () => {
     expect(supabase.rpc).not.toHaveBeenCalled()
   })
 
-  it('gallery_purchase отвечает 200 и ничего не пишет', async () => {
+  describe('gallery_purchase', () => {
+    /**
+     * Отдельный мок from(): ветка покупки трогает две таблицы (published_projects
+     * на чтение автора, project_purchases на запись), а mockSupabase() из блока выше
+     * заточен под одну таблицу подписок и тут не подходит.
+     */
+    function mockPurchaseSupabase(options: { readonly published?: { author_id: string } | null; readonly readError?: unknown; readonly upsertError?: unknown } = {}) {
+      const maybeSingle = vi.fn().mockResolvedValue({
+        data: options.published === undefined ? { author_id: 'author-1' } : options.published,
+        error: options.readError ?? null,
+      })
+      // Роут читает published_projects одним .eq('id', ...) перед .maybeSingle() -
+      // в отличие от подписочной ветки выше, где читают по двум .eq подряд.
+      const eq = vi.fn().mockReturnValue({ maybeSingle })
+      const select = vi.fn().mockReturnValue({ eq })
+      const upsert = vi.fn().mockResolvedValue({ error: options.upsertError ?? null })
+      supabase.from.mockImplementation((table: string) => {
+        if (table === 'published_projects') return { select }
+        if (table === 'project_purchases') return { upsert }
+        throw new Error(`unexpected table ${table}`)
+      })
+      return { select, eq, maybeSingle, upsert }
+    }
+
+    it('пишет чек в project_purchases с amount_total события и отвечает 200', async () => {
+      const sb = mockPurchaseSupabase()
+      const { POST } = await import('./route')
+
+      const res = await POST(
+        signedRequest(
+          topupEventBody({
+            amount_total: 1200,
+            metadata: { supabase_user_id: 'buyer-1', kind: 'gallery_purchase', published_id: 'pub-1' },
+          }),
+        ),
+      )
+
+      expect(res.status).toBe(200)
+      expect(await res.text()).toBe('ok')
+      expect(sb.upsert).toHaveBeenCalledTimes(1)
+      const [row, opts] = sb.upsert.mock.calls[0] as [Record<string, unknown>, Record<string, unknown>]
+      expect(row).toMatchObject({
+        published_id: 'pub-1',
+        buyer_id: 'buyer-1',
+        author_id: 'author-1',
+        price_cents: 1200,
+        currency: 'usd',
+        stripe_session_id: 'cs_1',
+        status: 'paid',
+      })
+      expect(opts).toEqual({ onConflict: 'stripe_session_id', ignoreDuplicates: true })
+      expect(supabase.rpc).not.toHaveBeenCalled()
+    })
+
+    it('повторная доставка того же события отвечает 200 (идемпотентность в SQL по stripe_session_id)', async () => {
+      const sb = mockPurchaseSupabase()
+      const { POST } = await import('./route')
+
+      const body = topupEventBody({ metadata: { supabase_user_id: 'buyer-1', kind: 'gallery_purchase', published_id: 'pub-1' } })
+      const first = await POST(signedRequest(body))
+      const second = await POST(signedRequest(body))
+
+      expect(first.status).toBe(200)
+      expect(second.status).toBe(200)
+      expect(sb.upsert).toHaveBeenCalledTimes(2)
+    })
+
+    it('без published_id в metadata отвечает 200 и не пишет (ретрай не помог бы)', async () => {
+      const sb = mockPurchaseSupabase()
+      const { POST } = await import('./route')
+
+      const res = await POST(
+        signedRequest(topupEventBody({ metadata: { supabase_user_id: 'buyer-1', kind: 'gallery_purchase' } })),
+      )
+
+      expect(res.status).toBe(200)
+      expect(sb.upsert).not.toHaveBeenCalled()
+    })
+
+    it('удалённая публикация отвечает 200 и не пишет чек', async () => {
+      const sb = mockPurchaseSupabase({ published: null })
+      const { POST } = await import('./route')
+
+      const res = await POST(
+        signedRequest(topupEventBody({ metadata: { supabase_user_id: 'buyer-1', kind: 'gallery_purchase', published_id: 'pub-1' } })),
+      )
+
+      expect(res.status).toBe(200)
+      expect(sb.upsert).not.toHaveBeenCalled()
+    })
+
+    it('ошибка чтения публикации даёт 500: Stripe переотправит', async () => {
+      mockPurchaseSupabase({ readError: { message: 'connection reset' } })
+      const { POST } = await import('./route')
+
+      const res = await POST(
+        signedRequest(topupEventBody({ metadata: { supabase_user_id: 'buyer-1', kind: 'gallery_purchase', published_id: 'pub-1' } })),
+      )
+
+      expect(res.status).toBe(500)
+    })
+
+    it('ошибка записи чека даёт 500: Stripe переотправит', async () => {
+      mockPurchaseSupabase({ upsertError: { message: 'constraint violation' } })
+      const { POST } = await import('./route')
+
+      const res = await POST(
+        signedRequest(topupEventBody({ metadata: { supabase_user_id: 'buyer-1', kind: 'gallery_purchase', published_id: 'pub-1' } })),
+      )
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  it('pro_pass зовёт grant_pro_pass с p_days = 90 и p_ref = session.id', async () => {
     mockSupabase()
+    supabase.rpc.mockResolvedValue({ data: null, error: null })
     const { POST } = await import('./route')
 
     const res = await POST(
-      signedRequest(topupEventBody({ metadata: { supabase_user_id: 'user-1', kind: 'gallery_purchase', published_id: 'pub-1' } })),
+      signedRequest(topupEventBody({ metadata: { supabase_user_id: 'user-1', kind: 'pro_pass' }, amount_total: 1900 })),
     )
 
     expect(res.status).toBe(200)
-    expect(supabase.rpc).not.toHaveBeenCalled()
+    expect(await res.text()).toBe('ok')
+    expect(supabase.rpc).toHaveBeenCalledWith('grant_pro_pass', { p_user_id: 'user-1', p_ref: 'cs_1', p_days: 90 })
+  })
+
+  it('ошибка базы при выдаче пропуска даёт 500: Stripe переотправит', async () => {
+    mockSupabase()
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'db down' } })
+    const { POST } = await import('./route')
+
+    const res = await POST(
+      signedRequest(topupEventBody({ metadata: { supabase_user_id: 'user-1', kind: 'pro_pass' }, amount_total: 1900 })),
+    )
+    expect(res.status).toBe(500)
+  })
+
+  it('живая подписка product=api поднимает тир ключей до developer', async () => {
+    const sb = mockSupabase({ existing: null })
+    supabase.rpc.mockResolvedValue({ error: null })
+    const { POST } = await import('./route')
+
+    const res = await POST(
+      signedRequest(
+        eventBody({
+          items: { data: [{ price: { id: 'price_api_yearly' }, current_period_end: CREATED_SEC + 2_592_000 }] },
+        }),
+      ),
+    )
+
+    expect(res.status).toBe(200)
+    expect(sb.upsert.mock.calls[0]?.[0]).toMatchObject({ product: 'api' })
+    expect(supabase.rpc).toHaveBeenCalledWith('set_api_tier', { p_user_id: 'user-1', p_tier: 'developer' })
+  })
+
+  it('отменённая подписка product=api опускает тир ключей до free', async () => {
+    const sb = mockSupabase({ existing: null })
+    supabase.rpc.mockResolvedValue({ error: null })
+    const { POST } = await import('./route')
+
+    const res = await POST(
+      signedRequest(
+        eventBody({
+          status: 'canceled',
+          items: { data: [{ price: { id: 'price_api_yearly' }, current_period_end: CREATED_SEC + 2_592_000 }] },
+        }),
+      ),
+    )
+
+    expect(res.status).toBe(200)
+    expect(sb.upsert.mock.calls[0]?.[0]).toMatchObject({ product: 'api' })
+    expect(supabase.rpc).toHaveBeenCalledWith('set_api_tier', { p_user_id: 'user-1', p_tier: 'free' })
   })
 })

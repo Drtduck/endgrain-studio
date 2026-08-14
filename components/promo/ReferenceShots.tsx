@@ -10,7 +10,7 @@ import { AiGateNote, useAiGate } from '@/components/promo/AiGate'
 import { PromoMockShot } from '@/components/promo/PromoMockShot'
 import { TrialPaywall } from '@/components/promo/TrialPaywall'
 import { blobToDataUrl, boardPngDataUrl } from '@/components/promo/boardPng'
-import { aiCost } from '@/lib/ai/quota'
+import { FREE_TRIAL_MAX_UNITS, aiCost } from '@/lib/ai/quota'
 import { safeFileName } from '@/lib/export'
 import { t, type MessageKey } from '@/lib/i18n'
 import { describeBoard } from '@/lib/promo/describe'
@@ -57,13 +57,16 @@ export function ReferenceShots() {
 
   const [preview, setPreview] = useState<string | null>(null)
   const [style, setStyle] = useState<StyleAnalysis | null>(null)
-  const [count, setCount] = useState(2)
   const [busy, setBusy] = useState<'analyze' | 'generate' | null>(null)
   const [errorKey, setErrorKey] = useState<MessageKey | null>(null)
   const [result, setResult] = useState<PromoResult | null>(null)
   const [remaining, setRemaining] = useState<number | null>(null)
   const gate = useAiGate(remaining)
   const trialMode = gate.access.state === 'trial'
+  // Во free-тире сервер режет серию до FREE_TRIAL_MAX_UNITS кадров: стартовый
+  // выбор обязан укладываться в тот же потолок, иначе счётчик под чипами
+  // обещает списать больше, чем реально спишется.
+  const [count, setCount] = useState(() => (trialMode ? FREE_TRIAL_MAX_UNITS : 2))
 
   const cost = aiCost('referenceShots', count)
   const images = result !== null && result.ok && !result.mock ? result.images : []

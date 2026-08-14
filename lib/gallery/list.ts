@@ -1,6 +1,8 @@
 import 'server-only'
 import type { Design } from '@/lib/engine'
 import { parseDesign } from '@/lib/persist'
+import { getProfiles } from '@/lib/profile/read'
+import type { PublicProfile } from '@/lib/profile/types'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { getSupabaseServer } from '@/lib/supabase/server'
 import type { PublishedProjectRow } from '@/lib/supabase/types'
@@ -32,12 +34,14 @@ interface CardRow {
  * роняет всю страницу: одна испорченная публикация не должна положить
  * галерею целиком.
  */
-function toCard(row: CardRow): GalleryCard | null {
+function toCard(row: CardRow, profiles: ReadonlyMap<string, PublicProfile>): GalleryCard | null {
   const summary = parseSummary(row.summary)
   if (summary === null) return null
+  const authorId = String(row.author_id)
+  const profile = profiles.get(authorId)
   return {
     id: String(row.id),
-    authorId: String(row.author_id),
+    authorId,
     title: String(row.title),
     priceCents: Number(row.price_cents),
     currency: String(row.currency),
@@ -46,6 +50,7 @@ function toCard(row: CardRow): GalleryCard | null {
     status: row.status as GalleryCard['status'],
     summary,
     createdAt: String(row.created_at),
+    author: { id: authorId, displayName: profile?.displayName ?? null },
   }
 }
 
@@ -73,8 +78,9 @@ export async function listGallery(sort: GallerySort, page: number): Promise<Gall
 
     const hasMore = data.length > GALLERY_PAGE_SIZE
     const rows = data.slice(0, GALLERY_PAGE_SIZE) as unknown as CardRow[]
+    const profiles = await getProfiles(rows.map((row) => String(row.author_id)))
     const items = rows.flatMap((row) => {
-      const card = toCard(row)
+      const card = toCard(row, profiles)
       return card === null ? [] : [card]
     })
 
@@ -144,6 +150,25 @@ export async function hasLiked(userId: string, publishedId: string): Promise<boo
   }
 }
 
+/** Купил ли текущий пользователь эту публикацию: под своей RLS-политикой select (purchases_select_buyer). */
+export async function hasPurchased(userId: string, publishedId: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false
+  try {
+    const sb = await getSupabaseServer()
+    const { data } = await sb
+      .from('project_purchases')
+      .select('id')
+      .eq('published_id', publishedId)
+      .eq('buyer_id', userId)
+      .eq('status', 'paid')
+      .maybeSingle()
+    return data !== null
+  } catch (err) {
+    console.error('hasPurchased failed', err)
+    return false
+  }
+}
+
 /** «Мои публикации»: собственные строки автора вне зависимости от статуса. */
 export async function listMyPublished(userId: string): Promise<readonly GalleryCard[]> {
   if (!isSupabaseConfigured()) return []
@@ -157,12 +182,44 @@ export async function listMyPublished(userId: string): Promise<readonly GalleryC
       .limit(50)
     if (error || !data) return []
     const rows = data as unknown as CardRow[]
+    // Все строки одного автора: userId уже известен, батч-чтение профиля не нужно.
+    const profiles = await getProfiles([userId])
     return rows.flatMap((row) => {
-      const card = toCard(row)
+      const card = toCard(row, profiles)
       return card === null ? [] : [card]
     })
   } catch (err) {
     console.error('listMyPublished failed', err)
+    return []
+  }
+}
+
+/**
+ * Публичные публикации одного автора, для /u/[id]. По образцу listMyPublished
+ * выше, но фильтр по status='public' (не все свои, как в панели проектов) и
+ * без RLS-обхода: тот же user-context клиент, что и listGallery, потому что
+ * анонимный посетитель обязан видеть эту сетку без входа.
+ */
+export async function listByAuthorPublic(userId: string): Promise<readonly GalleryCard[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const sb = await getSupabaseServer()
+    const { data, error } = await sb
+      .from('published_projects')
+      .select(CARD_COLUMNS)
+      .eq('author_id', userId)
+      .eq('status', 'public')
+      .order('created_at', { ascending: false })
+      .limit(50)
+    if (error || !data) return []
+    const rows = data as unknown as CardRow[]
+    const profiles = await getProfiles([userId])
+    return rows.flatMap((row) => {
+      const card = toCard(row, profiles)
+      return card === null ? [] : [card]
+    })
+  } catch (err) {
+    console.error('listByAuthorPublic failed', err)
     return []
   }
 }

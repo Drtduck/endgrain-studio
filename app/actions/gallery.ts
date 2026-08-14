@@ -1,5 +1,6 @@
 'use server'
 
+import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { compile } from '@/lib/engine'
@@ -8,8 +9,10 @@ import { PRICE_MAX_CENTS, parsePriceInput } from '@/lib/gallery/price'
 import { buildSummary } from '@/lib/gallery/summary'
 import type { GalleryError } from '@/lib/gallery/types'
 import { parseDesign } from '@/lib/persist'
+import { APP_ORIGIN } from '@/lib/routing/host'
 import { FREE_PROJECT_LIMIT } from '@/lib/stripe/limits'
 import { getProStatus } from '@/lib/stripe/pro'
+import { STRIPE_SECRET_KEY, isStripeConfigured } from '@/lib/stripe/config'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { getSupabaseServer } from '@/lib/supabase/server'
 
@@ -25,11 +28,11 @@ const PUBLISH_LIMIT = 20
 const titleSchema = z.string().trim().min(1).max(120)
 const idSchema = z.uuid()
 
-async function requireUser(): Promise<{ readonly id: string } | null> {
+async function requireUser(): Promise<{ readonly id: string; readonly email: string | undefined } | null> {
   if (!isSupabaseConfigured()) return null
   const sb = await getSupabaseServer()
   const { data } = await sb.auth.getUser()
-  return data.user ? { id: data.user.id } : null
+  return data.user ? { id: data.user.id, email: data.user.email } : null
 }
 
 /**
@@ -247,4 +250,95 @@ export async function copyPublishedAction(publishedId: string): Promise<ActionRe
   await sb.rpc('bump_save_count', { p_id: publishedId })
 
   return { ok: true, data: { id: String(inserted.id) } }
+}
+
+export type PurchaseCheckoutResult = { readonly ok: true; readonly url: string } | { readonly ok: false; readonly error: GalleryError }
+
+/**
+ * Checkout Session mode=payment для покупки платного проекта из галереи -
+ * фаза 2 спеки docs/superpowers/specs/2026-08-13-commerce-social-design.md,
+ * раздел 1.4. Тот же приём, что и createTopUpCheckoutAction в app/actions/wallet.ts:
+ * REST Stripe без SDK, price_data инлайном (цену видно только с сервера).
+ *
+ * Гварды по порядку: касса настроена, id валиден, пользователь вошёл,
+ * публикация существует и не удалена, цена больше нуля (бесплатное копируется
+ * без Checkout), не свой проект (автор не покупает у себя), ещё не куплена.
+ * Сумма в metadata не участвует: source of truth для webhook - amount_total
+ * события, тут только выставляем её через price_data.
+ */
+export async function createPurchaseCheckoutAction(publishedId: string): Promise<PurchaseCheckoutResult> {
+  if (!isStripeConfigured()) return { ok: false, error: 'disabled' }
+
+  const parsedId = idSchema.safeParse(publishedId)
+  if (!parsedId.success) return { ok: false, error: 'invalid' }
+
+  const user = await requireUser()
+  if (!user) return { ok: false, error: 'unauthenticated' }
+
+  const sb = await getSupabaseServer()
+
+  const { data: published, error: readError } = await sb
+    .from('published_projects')
+    .select('title, price_cents, author_id, status')
+    .eq('id', parsedId.data)
+    .maybeSingle()
+  if (readError) return { ok: false, error: 'failed' }
+  if (!published || published.status === 'removed') return { ok: false, error: 'notFound' }
+
+  const priceCents = Number(published.price_cents)
+  if (!Number.isInteger(priceCents) || priceCents <= 0) return { ok: false, error: 'invalid' }
+  if (String(published.author_id) === user.id) return { ok: false, error: 'own' }
+
+  const { data: purchase, error: purchaseError } = await sb
+    .from('project_purchases')
+    .select('id')
+    .eq('published_id', parsedId.data)
+    .eq('buyer_id', user.id)
+    .eq('status', 'paid')
+    .maybeSingle()
+  if (purchaseError) return { ok: false, error: 'failed' }
+  if (purchase) return { ok: false, error: 'already' }
+
+  const headerList = await headers()
+  const origin = headerList.get('origin') ?? APP_ORIGIN
+
+  const body = new URLSearchParams({
+    mode: 'payment',
+    'line_items[0][quantity]': '1',
+    'line_items[0][price_data][currency]': 'usd',
+    'line_items[0][price_data][unit_amount]': String(priceCents),
+    'line_items[0][price_data][product_data][name]': `Endgrain App: ${String(published.title)}`,
+    success_url: `${origin}/gallery/${parsedId.data}?purchase=success`,
+    cancel_url: `${origin}/gallery/${parsedId.data}?purchase=cancel`,
+    client_reference_id: user.id,
+    'metadata[supabase_user_id]': user.id,
+    'metadata[kind]': 'gallery_purchase',
+    'metadata[published_id]': parsedId.data,
+  })
+  if (user.email) body.set('customer_email', user.email)
+
+  try {
+    const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+      cache: 'no-store',
+    })
+    if (!res.ok) {
+      console.error('gallery purchase checkout failed', res.status, await res.text())
+      return { ok: false, error: 'failed' }
+    }
+    const json = (await res.json()) as { url?: unknown }
+    if (typeof json.url !== 'string' || json.url.length === 0) {
+      console.error('gallery purchase checkout returned no url')
+      return { ok: false, error: 'failed' }
+    }
+    return { ok: true, url: json.url }
+  } catch (err) {
+    console.error('gallery purchase checkout threw', err)
+    return { ok: false, error: 'failed' }
+  }
 }

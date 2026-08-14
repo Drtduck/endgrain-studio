@@ -72,4 +72,37 @@ describe('resolveProStatus', () => {
   it('неизвестный план в строке не ломает разбор', () => {
     expect(resolveProStatus(row({ plan: 'lifetime' }), NOW).plan).toBe(null)
   })
+
+  describe('пропуск', () => {
+    it('без подписки и с живым пропуском даёт Pro с причиной pass', () => {
+      const expiresAt = new Date(NOW + 10 * DAY).toISOString()
+      const res = resolveProStatus(null, NOW, { expiresAt })
+      expect(res).toEqual({
+        pro: true,
+        reason: 'pass',
+        plan: null,
+        currentPeriodEnd: expiresAt,
+        cancelAtPeriodEnd: true,
+      })
+    })
+
+    it('истёкший пропуск без подписки не даёт Pro', () => {
+      const expiresAt = new Date(NOW - DAY).toISOString()
+      expect(resolveProStatus(null, NOW, { expiresAt }).pro).toBe(false)
+    })
+
+    it('живая подписка выигрывает у пропуска: причина subscription, а не pass', () => {
+      const passExpiresAt = new Date(NOW + 90 * DAY).toISOString()
+      const res = resolveProStatus(row(), NOW, { expiresAt: passExpiresAt })
+      expect(res.reason).toBe('subscription')
+    })
+
+    it('мёртвая подписка и живой пропуск дают Pro с причиной pass', () => {
+      const passExpiresAt = new Date(NOW + 10 * DAY).toISOString()
+      const res = resolveProStatus(row({ status: 'canceled' }), NOW, { expiresAt: passExpiresAt })
+      expect(res.pro).toBe(true)
+      expect(res.reason).toBe('pass')
+      expect(res.currentPeriodEnd).toBe(passExpiresAt)
+    })
+  })
 })

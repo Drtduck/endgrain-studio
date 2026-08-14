@@ -19,7 +19,16 @@ export const GALLERY_MAX_PAGE = 10
 /** Выше стольки ячеек карточка рисует упрощённый плейсхолдер, а не полный SVG. */
 export const GALLERY_CELL_LIMIT = 2000
 
-export type GalleryError = 'unauthenticated' | 'invalid' | 'notFound' | 'failed' | 'limit' | 'needsPurchase'
+export type GalleryError =
+  | 'unauthenticated'
+  | 'invalid'
+  | 'notFound'
+  | 'failed'
+  | 'limit'
+  | 'needsPurchase'
+  | 'disabled'
+  | 'own'
+  | 'already'
 
 export interface GallerySummary {
   readonly widthMm: number
@@ -28,6 +37,12 @@ export interface GallerySummary {
   readonly cellCount: number
   /** Id пород по убыванию доли, как в lib/species. */
   readonly species: readonly string[]
+}
+
+/** Автор карточки для AuthorLine. Отсутствует, если профиль ещё не заполнялся. */
+export interface GalleryCardAuthor {
+  readonly id: string
+  readonly displayName: string | null
 }
 
 export interface GalleryCard {
@@ -41,6 +56,7 @@ export interface GalleryCard {
   readonly status: 'public' | 'unlisted' | 'removed'
   readonly summary: GallerySummary
   readonly createdAt: string
+  readonly author?: GalleryCardAuthor
 }
 
 export interface GalleryPage {

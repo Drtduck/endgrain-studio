@@ -10,7 +10,7 @@ import { AiGateNote, useAiGate } from '@/components/promo/AiGate'
 import { PromoMockShot } from '@/components/promo/PromoMockShot'
 import { TrialPaywall } from '@/components/promo/TrialPaywall'
 import { boardPngDataUrl } from '@/components/promo/boardPng'
-import { aiCost } from '@/lib/ai/quota'
+import { FREE_TRIAL_MAX_UNITS, aiCost } from '@/lib/ai/quota'
 import { safeFileName } from '@/lib/export'
 import { t } from '@/lib/i18n'
 import { describeBoard } from '@/lib/promo/describe'
@@ -25,16 +25,20 @@ export function PhotoSeries() {
   const { model } = useDerived()
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<PromoResult | null>(null)
-  // Отмеченные пресеты. Двенадцать кадров разом стоят двенадцать единиц квоты
-  // из тридцати, поэтому набор выбирает человек, а не кнопка за него.
-  const [selected, setSelected] = useState<readonly PromoShotKind[]>(PROMO_DEFAULT_SHOTS)
   // Остаток квоты после последней генерации: сервер возвращает его в ответе.
   const [remaining, setRemaining] = useState<number | null>(null)
   const gate = useAiGate(remaining)
-  // Во free-тире серия режется до одного кадра ещё на сервере: чипы отражают
-  // это здесь, а не только после отказа - выбрать второй кадр вместо первого
-  // можно, набрать оба сразу нельзя.
+  // Состояние доступа приезжает из серверного layout (ProProvider), поэтому
+  // тир известен уже на первом рендере, без мигания.
   const trialMode = gate.access.state === 'trial'
+  // Отмеченные пресеты. Двенадцать кадров разом стоят двенадцать единиц квоты
+  // из тридцати, поэтому набор выбирает человек, а не кнопка за него. Во
+  // free-тире сервер режет серию до FREE_TRIAL_MAX_UNITS кадров (сейчас один),
+  // поэтому и стартовый выбор обязан укладываться в тот же потолок - иначе
+  // счётчик под чипами обещает списать больше, чем реально спишется.
+  const [selected, setSelected] = useState<readonly PromoShotKind[]>(() =>
+    trialMode ? PROMO_DEFAULT_SHOTS.slice(0, FREE_TRIAL_MAX_UNITS) : PROMO_DEFAULT_SHOTS,
+  )
 
   const cost = aiCost('promoShots', selected.length)
   const imageByKind = new Map<PromoShotKind, string>(

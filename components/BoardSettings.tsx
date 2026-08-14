@@ -77,9 +77,8 @@ export function BoardSettings() {
 
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" data-testid="share-copy" onClick={copyLink}>
-            {t(locale, 'share.copy')}
+            {t(locale, copied ? 'share.copied' : 'share.copy')}
           </Button>
-          {copied ? <span className="text-[11px] text-ink-muted">{t(locale, 'share.copied')}</span> : null}
         </div>
       </CardContent>
     </Card>

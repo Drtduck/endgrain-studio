@@ -15,6 +15,9 @@ const ERROR_KEYS: Readonly<Record<GalleryError, MessageKey>> = {
   failed: 'gallery.copyError',
   limit: 'gallery.copyErrorLimit',
   needsPurchase: 'gallery.copyErrorPaid',
+  disabled: 'gallery.copyError',
+  own: 'gallery.copyError',
+  already: 'gallery.copyError',
 }
 
 /**

@@ -6,6 +6,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const getUser = vi.fn()
 const maybeSingle = vi.fn()
+// subscriptions читается .eq('user_id').eq('product').maybeSingle(), а pro_passes -
+// .eq('user_id').order().limit().maybeSingle(). Разная форма цепочки на разные
+// таблицы, поэтому разные моки по имени таблицы.
+const maybeSinglePass = vi.fn()
 
 vi.mock('@/lib/supabase/config', () => ({
   SUPABASE_URL: 'https://example.supabase.co',
@@ -19,7 +23,12 @@ vi.mock('@/lib/supabase/session', () => ({
 
 vi.mock('@/lib/supabase/server', () => ({
   getSupabaseServer: async () => ({
-    from: () => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }),
+    from: (table: string) => {
+      if (table === 'pro_passes') {
+        return { select: () => ({ eq: () => ({ order: () => ({ limit: () => ({ maybeSingle: maybeSinglePass }) }) }) }) }
+      }
+      return { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle }) }) }) }
+    },
   }),
 }))
 
@@ -44,6 +53,8 @@ describe('getSubscriptionStatus', () => {
   beforeEach(() => {
     getUser.mockReset()
     maybeSingle.mockReset()
+    maybeSinglePass.mockReset()
+    maybeSinglePass.mockResolvedValue({ data: null, error: null })
     vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
@@ -104,6 +115,8 @@ describe('getProStatus', () => {
   beforeEach(() => {
     getUser.mockReset()
     maybeSingle.mockReset()
+    maybeSinglePass.mockReset()
+    maybeSinglePass.mockResolvedValue({ data: null, error: null })
     vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 

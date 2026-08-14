@@ -29,6 +29,8 @@ export const PUBLIC_PREFIXES: readonly string[] = [
   // Галерея единственная страница студии, обязанная открываться анониму:
   // иначе делиться ссылкой на опубликованный проект незачем.
   '/gallery',
+  // Публичный профиль автора: на него ведут ссылки из галереи, доступные анониму.
+  '/u',
 ]
 
 /** Файлы-метаданные в корне: их отдаёт Next, логин к ним неприменим. */
@@ -78,6 +80,30 @@ export function loginRedirectPath(pathname: string, search: string): string {
   return `${LOGIN_PATH}?next=${encodeURIComponent(next)}`
 }
 
+/**
+ * Входные экраны логина. /reset-password и /forgot-password сюда намеренно не входят:
+ * recovery-сессия, которую Supabase кладёт по ссылке из письма, обязана дойти до формы,
+ * иначе поставить новый пароль будет негде.
+ */
+export const AUTH_ENTRY_PREFIXES: readonly string[] = ['/login', '/register']
+
+/** Путь ведёт на форму входа или регистрации, куда авторизованному человеку возвращаться незачем. */
+export function isAuthEntryPath(pathname: string): boolean {
+  return AUTH_ENTRY_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+}
+
+/**
+ * Куда отправить уже авторизованного человека, который открыл /login или /register.
+ * Используем тот же safeNextPath: если next сам указывает на вход/регистрацию
+ * (например по старой ссылке или в цикле редиректов), уводим в корень студии.
+ */
+export function postAuthRedirectPath(search: string): string {
+  const params = new URLSearchParams(search)
+  const next = safeNextPath(params.get('next'))
+  if (isAuthEntryPath(next.split('?')[0] ?? '')) return '/'
+  return next
+}
+
 export interface AccessInput {
   /** Роль хоста: лендинг, студия или неизвестный (localhost, превью). */
   readonly role: HostRole
@@ -102,6 +128,9 @@ const ALLOW: AccessDecision = { kind: 'allow' }
  */
 export function decideAccess(input: AccessInput): AccessDecision {
   if (input.role === 'site') return ALLOW
+  if (input.authenticated && isAuthEntryPath(input.pathname)) {
+    return { kind: 'redirect', to: postAuthRedirectPath(input.search) }
+  }
   if (input.publicStudio) return ALLOW
   if (!input.supabaseConfigured) return ALLOW
   if (input.authenticated) return ALLOW

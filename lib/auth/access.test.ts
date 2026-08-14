@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { decideAccess, isPublicPath, loginRedirectPath, safeNextPath, type AccessInput } from './access'
+import {
+  decideAccess,
+  isAuthEntryPath,
+  isPublicPath,
+  loginRedirectPath,
+  safeNextPath,
+  type AccessInput,
+} from './access'
 
 /** База: студия, аноним, Supabase настроен, аварийный флаг выключен. */
 function input(overrides: Partial<AccessInput> = {}): AccessInput {
@@ -51,6 +58,19 @@ describe('isPublicPath', () => {
   it('открывает картинки соцсетей с хешем в имени', () => {
     expect(isPublicPath('/opengraph-image-a1b2c3')).toBe(true)
   })
+})
+
+describe('isAuthEntryPath', () => {
+  it.each(['/login', '/register'])('вход/регистрация: %s', (path) => {
+    expect(isAuthEntryPath(path)).toBe(true)
+  })
+
+  it.each(['/forgot-password', '/reset-password', '/loginx', '/'])(
+    'не вход: %s',
+    (path) => {
+      expect(isAuthEntryPath(path)).toBe(false)
+    }
+  )
 })
 
 describe('safeNextPath', () => {
@@ -121,5 +141,55 @@ describe('decideAccess', () => {
 
   it('без ключей Supabase гейт выключен: логиниться всё равно негде', () => {
     expect(decideAccess(input({ supabaseConfigured: false })).kind).toBe('allow')
+  })
+
+  it('авторизованного на /login уводит в корень студии', () => {
+    expect(decideAccess(input({ authenticated: true, pathname: '/login' }))).toEqual({
+      kind: 'redirect',
+      to: '/',
+    })
+  })
+
+  it('авторизованного на /login с next возвращает по next', () => {
+    expect(
+      decideAccess(
+        input({ authenticated: true, pathname: '/login', search: '?next=' + encodeURIComponent('/?tab=cut') })
+      )
+    ).toEqual({ kind: 'redirect', to: '/?tab=cut' })
+  })
+
+  it('авторизованного на /register уводит в корень студии', () => {
+    expect(decideAccess(input({ authenticated: true, pathname: '/register' }))).toEqual({
+      kind: 'redirect',
+      to: '/',
+    })
+  })
+
+  it('next, указывающий на /login, тоже уводит в корень: возвращаться некуда', () => {
+    expect(
+      decideAccess(input({ authenticated: true, pathname: '/login', search: '?next=%2Flogin' }))
+    ).toEqual({ kind: 'redirect', to: '/' })
+  })
+
+  it('открытый редирект в next режется safeNextPath и уводит в корень', () => {
+    expect(
+      decideAccess(
+        input({ authenticated: true, pathname: '/login', search: '?next=' + encodeURIComponent('//evil.com') })
+      )
+    ).toEqual({ kind: 'redirect', to: '/' })
+  })
+
+  it('PUBLIC_STUDIO=1 не отменяет уход авторизованного со страницы входа', () => {
+    expect(
+      decideAccess(input({ authenticated: true, publicStudio: true, pathname: '/login' }))
+    ).toEqual({ kind: 'redirect', to: '/' })
+  })
+
+  it('регресс: аноним на /login остаётся на форме', () => {
+    expect(decideAccess(input({ pathname: '/login' })).kind).toBe('allow')
+  })
+
+  it('регресс: авторизованный на /reset-password не уводится - recovery-сессия обязана дойти до формы', () => {
+    expect(decideAccess(input({ authenticated: true, pathname: '/reset-password' })).kind).toBe('allow')
   })
 })

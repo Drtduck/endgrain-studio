@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { planForPriceId, type PlanId } from './plans'
+import { resolvePriceId, type PlanId, type Product } from './plans'
 
 export type SubscriptionStatus =
   | 'trialing'
@@ -16,6 +16,7 @@ export interface SubscriptionUpsert {
   readonly customerId: string
   readonly subscriptionId: string
   readonly priceId: string
+  readonly product: Product
   readonly plan: PlanId
   readonly status: SubscriptionStatus
   /** ISO-строка или null, если Stripe не прислал период (см. раздел про версию API в спеке). */
@@ -60,7 +61,7 @@ const subscriptionSchema = z.object({
   status: statusSchema,
   cancel_at_period_end: z.boolean().optional(),
   current_period_end: z.number().nullish(),
-  metadata: z.object({ supabase_user_id: z.string().optional() }).nullish(),
+  metadata: z.object({ supabase_user_id: z.string().optional(), product: z.string().optional() }).nullish(),
   items: z.object({ data: z.array(itemSchema) }).optional(),
 })
 
@@ -94,15 +95,24 @@ export function parseSubscriptionEvent(raw: unknown): SubscriptionUpsert | null 
   const item = subscription.items?.data[0]
   const periodEndSec = item?.current_period_end ?? subscription.current_period_end ?? null
   const priceId = item?.price?.id ?? ''
+  const resolved = resolvePriceId(priceId)
+
+  // Источник продукта - metadata.product, выставленный при создании сессии
+  // (subscription_data[metadata][product]): после переключения тумблера upsell
+  // цена в line_items меняется, а metadata подписки нет. Фолбэк на resolvePriceId
+  // страхует старые подписки без metadata.product, дефолт 'pro' - самый частый случай.
+  const metaProduct = subscription.metadata?.product
+  const product: Product = metaProduct === 'api' || metaProduct === 'pro' ? metaProduct : (resolved?.product ?? 'pro')
 
   return {
     userId,
     customerId: refId(subscription.customer),
     subscriptionId: subscription.id,
     priceId,
+    product,
     // Неизвестный price id не повод оставить заплатившего человека без Pro:
     // пишем 'monthly' и активируем подписку, расхождение видно в логе и в price_id.
-    plan: planForPriceId(priceId) ?? 'monthly',
+    plan: resolved?.plan ?? 'monthly',
     status: subscription.status,
     currentPeriodEnd: periodEndSec === null ? null : new Date(periodEndSec * 1000).toISOString(),
     cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,

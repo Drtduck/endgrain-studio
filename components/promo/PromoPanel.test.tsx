@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProProvider } from '@/components/ProProvider'
-import { aiAccess, type AiAccessState } from '@/lib/ai/quota'
+import { AI_MONTHLY_LIMIT, FREE_TRIAL_LIMIT, aiAccess, type AiAccessState } from '@/lib/ai/quota'
 import type { ProStatus } from '@/lib/stripe/pro'
 import {
   MERCH_DEFAULT_PRODUCTS,
@@ -16,9 +16,9 @@ import { PromoPanel } from './PromoPanel'
 const FREE_STATUS: ProStatus = { pro: false, reason: 'free', plan: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }
 
 /** Панель в окружении с известным состоянием доступа: его считает сервер в layout. */
-function renderWithAccess(state: AiAccessState, used = 0) {
+function renderWithAccess(state: AiAccessState, used = 0, limit: number = AI_MONTHLY_LIMIT) {
   return render(
-    <ProProvider value={{ status: FREE_STATUS, billingEnabled: true, ai: aiAccess(state, used) }}>
+    <ProProvider value={{ status: FREE_STATUS, billingEnabled: true, ai: aiAccess(state, used, limit) }}>
       <PromoPanel />
     </ProProvider>,
   )
@@ -27,9 +27,13 @@ function renderWithAccess(state: AiAccessState, used = 0) {
 const promoResult = { current: { ok: true, mock: true, kinds: PROMO_DEFAULT_SHOTS } as PromoResult }
 const merchResult = { current: { printful: false } as MerchResult }
 const merchInput = vi.fn<(input: unknown) => void>()
+const promoInput = vi.fn<(input: unknown) => void>()
 
 vi.mock('@/app/actions/promo', () => ({
-  generatePromoShotsAction: () => Promise.resolve(promoResult.current),
+  generatePromoShotsAction: (input: unknown) => {
+    promoInput(input)
+    return Promise.resolve(promoResult.current)
+  },
   createMerchMockupsAction: (input: unknown) => {
     merchInput(input)
     return Promise.resolve(merchResult.current)
@@ -57,6 +61,7 @@ describe('PromoPanel', () => {
     promoResult.current = { ok: true, mock: true, kinds: PROMO_DEFAULT_SHOTS }
     merchResult.current = { printful: false }
     merchInput.mockClear()
+    promoInput.mockClear()
     act(() => {
       useStudio.getState().resetStudio()
     })
@@ -143,6 +148,7 @@ describe('PromoPanel: гейт AI', () => {
   beforeEach(() => {
     promoResult.current = { ok: true, mock: true, kinds: PROMO_DEFAULT_SHOTS }
     merchResult.current = { printful: false }
+    promoInput.mockClear()
     act(() => {
       useStudio.getState().resetStudio()
     })
@@ -208,6 +214,7 @@ describe('PromoPanel: выбор пресетов', () => {
   beforeEach(() => {
     promoResult.current = { ok: true, mock: true, kinds: PROMO_DEFAULT_SHOTS }
     merchResult.current = { printful: false }
+    promoInput.mockClear()
     act(() => {
       useStudio.getState().resetStudio()
     })
@@ -250,6 +257,55 @@ describe('PromoPanel: выбор пресетов', () => {
   })
 })
 
+describe('PromoPanel: выбор пресетов в пробном тире', () => {
+  beforeEach(() => {
+    promoResult.current = { ok: true, mock: true, kinds: PROMO_DEFAULT_SHOTS }
+    merchResult.current = { printful: false }
+    promoInput.mockClear()
+    act(() => {
+      useStudio.getState().resetStudio()
+    })
+  })
+
+  // Сценарий из прод-теста: остаток три, а по умолчанию отмечены четыре пресета
+  // (PROMO_DEFAULT_SHOTS). Сервер всё равно режет серию до одного кадра, поэтому
+  // и стартовый выбор в интерфейсе обязан быть таким же, а не врать про четыре.
+  it('стартовый выбор во free-тире это один кадр, а не все четыре дефолтных', () => {
+    renderWithAccess('trial', 0, FREE_TRIAL_LIMIT)
+    expect(screen.getByTestId('promo-shot-hero')).toBeTruthy()
+    expect(screen.queryByTestId('promo-shot-serving')).toBeNull()
+    expect(screen.queryByTestId('promo-shot-macroOil')).toBeNull()
+    expect(screen.queryByTestId('promo-shot-package')).toBeNull()
+    // Счётчик под чипами обязан обещать ровно то, что спишется.
+    expect(screen.getByTestId('promo-cost').textContent ?? '').toContain('1')
+  })
+
+  it('остальные чипы недоступны, пока один уже отмечен', () => {
+    renderWithAccess('trial', 0, FREE_TRIAL_LIMIT)
+    expect(screen.getByTestId('promo-preset-serving').hasAttribute('disabled')).toBe(true)
+  })
+
+  it('генерация во free-тире шлёт ровно один кадр из выбранных', async () => {
+    renderWithAccess('trial', 0, FREE_TRIAL_LIMIT)
+    fireEvent.click(screen.getByTestId('promo-generate'))
+    await waitFor(() => expect(promoInput).toHaveBeenCalled())
+    const input = promoInput.mock.calls[0]?.[0] as { kinds?: readonly string[] }
+    expect(input.kinds).toHaveLength(1)
+  })
+
+  it('после списания одного кадра остаток отражает реальную трату, а не обещанную', async () => {
+    promoResult.current = {
+      ok: true,
+      mock: false,
+      images: [{ kind: 'hero', dataUrl: 'data:image/png;base64,AAAA' }],
+      remaining: 2,
+    }
+    renderWithAccess('trial', 0, FREE_TRIAL_LIMIT)
+    fireEvent.click(screen.getByTestId('promo-generate'))
+    await waitFor(() => expect(screen.getByTestId('promo-trial-note').textContent ?? '').toContain('2'))
+  })
+})
+
 describe('PromoPanel: генерация по референсу', () => {
   const JPEG = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ'
 
@@ -263,6 +319,7 @@ describe('PromoPanel: генерация по референсу', () => {
   beforeEach(() => {
     promoResult.current = { ok: true, mock: true, kinds: PROMO_DEFAULT_SHOTS }
     merchResult.current = { printful: false }
+    promoInput.mockClear()
     act(() => {
       useStudio.getState().resetStudio()
     })
@@ -332,6 +389,7 @@ describe('PromoPanel: мокапы Printful', () => {
     promoResult.current = { ok: true, mock: true, kinds: PROMO_DEFAULT_SHOTS }
     merchResult.current = { printful: false }
     merchInput.mockClear()
+    promoInput.mockClear()
     act(() => {
       useStudio.getState().resetStudio()
     })

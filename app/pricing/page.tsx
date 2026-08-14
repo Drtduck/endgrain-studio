@@ -7,8 +7,8 @@ import { t } from '@/lib/i18n'
 import { getLandingLocale } from '@/lib/landing/locale'
 import { pricingJsonLd } from '@/lib/seo/jsonld'
 import { appUrl, pageMetadata } from '@/lib/seo/metadata'
-import { STRIPE_PORTAL_URL, isStripeConfigured } from '@/lib/stripe/config'
-import { getProStatus } from '@/lib/stripe/pro'
+import { STRIPE_PORTAL_URL, hasApiPrices, hasPassPrice, isStripeConfigured } from '@/lib/stripe/config'
+import { getProStatus, getSubscriptionStatus } from '@/lib/stripe/pro'
 import { getCurrentUser } from '@/lib/supabase/session'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -32,6 +32,15 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function PricingPage(props: PageProps<'/pricing'>) {
   const locale = await getLandingLocale()
   const [status, user] = await Promise.all([getProStatus(), getCurrentUser()])
+  // Своя подписка API не влияет на Pro-статус, поэтому читается отдельно.
+  // Без пользователя (не вошёл) спрашивать нечего - и без него getSubscriptionStatus
+  // сама вернёт FREE.
+  const apiStatus = await getSubscriptionStatus('api')
+  // passExpiresAt читается отдельным вызовом getSubscriptionStatus('pro'), а не из
+  // status (getProStatus): allowlist и аварийный флаг NEXT_PUBLIC_PRO_UNLOCK
+  // перекрывают status.reason на 'flag'/'allowlist' даже когда в базе лежит живой
+  // пропуск - карточка Пропуска тогда молчала бы о его настоящей дате окончания.
+  const proSubscription = await getSubscriptionStatus('pro')
 
   // Отмена оплаты возвращает человека сюда, а не в студию: с этой страницы
   // он может сразу попробовать ещё раз или выбрать другой тариф.
@@ -60,6 +69,10 @@ export default async function PricingPage(props: PageProps<'/pricing'>) {
             currentPeriodEnd={status.currentPeriodEnd}
             cancelAtPeriodEnd={status.cancelAtPeriodEnd}
             portalUrl={STRIPE_PORTAL_URL}
+            apiEnabled={hasApiPrices()}
+            passEnabled={hasPassPrice()}
+            apiSubscribed={apiStatus.reason === 'subscription'}
+            passExpiresAt={proSubscription.reason === 'pass' ? proSubscription.currentPeriodEnd : null}
           />
         </div>
       </main>

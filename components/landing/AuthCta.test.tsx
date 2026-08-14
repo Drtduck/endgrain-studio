@@ -17,7 +17,11 @@ vi.mock('@/lib/supabase/browser', () => ({
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }))
 
 const assign = vi.fn()
-vi.mock('@/lib/routing/navigate', () => ({ hardNavigate: (url: string) => assign(url) }))
+const replace = vi.fn()
+vi.mock('@/lib/routing/navigate', () => ({
+  hardNavigate: (url: string) => assign(url),
+  hardReplace: (url: string) => replace(url),
+}))
 
 function renderCta(locale: 'ru' | 'en' = 'ru') {
   return render(<AuthCta locale={locale} testId="landing-cta-hero" label="Начать" className="cta" />)
@@ -35,6 +39,7 @@ describe('AuthCta', () => {
     signUp.mockClear()
     push.mockClear()
     assign.mockClear()
+    replace.mockClear()
     window.history.replaceState({}, '', '/landing')
   })
 

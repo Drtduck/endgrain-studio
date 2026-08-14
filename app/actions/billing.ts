@@ -4,52 +4,87 @@ import { headers } from 'next/headers'
 import { z } from 'zod'
 import { APP_ORIGIN } from '@/lib/routing/host'
 import type { CheckoutResult } from '@/lib/stripe/billing'
-import { STRIPE_SECRET_KEY, isStripeConfigured } from '@/lib/stripe/config'
-import { priceIdFor } from '@/lib/stripe/plans'
+import { STRIPE_SECRET_KEY, hasApiPrices, hasPassPrice, isStripeConfigured, STRIPE_PRICE_PASS } from '@/lib/stripe/config'
+import { checkoutPriceFor } from '@/lib/stripe/plans'
 import { getSubscriptionStatus } from '@/lib/stripe/pro'
 import { getCurrentUser } from '@/lib/supabase/session'
 
-const planSchema = z.enum(['monthly', 'yearly'])
+const planSchema = z.enum(['pro', 'api', 'pass'])
 
 /**
  * Checkout Session через REST Stripe, без SDK: один POST с form-encoded телом
  * не стоит трёх мегабайт зависимости (тот же довод, что и в app/actions/subscribe.ts).
  * Карточные данные мы не видим никогда, оплата целиком на hosted-странице Stripe.
+ * Три ветки по одному вызову: pro (подписка, тумблер месяц/год живёт в Dashboard
+ * как Upsell), api (подписка Developer), pass (разовый платёж, mode=payment
+ * нельзя смешивать с mode=subscription - отдельная сессия).
  */
 export async function createCheckoutAction(plan: unknown): Promise<CheckoutResult> {
   const parsed = planSchema.safeParse(plan)
   if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const product = parsed.data
   if (!isStripeConfigured()) return { ok: false, error: 'disabled' }
+  if (product === 'api' && !hasApiPrices()) return { ok: false, error: 'disabled' }
+  if (product === 'pass' && !hasPassPrice()) return { ok: false, error: 'disabled' }
 
   const user = await getCurrentUser()
   if (!user) return { ok: false, error: 'unauthenticated' }
 
-  // Второй чек-аут поверх активной подписки создал бы вторую подписку и двойное
-  // списание. Спрашиваем живую строку, а не getProStatus(): при аварийном флаге
-  // NEXT_PUBLIC_PRO_UNLOCK=1 причина была бы 'flag', и защита бы не сработала.
-  const subscription = await getSubscriptionStatus()
-  if (subscription.reason === 'subscription') return { ok: false, error: 'already' }
+  // Второй чек-аут поверх активной подписки/пропуска создал бы вторую подписку
+  // и двойное списание. Спрашиваем живую строку, а не getProStatus(): при
+  // аварийном флаге NEXT_PUBLIC_PRO_UNLOCK=1 причина была бы 'flag', и защита
+  // бы не сработала.
+  if (product === 'pro') {
+    // Живой Пропуск не блокирует покупку Pro: подписка даёт больше, чем разовый
+    // пропуск (автопродление), и купивший пропуск должен мочь апгрейднуться, а не
+    // упереться в «already» до истечения 90 дней.
+    const subscription = await getSubscriptionStatus('pro')
+    if (subscription.reason === 'subscription') return { ok: false, error: 'already' }
+  } else if (product === 'api') {
+    const subscription = await getSubscriptionStatus('api')
+    if (subscription.reason === 'subscription') return { ok: false, error: 'already' }
+  } else {
+    // Живая Pro-подписка уже даёт всё, что даёт пропуск, и больше: продавать
+    // его поверх подписки значит взять деньги за то, что и так есть.
+    const subscription = await getSubscriptionStatus('pro')
+    if (subscription.reason === 'subscription') return { ok: false, error: 'already' }
+  }
 
   // Origin из запроса, а не жёстко зашитый APP_ORIGIN: иначе с localhost
   // после оплаты уводило бы на прод.
   const headerList = await headers()
   const origin = headerList.get('origin') ?? APP_ORIGIN
 
-  const body = new URLSearchParams({
-    mode: 'subscription',
-    'line_items[0][price]': priceIdFor(parsed.data),
-    'line_items[0][quantity]': '1',
-    success_url: `${origin}/?checkout=success`,
-    cancel_url: `${origin}/pricing?checkout=cancel`,
-    client_reference_id: user.id,
-    customer_email: user.email,
-    'metadata[supabase_user_id]': user.id,
-    // Самая важная строка файла: благодаря ей идентификатор пользователя приезжает
-    // в каждом событии подписки, включая продления и отмену через полгода.
-    // Поэтому вебхук одноветочный, а checkout.session.completed не нужен вовсе.
-    'subscription_data[metadata][supabase_user_id]': user.id,
-    allow_promotion_codes: 'true',
-  })
+  const body =
+    product === 'pass'
+      ? new URLSearchParams({
+          mode: 'payment',
+          'line_items[0][price]': STRIPE_PRICE_PASS,
+          'line_items[0][quantity]': '1',
+          success_url: `${origin}/?checkout=success`,
+          cancel_url: `${origin}/pricing?checkout=cancel`,
+          client_reference_id: user.id,
+          customer_email: user.email,
+          'metadata[supabase_user_id]': user.id,
+          'metadata[kind]': 'pro_pass',
+        })
+      : new URLSearchParams({
+          mode: 'subscription',
+          'line_items[0][price]': checkoutPriceFor(product),
+          'line_items[0][quantity]': '1',
+          success_url: `${origin}/?checkout=success`,
+          cancel_url: `${origin}/pricing?checkout=cancel`,
+          client_reference_id: user.id,
+          customer_email: user.email,
+          'metadata[supabase_user_id]': user.id,
+          // Самая важная строка файла: благодаря ей идентификатор пользователя приезжает
+          // в каждом событии подписки, включая продления и отмену через полгода.
+          // Поэтому вебхук одноветочный, а checkout.session.completed не нужен вовсе.
+          'subscription_data[metadata][supabase_user_id]': user.id,
+          'subscription_data[metadata][product]': product,
+          allow_promotion_codes: 'true',
+        })
 
   try {
     const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {

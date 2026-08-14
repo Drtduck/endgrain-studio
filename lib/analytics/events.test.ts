@@ -21,10 +21,10 @@ describe('track', () => {
   it('передаёт параметры третьим элементом', () => {
     track('pdf_exported', { pro: true })
     expect(window.dataLayer).toEqual([['event', 'pdf_exported', { pro: true }]])
-    track('checkout_started', { plan: 'yearly' })
+    track('checkout_started', { plan: 'pro' })
     expect(window.dataLayer).toEqual([
       ['event', 'pdf_exported', { pro: true }],
-      ['event', 'checkout_started', { plan: 'yearly' }],
+      ['event', 'checkout_started', { plan: 'pro' }],
     ])
   })
 
