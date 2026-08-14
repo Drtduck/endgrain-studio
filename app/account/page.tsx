@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { AppHeader } from '@/components/AppHeader'
 import { Avatar } from '@/components/account/Avatar'
 import { DangerZone } from '@/components/account/DangerZone'
 import { EmailSection } from '@/components/account/EmailSection'
@@ -32,7 +31,6 @@ export default async function AccountPage() {
 
   return (
     <div className="min-h-screen bg-app">
-      <AppHeader />
       <main className="px-4 py-10">
         <div className="mx-auto flex max-w-2xl flex-col gap-6">
           <div className="flex items-center gap-3">

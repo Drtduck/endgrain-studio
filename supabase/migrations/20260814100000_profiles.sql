@@ -59,11 +59,19 @@ grant select (user_id, display_name, bio, website, created_at) on public.profile
 revoke select on public.profiles from authenticated;
 grant select (user_id, display_name, bio, website, created_at, updated_at) on public.profiles to authenticated;
 
--- user_id обязателен в списке update-колонок, хотя with check и так не даёт его
--- сменить: PostgREST-upsert (merge-duplicates, onConflict: user_id) компилируется в
--- INSERT ... ON CONFLICT DO UPDATE SET user_id = EXCLUDED.user_id, ..., то есть
--- user_id всегда попадает в SET-список, даже когда его значение не меняется.
--- Без него в этом списке Postgres рубит любой upsert с 42501 column privilege.
+-- update/insert-гранты authenticated ниже практического значения не имеют:
+-- PostgREST-upsert (merge-duplicates, onConflict: user_id) компилируется в
+-- INSERT ... ON CONFLICT DO UPDATE ... RETURNING, а RETURNING требует ту же
+-- table-level SELECT-привилегию, что и обычный select - у authenticated её
+-- нет (см. column-grant выше: notify_email намеренно не читается никем через
+-- policy using(true)). Расширять select ради upsert нельзя - это и есть та
+-- самая утечка notify_email, ради которой колонка была срезана. Поэтому
+-- запись профиля (app/actions/profile.ts, updateProfileAction) идёт
+-- service-role клиентом в обход RLS и этих грантов: user_id для записи
+-- берётся из серверной сессии, а не от клиента, так что подмена чужой
+-- строки исключена на уровне server action, а не грантов. Гранты ниже
+-- оставлены как документация целевой модели privileges и на случай,
+-- если политика записи через PostgREST вернётся.
 revoke update on public.profiles from authenticated;
 grant update (user_id, display_name, bio, website, notify_email) on public.profiles to authenticated;
 

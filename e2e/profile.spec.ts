@@ -41,6 +41,10 @@ test.describe('страница профиля с живым Supabase', () => {
 
   test('несёт единый AppHeader и все секции формы', async ({ page }) => {
     await page.goto('/account')
+    // Ровно один: AccountLayout оборачивает страницу в AppShell (свой AppHeader),
+    // а страница раньше рисовала AppHeader ещё раз поверх него - регрессия
+    // hotfix/account-save на две шапки на /account.
+    await expect(page.getByTestId('app-header')).toHaveCount(1)
     await expect(page.getByTestId('app-header')).toBeVisible()
     await expect(page.getByTestId('profile-form')).toBeVisible()
     await expect(page.getByTestId('email-section')).toBeVisible()
