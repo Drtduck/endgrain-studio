@@ -506,7 +506,7 @@ const en: Record<keyof typeof ru, string> = {
   'pricing.f.aiListing': 'Etsy and Amazon listing copy: title, description, tags',
   'pricing.f.aiPro': '30 AI generations a month: promo shots, reference analysis, merch mockups',
   'pricing.cta.pro': 'Get Pro: from $7.50 a month',
-  'pricing.pro.checkoutHint': 'You pick yearly or monthly on the next screen. Yearly is preselected.',
+  'pricing.pro.checkoutHint': 'Switch to yearly on the next screen: two months free.',
   'pricing.cta.open': 'Open the app',
   'pricing.cta.needAuth': 'Sign in and subscribe',
   'pricing.busy': 'Opening checkout',

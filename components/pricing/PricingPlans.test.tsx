@@ -49,7 +49,7 @@ describe('PricingPlans', () => {
     const button = container.querySelector('[data-testid="pricing-buy-pro"]')
     expect(button).not.toBe(null)
     expect(button?.textContent).toContain('$7.50')
-    expect(container.querySelector('[data-testid="pricing-pro"]')?.textContent).toContain('Год выбран заранее')
+    expect(container.querySelector('[data-testid="pricing-pro"]')?.textContent).toContain('два месяца в подарок')
   })
 
   it('подписчику показывает текущий план и ссылку на портал', () => {
