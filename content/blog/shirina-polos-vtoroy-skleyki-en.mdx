@@ -1,0 +1,103 @@
+import { Answer } from '../../components/blog/Answer'
+
+export const meta = {
+  slug: 'shirina-polos-vtoroy-skleyki-en',
+  lang: 'en',
+  translationOf: 'shirina-polos-vtoroy-skleyki',
+  title: 'How Wide Should the Strips Be for the Second Glue-Up?',
+  description:
+    'The crosscut width of each slice becomes the thickness of the finished board. Here is the allowance to add on top of it, and how to size the first panel around it.',
+  answer:
+    'Cut the slices for the second glue-up at your target board thickness plus a flattening allowance: 6 mm (1/4 in) total is enough if you flatten with a router sled or a drum sander, and 10 mm (3/8 in) if the glue-up comes out uneven and you level it by hand. A 38 mm (1.5 in) finished board therefore gets crosscut at 44 mm (1.75 in).',
+  date: '2026-08-14',
+  updated: '2026-08-14',
+  tags: ['glue-up', 'milling'],
+  cover: '/blog/shirina-polos-vtoroy-skleyki-en/cover.jpg',
+  readingMinutes: 6,
+}
+
+<Answer>{meta.answer}</Answer>
+
+The number that trips people up here is the one nobody writes on the drawing. Strip thickness in the first glue-up controls the pattern, and everyone plans that part. The crosscut width in the second glue-up controls something else entirely: how thick the board ends up, and how much room you have left to flatten it.
+
+## What does "strip width" actually mean at this stage?
+
+After the first glue-up you have a panel: long grain running the length of it, strips stacked across the width. You crosscut that panel into slices, rotate each slice 90 degrees so the end grain points up, then glue the slices edge to edge. That second assembly is the board.
+
+Follow one slice through the rotation and the dimensions swap roles. The width you cut it at, measured along the length of the panel, stands upright after the rotation and becomes board thickness. The panel width becomes one plan dimension of the board. The stock thickness you milled to at the very start becomes the amount each slice adds to the other plan dimension.
+
+So the question "how wide do I cut the slices" is the question "how thick do I want the board", with one correction on top.
+
+<ArticleFigure
+  src="/blog/images/shirina-polos-vtoroy-skleyki-1.jpg"
+  alt="A carpenter in an apron checks a wooden part with a caliper next to a thick butcher block blank"
+  caption="Slice width is worth checking with a caliper rather than a tape: a 1 mm spread between slices shows up as steps in the glued board."
+  photographer="Adventure Studio"
+  photographerUrl="https://www.pexels.com/@adventurestudio"
+  pexelsUrl="https://www.pexels.com/photo/a-man-holding-a-tool-7166968/"
+/>
+
+## How much allowance goes on top of the finished thickness?
+
+The second glue-up never comes out of the clamps flat. Slices slide a little under clamping pressure, and the end grain surface has to be leveled on both faces afterwards. That leveling comes out of the slice width, which is why the slice has to start wider than the board.
+
+| Flattening method | Removed per face | Allowance on the slice |
+|---|---|---|
+| Drum sander, careful glue-up with cauls | 1.5 to 2 mm | 4 mm (5/32 in) |
+| Router sled | 2 to 3 mm | 6 mm (1/4 in) |
+| Hand plane or random orbit sander on an uneven glue-up | 4 to 5 mm | 10 mm (3/8 in) |
+
+Six millimeters is the number I would put in a first project. A router sled is what most people actually own, and the sled has to cut down to the lowest point of the surface, not the average one. If two neighboring slices sit 2 mm apart in height, the sled takes that 2 mm off everything.
+
+The allowance that gets skipped most often is the one for the second face. A board flattened on one side only rocks on the counter, so both faces get leveled, and the allowance is doubled compared to what people picture in their head.
+
+## Which slice widths work for common board thicknesses?
+
+| Finished thickness | Crosscut width | Where it fits |
+|---|---|---|
+| 32 mm (1.25 in) | 38 mm (1.5 in) | light board for a small kitchen, easy to lift with one hand |
+| 38 mm (1.5 in) | 44 mm (1.75 in) | the default for a board you sell, holds up to daily chopping |
+| 45 mm (1.75 in) | 51 mm (2 in) | heavy board, usually paired with maple or hard maple and a juice groove |
+
+Below 32 mm the board stops behaving. End grain moves seasonally in the thickness direction least of all, but a thin panel has almost no stiffness across the glue lines, and the first hard cup after a wet wipe-down splits a joint. Above 50 mm you are buying wood that only adds weight, and the crosscut starts to strain a 10-inch blade set to full height.
+
+There is a practical floor on the other end too. A slice narrower than about 25 mm tips over on the sled during the crosscut and refuses to stand up straight in the second glue-up, which puts you back to leveling out steps you created yourself.
+
+## How long does the first panel need to be?
+
+Each slice eats its own width plus a kerf, and the ends of the panel need trimming before you count anything. Take a board that finishes at 400 mm along the direction the slices stack, built from 10 slices of 40 mm stock, crosscut at 44 mm with a 3 mm kerf:
+
+10 slices x (44 + 3) = 470 mm, plus roughly 25 mm to square up the first end and clean the last one, so the first glue-up panel needs to be at least 495 mm long.
+
+In inches the same board runs 10 x (1.75 + 1/8) = 18.75 in, plus an inch of trim, so a 20 inch panel.
+
+Order the lumber against that number, not against the finished board. Coming up one slice short on the last crosscut means gluing an extra slice from a different board, and the color rarely matches on walnut.
+
+<NewsletterBreak locale="en" />
+
+## Why does consistency beat accuracy here?
+
+Absolute accuracy matters less than repeatability. If every slice comes out at 44.6 mm instead of 44, the board is 0.6 mm thicker than planned and nobody will ever know. If the slices range from 43 to 45 mm, every joint in the second glue-up sits at a different height, and the sled has to take 2 mm off the whole surface to reach the lowest one.
+
+Cut all slices in one session with a stop block on the crosscut sled, without moving the block and without measuring each piece separately. Measuring each cut is exactly how the spread creeps in.
+
+<ArticleFigure
+  src="/blog/images/shirina-polos-vtoroy-skleyki-2.jpg"
+  alt="A woodworker tightening a clamp on a workpiece at the bench"
+  caption="Cauls across the clamped stack keep neighboring slices in one plane, which is what lets you get away with a 6 mm allowance instead of 10."
+  photographer="Tima Miroshnichenko"
+  photographerUrl="https://www.pexels.com/@tima-miroshnichenko"
+  pexelsUrl="https://www.pexels.com/photo/a-person-doing-carpentry-6790050/"
+/>
+
+## Where the calculation gets tedious
+
+Chaining these numbers by hand works for a plain checkerboard. It stops being pleasant on a brick offset or a 3D cube pattern, where slice count, stock thickness and panel length all shift as soon as you touch one strip width, and the kerf multiplies across two glue-ups instead of one.
+
+In [Endgrain Studio](/?tab=editor) the finished thickness and the flattening allowance are project parameters: the crosscut width, the number of slices and the required panel length for the first glue-up come out of the pattern itself, together with the material and cost estimate, and the printable cut plan carries the same numbers to the workshop.
+
+## The short version
+
+Set the finished thickness first, add 6 mm, and that is your crosscut width. Check it once with a caliper against the stop block, cut every slice in one setup, and the second glue-up will need one pass on the sled instead of an afternoon of chasing high spots.
+
+Worth reading next: [kerf and allowances](/blog/kerf-i-pripuski-en), where the same 3 mm per cut is traced through the first glue-up and the lumber order.

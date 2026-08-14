@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { allPosts, allTags, feedPosts, postBySlug, postsByTag, translationOf } from './posts'
 
 describe('allPosts', () => {
-  it('возвращает три стартовые темы в обеих локалях, шесть статей', () => {
-    expect(allPosts()).toHaveLength(6)
+  it('отдаёт каждую тему в обеих локалях, поэтому статей чётное число', () => {
+    const posts = allPosts()
+    expect(posts.length).toBeGreaterThanOrEqual(6)
+    expect(posts.filter((p) => p.lang === 'ru')).toHaveLength(posts.length / 2)
+    expect(posts.filter((p) => p.lang === 'en')).toHaveLength(posts.length / 2)
   })
 
   it('сортирует по дате убыванием', () => {
@@ -68,13 +71,13 @@ describe('translationOf', () => {
 describe('feedPosts', () => {
   it('на английской локали отдаёт по одной статье на тему, все на английском', () => {
     const posts = feedPosts('en')
-    expect(posts).toHaveLength(3)
+    expect(posts).toHaveLength(allPosts().length / 2)
     for (const post of posts) expect(post.lang).toBe('en')
   })
 
   it('на русской локали отдаёт по одной статье на тему, все на русском', () => {
     const posts = feedPosts('ru')
-    expect(posts).toHaveLength(3)
+    expect(posts).toHaveLength(allPosts().length / 2)
     for (const post of posts) expect(post.lang).toBe('ru')
   })
 })
@@ -88,9 +91,11 @@ describe('allTags', () => {
     }
   })
 
-  it('раскрой встречается дважды', () => {
+  it('считает тег «раскрой» ровно по русским статьям с этим тегом', () => {
     const tags = allTags()
     const raskroi = tags.find((t) => t.tag === 'раскрой')
-    expect(raskroi?.count).toBe(2)
+    const expected = allPosts().filter((p) => p.tags.includes('раскрой')).length
+    expect(expected).toBeGreaterThan(0)
+    expect(raskroi?.count).toBe(expected)
   })
 })

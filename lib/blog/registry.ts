@@ -4,6 +4,8 @@ import { meta as vyborPorod } from '@/content/blog/vybor-porod.mdx'
 import { meta as vyborPorodEn } from '@/content/blog/vybor-porod-en.mdx'
 import { meta as shemaPerekleyki } from '@/content/blog/shema-perekleyki.mdx'
 import { meta as shemaPerekleykiEn } from '@/content/blog/shema-perekleyki-en.mdx'
+import { meta as shirinaPolosVtoroySkleyki } from '@/content/blog/shirina-polos-vtoroy-skleyki.mdx'
+import { meta as shirinaPolosVtoroySkleykiEn } from '@/content/blog/shirina-polos-vtoroy-skleyki-en.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -19,4 +21,6 @@ export const POST_METAS: readonly PostMeta[] = [
   vyborPorodEn,
   shemaPerekleyki,
   shemaPerekleykiEn,
+  shirinaPolosVtoroySkleyki,
+  shirinaPolosVtoroySkleykiEn,
 ]

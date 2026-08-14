@@ -29,6 +29,18 @@ const COVERS = [
     stripes: ['#5b3a24', '#e3caa1', '#a8422a', '#3a2a20'],
   },
   {
+    slug: 'shirina-polos-vtoroy-skleyki',
+    title: 'Ширина полос второй склейки',
+    subtitle: 'Чистовая толщина плюс припуск на выравнивание',
+    stripes: ['#a5613b', '#e3caa1', '#5b3a24'],
+  },
+  {
+    slug: 'shirina-polos-vtoroy-skleyki-en',
+    title: 'Strips for the Second Glue-Up',
+    subtitle: 'Finished thickness plus a flattening allowance',
+    stripes: ['#a5613b', '#e3caa1', '#5b3a24'],
+  },
+  {
     slug: 'kerf-i-pripuski-en',
     title: 'Kerf and Allowances',
     subtitle: 'Why the board comes out narrower than the drawing',
