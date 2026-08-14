@@ -506,7 +506,7 @@ const ru = {
   'pricing.f.aiListing': 'Карточка товара для Etsy и Amazon: заголовок, описание, теги',
   'pricing.f.aiPro': '30 AI-генераций в месяц: промо-кадры, разбор референса, мокапы мерча',
   'pricing.cta.pro': 'Оформить Pro: от $7.50 в месяц',
-  'pricing.pro.checkoutHint': 'На следующем шаге выберете год или месяц. Год выбран заранее.',
+  'pricing.pro.checkoutHint': 'На следующем шаге переключите на год: два месяца в подарок.',
   'pricing.cta.open': 'Открыть приложение',
   'pricing.cta.needAuth': 'Войти и оформить',
   'pricing.busy': 'Открываем оплату',
