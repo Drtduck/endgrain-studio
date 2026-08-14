@@ -315,6 +315,20 @@ describe('app/actions/promo: пробный тир', () => {
     expect(res.images[0]?.kind).toBe(KINDS[0])
   })
 
+  it('четыре отмеченных кадра при трёх оставшихся всё равно режутся до одного', async () => {
+    // Прод-сценарий: остаток квоты (3) больше, чем FREE_TRIAL_MAX_UNITS (1), но
+    // потолок free-тира это цена ОДНОГО вызова, а не то, сколько ещё осталось.
+    aiAccessResult = { state: 'trial', limit: 3, used: 0, remaining: 3, tier: 'trial' }
+    aiVerdict = { ...TRIAL_GRANT, remaining: 2 }
+    const { generatePromoShotsAction } = await import('./promo')
+    const res = await generatePromoShotsAction(INPUT)
+    expect(allowed).toHaveBeenCalledWith('promoShots', 1)
+    expect(generate).toHaveBeenCalledTimes(1)
+    if (!res.ok || res.mock) throw new Error('ожидались настоящие кадры')
+    expect(res.images).toHaveLength(1)
+    expect(res.remaining).toBe(2)
+  })
+
   it('провайдер выбирается по тиру гранта: trial -> cheap', async () => {
     aiAccessResult = { state: 'trial', limit: 3, used: 1, remaining: 2, tier: 'trial' }
     aiVerdict = TRIAL_GRANT

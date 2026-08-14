@@ -667,7 +667,7 @@ const en: Record<keyof typeof ru, string> = {
   'promo.err.quota': 'The monthly generation quota is used up. A new batch opens on the 1st of next month.',
   'promo.err.unavailable': 'Generation is unavailable right now: the service is not configured. Try later.',
   'promo.err.trialSpent': 'Your trial generations are used up. Upgrade to Pro to continue.',
-  'promo.mockNote': 'Appears once Gemini is connected',
+  'promo.mockNote': 'Appears once generated',
   'promo.mockBadge': 'placeholder',
   'promo.needKey': 'Real photos arrive once GEMINI_API_KEY is added to the environment. For now this is the shot layout.',
   'promo.ready': 'Series is ready: save the shots and upload them to your listing.',
