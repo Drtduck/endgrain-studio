@@ -28,6 +28,24 @@ const COVERS = [
     subtitle: 'От полос до готовой доски',
     stripes: ['#5b3a24', '#e3caa1', '#a8422a', '#3a2a20'],
   },
+  {
+    slug: 'kerf-i-pripuski-en',
+    title: 'Kerf and Allowances',
+    subtitle: 'Why the board comes out narrower than the drawing',
+    stripes: ['#5b3a24', '#a8422a', '#e3caa1'],
+  },
+  {
+    slug: 'vybor-porod-en',
+    title: 'Choosing Wood Species',
+    subtitle: 'What glues well, what moves, what you cannot eat off',
+    stripes: ['#e3caa1', '#a5613b', '#3a2a20'],
+  },
+  {
+    slug: 'shema-perekleyki-en',
+    title: 'Reading a Glue-Up Diagram',
+    subtitle: 'From strips to a finished board',
+    stripes: ['#5b3a24', '#e3caa1', '#a8422a', '#3a2a20'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {

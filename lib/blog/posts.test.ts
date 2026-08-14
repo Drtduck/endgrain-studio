@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { allPosts, allTags, postBySlug, postsByTag } from './posts'
+import { allPosts, allTags, feedPosts, postBySlug, postsByTag, translationOf } from './posts'
 
 describe('allPosts', () => {
-  it('возвращает все три стартовые статьи', () => {
-    expect(allPosts()).toHaveLength(3)
+  it('возвращает три стартовые темы в обеих локалях, шесть статей', () => {
+    expect(allPosts()).toHaveLength(6)
   })
 
   it('сортирует по дате убыванием', () => {
@@ -48,6 +48,34 @@ describe('postsByTag', () => {
 
   it('пустой список для неизвестного тега', () => {
     expect(postsByTag('нет-такого-тега')).toEqual([])
+  })
+})
+
+describe('translationOf', () => {
+  it('находит английский перевод русской статьи', () => {
+    const ru = postBySlug('kerf-i-pripuski')
+    expect(ru).toBeDefined()
+    expect(translationOf(ru!)?.slug).toBe('kerf-i-pripuski-en')
+  })
+
+  it('находит русский оригинал по английской статье', () => {
+    const en = postBySlug('kerf-i-pripuski-en')
+    expect(en).toBeDefined()
+    expect(translationOf(en!)?.slug).toBe('kerf-i-pripuski')
+  })
+})
+
+describe('feedPosts', () => {
+  it('на английской локали отдаёт по одной статье на тему, все на английском', () => {
+    const posts = feedPosts('en')
+    expect(posts).toHaveLength(3)
+    for (const post of posts) expect(post.lang).toBe('en')
+  })
+
+  it('на русской локали отдаёт по одной статье на тему, все на русском', () => {
+    const posts = feedPosts('ru')
+    expect(posts).toHaveLength(3)
+    for (const post of posts) expect(post.lang).toBe('ru')
   })
 })
 

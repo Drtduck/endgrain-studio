@@ -1,0 +1,62 @@
+import { Answer } from '../../components/blog/Answer'
+
+export const meta = {
+  slug: 'kerf-i-pripuski-en',
+  lang: 'en',
+  translationOf: 'kerf-i-pripuski',
+  title: 'Kerf and Allowances: Why Your Board Comes Out Narrower Than the Drawing',
+  description:
+    "Every cut eats an eighth of an inch. On a 24-strip board that adds up to a few inches of loss. Here is how to budget for it before the finished panel surprises you.",
+  answer:
+    "The rough width of a first glue-up equals the sum of your strip thicknesses, plus a planing allowance on each strip (usually 1/8 in, 3 mm), plus the kerf multiplied by the number of cuts between strips. A 10-inch, 40-tooth blade typically leaves a 1/8 in (3 mm) kerf; a thin-kerf 24-tooth blade runs closer to 3/32 in (2.2 mm).",
+  date: '2026-08-13',
+  updated: '2026-08-13',
+  tags: ['milling', 'material'],
+  cover: '/blog/kerf-i-pripuski-en/cover.jpg',
+  readingMinutes: 6,
+}
+
+<Answer>{meta.answer}</Answer>
+
+Measure twice, cut once, and the board still comes out narrower than the drawing. That is not sloppy work. The blade and the planer both take their cut, it just never shows up as a line item until the panel is already glued up.
+
+## What a single kerf actually costs you
+
+Kerf is the width of material the blade removes on every pass. A 10-inch blade with 40 teeth typically leaves a kerf around 1/8 in (3 mm). A thin-kerf blade with 24 teeth cuts narrower, closer to 3/32 in (2.2 mm), but you rarely want it on end-grain stock: the coarser tooth geometry tears the fibers across the grain instead of shearing them cleanly.
+
+An eighth of an inch sounds trivial until you multiply it across a full panel. A 24-strip glue-up needs 23 cuts between strips for the first assembly, and roughly the same number again once the block gets crosscut into slices. Counting only the first glue-up, at 1/8 in per cut: 23 cuts times 1/8 in is just under 3 inches of width that never made it into the drawing. On a 12-inch panel with zero kerf budgeted, the finished board lands nearly 25 percent narrower than planned.
+
+<ArticleFigure
+  src="/blog/images/kerf-i-pripuski-1.jpg"
+  alt="Hands feeding a board through a table saw blade, sawdust visible in the cut"
+  caption="Every pass of the blade removes a kerf's worth of material, and it adds up fast across a multi-strip glue-up."
+  photographer="Ismael Campos Carrillo"
+  photographerUrl="https://www.pexels.com/@ismaelcampos"
+  pexelsUrl="https://www.pexels.com/photo/hands-of-carpenter-cutting-wood-with-saw-16496901/"
+/>
+
+## The planing allowance is not free either
+
+Once a panel is glued, it goes through the planer to clean up squeeze-out and clamp marks. Each pass takes off a layer, not a polish. A reasonable default is 1/8 in (3 mm) per face, the same order of magnitude as a single kerf, and it also gets added to the raw blank width rather than showing up in the finished board.
+
+The rough width for any glue-up stage breaks into three parts:
+
+| Component | What it covers | Typical value |
+|---|---|---|
+| Strip thickness sum | the width of each strip or slice in the design | depends on the pattern |
+| Planing allowance | material removed after each glue-up, per face | 1/8 in (3 mm) |
+| Inter-strip kerf | blade width times the number of cuts | 1/8 in x (n - 1) |
+
+Edge trim for squaring the panel is a separate line item on top of these three: skip it and the outer strips arrive chipped, and you end up trimming them anyway, just without having planned for it.
+
+## Building it into your lumber order
+
+The practical fix is to order stock with kerf and planing built in, not cut flush to the finished dimensions in the drawing. For a two-pass design (a first glue-up of strips, then crosscuts for the final pattern), 10 to 15 percent over the net finished width is a reasonable order-time buffer. Narrow boards lose a bigger share to kerf than wide ones, so lean toward the high end on anything under 8 inches wide.
+
+I would rather over-order 15 percent on a first project than run short mid-glue-up and improvise a substitute species halfway through a panel. A board with one mismatched strip is a permanent reminder, and lumber yards do not always restock the same batch.
+
+Doing this by hand for a complex chevron or diamond layout is slow and easy to get wrong by one row. In the Endgrain Studio editor, kerf and planing allowance are project parameters, and the material calculator in the Materials panel already accounts for both, along with species-specific waste.
+
+<NewsletterBreak locale="en" />
+
+The next thing worth understanding is [how to read a glue-up diagram](/blog/shema-perekleyki-en): it shows exactly where kerf and allowances enter the final part dimensions.

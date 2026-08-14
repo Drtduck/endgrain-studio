@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { PostCard } from '@/components/blog/PostCard'
 import { JsonLd } from '@/components/seo/JsonLd'
-import { allPosts } from '@/lib/blog/posts'
+import { feedPosts } from '@/lib/blog/posts'
 import { t } from '@/lib/i18n'
 import { getLandingLocale } from '@/lib/landing/locale'
 import { blogJsonLd } from '@/lib/seo/jsonld'
@@ -24,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function BlogFeedPage() {
   const locale = await getLandingLocale()
-  const posts = allPosts()
+  const posts = feedPosts(locale)
 
   return (
     <main className="flex flex-col gap-8 px-6 py-12" data-testid="blog-feed">
