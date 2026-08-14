@@ -48,6 +48,8 @@ test('сброс не возвращает язык к русскому', async 
   await page.getByTestId('reset-studio').click()
   await page.getByTestId('reset-confirm').click()
   await expect(page.getByTestId('locale-en')).toHaveClass(/bg-surface-raised/)
+  // Сброс возвращает и стартовый экран, поэтому за именем доски идём обратно в редактор.
+  await page.getByTestId('tab-editor').click()
   await expect(page.getByTestId('board-name')).toHaveAttribute('placeholder', 'Checkerboard')
 })
 
