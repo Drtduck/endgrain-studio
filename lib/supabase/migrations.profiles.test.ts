@@ -45,14 +45,31 @@ describe('20260814100000_profiles.sql: таблица профилей и её �
     expect(sql.slice(grantIdx, grantIdx + 120)).not.toContain('notify_email')
   })
 
-  it('authenticated может писать update только по display_name/bio/website/notify_email', () => {
+  it('authenticated не получает select notify_email: select-политика открыта на все строки', () => {
+    const revokeIdx = sql.indexOf('revoke select on public.profiles from authenticated;')
+    const grantIdx = sql.indexOf(
+      'grant select (user_id, display_name, bio, website, created_at, updated_at) on public.profiles to authenticated;',
+    )
+    expect(revokeIdx, 'revoke select от authenticated должен присутствовать').toBeGreaterThan(-1)
+    expect(grantIdx, 'узкий grant select для authenticated должен присутствовать').toBeGreaterThan(-1)
+    expect(revokeIdx).toBeLessThan(grantIdx)
+    // profiles_select_all открыта using(true) на все строки: notify_email в этом
+    // гранте отдала бы приватную настройку любого пользователя кому угодно вошедшему.
+    expect(sql.slice(grantIdx, grantIdx + 130)).not.toContain('notify_email')
+  })
+
+  it('authenticated может писать update по display_name/bio/website/notify_email и user_id (PostgREST upsert)', () => {
     const revokeIdx = sql.indexOf('revoke update on public.profiles from authenticated;')
-    const grantIdx = sql.indexOf('grant update (display_name, bio, website, notify_email) on public.profiles to authenticated;')
+    const grantIdx = sql.indexOf(
+      'grant update (user_id, display_name, bio, website, notify_email) on public.profiles to authenticated;',
+    )
     expect(revokeIdx, 'revoke update от authenticated должен присутствовать').toBeGreaterThan(-1)
     expect(grantIdx, 'узкий grant update для authenticated должен присутствовать').toBeGreaterThan(-1)
     expect(revokeIdx).toBeLessThan(grantIdx)
-    // user_id и created_at обязаны остаться недоступны обычному update из браузера.
-    expect(sql.slice(grantIdx, grantIdx + 120)).not.toContain('user_id')
-    expect(sql.slice(grantIdx, grantIdx + 120)).not.toContain('created_at')
+    // user_id обязателен: merge-duplicates upsert компилируется в ON CONFLICT DO UPDATE
+    // SET user_id = EXCLUDED.user_id, ... - без грани на user_id это падает 42501,
+    // хотя with check и так не даёт его реально сменить. created_at должен остаться
+    // недоступен обычному update из браузера.
+    expect(sql.slice(grantIdx, grantIdx + 130)).not.toContain('created_at')
   })
 })

@@ -9,6 +9,7 @@ import { t, type Locale, type MessageKey } from '@/lib/i18n'
 const ERROR_KEYS: Readonly<Partial<Record<ProfileError, MessageKey>>> = {
   invalid: 'profile.error.invalid',
   failed: 'profile.error.failed',
+  wrongPassword: 'profile.password.wrong',
 }
 
 export interface PasswordSectionProps {
@@ -18,6 +19,7 @@ export interface PasswordSectionProps {
 }
 
 export function PasswordSection({ locale, hasPassword }: PasswordSectionProps) {
+  const [currentPassword, setCurrentPassword] = useState('')
   const [password, setPassword] = useState('')
   const [repeat, setRepeat] = useState('')
   const [busy, startTransition] = useTransition()
@@ -33,9 +35,10 @@ export function PasswordSection({ locale, hasPassword }: PasswordSectionProps) {
       return
     }
     startTransition(async () => {
-      const res = await changePasswordAction(password)
+      const res = await changePasswordAction(currentPassword, password)
       if (res.ok) {
         setSaved(true)
+        setCurrentPassword('')
         setPassword('')
         setRepeat('')
       } else {
@@ -71,6 +74,19 @@ export function PasswordSection({ locale, hasPassword }: PasswordSectionProps) {
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-end gap-2">
             <div className="flex flex-col gap-1">
+              <label htmlFor="password-current" className="text-xs text-ink-secondary">
+                {t(locale, 'profile.password.current')}
+              </label>
+              <Input
+                id="password-current"
+                data-testid="password-current-input"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                disabled={busy}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
               <label htmlFor="password-new" className="text-xs text-ink-secondary">
                 {t(locale, 'profile.password.new')}
               </label>
@@ -98,7 +114,11 @@ export function PasswordSection({ locale, hasPassword }: PasswordSectionProps) {
                 disabled={busy}
               />
             </div>
-            <Button data-testid="password-submit" disabled={busy || password.length === 0} onClick={submit}>
+            <Button
+              data-testid="password-submit"
+              disabled={busy || currentPassword.length === 0 || password.length === 0}
+              onClick={submit}
+            >
               {t(locale, 'profile.password.submit')}
             </Button>
           </div>

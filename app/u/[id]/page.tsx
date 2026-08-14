@@ -49,7 +49,7 @@ export default async function PublicProfilePage(props: PageProps<'/u/[id]'>) {
                 <a
                   href={profile.website}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noreferrer nofollow ugc"
                   data-testid="public-profile-website"
                   className="w-fit text-sm text-accent hover:underline"
                 >

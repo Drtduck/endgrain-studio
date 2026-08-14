@@ -19,15 +19,62 @@ function text(body: string, status: number): Response {
 /**
  * Разовый платёж. wallet_topup зовёт SQL-функцию под service-role: она сама
  * идемпотентна по (kind, ref), поэтому повторная доставка того же события просто
- * вернёт текущий баланс, не увеличив его дважды. gallery_purchase в MVP не входит
- * (см. спеку, раздел «Отложено»): ветка существует, чтобы фаза 2 не трогала транспорт.
+ * вернёт текущий баланс, не увеличив его дважды.
+ *
+ * gallery_purchase (фаза 2 спеки docs/superpowers/specs/2026-08-13-commerce-social-design.md):
+ * пишет строку в project_purchases под service-role - единственный писатель этой таблицы,
+ * у клиентских ролей политик insert нет вовсе (см. миграцию 20260813100000_gallery.sql).
+ * Идемпотентность даёт уникальный индекс purchases_session_idx по stripe_session_id:
+ * upsert с ignoreDuplicates на повторной доставке не создаёт вторую строку и не роняет ответ.
+ * Доступ к design открывает published_project_design() сама, по наличию этой строки -
+ * никакого отдельного «разблокирования» тут делать не нужно.
  */
 async function handleOneTime(payment: import('@/lib/stripe/oneTime').OneTimePayment): Promise<Response> {
   if (payment.kind === 'gallery_purchase') {
-    console.warn('stripe webhook: gallery_purchase ещё не реализована (фаза 2)', {
-      sessionId: payment.sessionId,
-      publishedId: payment.publishedId,
-    })
+    const publishedId = payment.publishedId
+    if (publishedId === null) {
+      // Сессия создана не нашим action (либо испорченные metadata): ретраить
+      // бессмысленно, чинить нечего.
+      console.error('stripe webhook: gallery_purchase без published_id', { sessionId: payment.sessionId })
+      return text('ok', 200)
+    }
+    try {
+      const sb = getSupabaseAdmin()
+      const { data: published, error: readError } = await sb
+        .from('published_projects')
+        .select('author_id')
+        .eq('id', publishedId)
+        .maybeSingle()
+      if (readError) {
+        console.error('stripe webhook: gallery_purchase чтение публикации упало', readError)
+        return text('read failed', 500)
+      }
+      if (!published) {
+        // Публикацию успели удалить между Checkout и вебхуком: писать чек не к чему,
+        // ретрай ничего не исправит.
+        console.warn('stripe webhook: gallery_purchase публикация не найдена', { publishedId })
+        return text('ok', 200)
+      }
+      const { error: insertError } = await sb.from('project_purchases').upsert(
+        {
+          published_id: publishedId,
+          buyer_id: payment.userId,
+          author_id: published.author_id,
+          price_cents: payment.amountCents,
+          currency: payment.currency,
+          stripe_session_id: payment.sessionId,
+          status: 'paid',
+        },
+        { onConflict: 'stripe_session_id', ignoreDuplicates: true },
+      )
+      if (insertError) {
+        console.error('stripe webhook: gallery_purchase запись покупки упала', insertError)
+        return text('write failed', 500)
+      }
+    } catch (err) {
+      console.error('stripe webhook: gallery_purchase threw', err)
+      return text('write failed', 500)
+    }
     return text('ok', 200)
   }
 

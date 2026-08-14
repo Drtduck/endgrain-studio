@@ -1,6 +1,7 @@
 import 'server-only'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { getSupabaseServer } from '@/lib/supabase/server'
+import { getSupabaseService, isSupabaseServiceConfigured } from '@/lib/supabase/service'
 import type { Profile, PublicProfile } from './types'
 
 /**
@@ -30,15 +31,19 @@ function toPublicProfile(row: ProfileRow): PublicProfile {
 }
 
 /**
- * Собственный профиль владельца, включая notify_email: authenticated-грант
- * миграции 20260814100000 открывает эту колонку только своей строке через RLS,
- * анониму и на /u/[id] notify_email не должна быть видна вовсе, поэтому это
- * отдельная функция, а не расширение getProfile.
+ * Собственный профиль владельца, включая notify_email. select-политика profiles_select_all
+ * открыта using(true) на все строки таблицы, поэтому notify_email принципиально не может
+ * сидеть в authenticated-гранте (миграция 20260814100000): это отдало бы приватную
+ * настройку любого человека кому угодно вошедшему. Читаем её в обход RLS через
+ * service-role клиент, отфильтрованный тем же userId, что пришёл из собственной
+ * сессии вызывающего (app/account/page.tsx зовёт getOwnProfile(user.id) - id никогда
+ * не приходит от клиента как есть). Файл server-only (см. импорт выше), утечки в
+ * браузер этот код дать не может.
  */
 export async function getOwnProfile(userId: string): Promise<Profile | null> {
-  if (!isSupabaseConfigured()) return null
+  if (!isSupabaseConfigured() || !isSupabaseServiceConfigured()) return null
   try {
-    const sb = await getSupabaseServer()
+    const sb = getSupabaseService()
     const { data, error } = await sb
       .from('profiles')
       .select('user_id, display_name, bio, website, notify_email, created_at')

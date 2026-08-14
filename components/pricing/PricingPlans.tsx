@@ -174,9 +174,10 @@ export function PricingPlans(props: PricingPlansProps) {
     })
   }
 
-  // Подписка и Пропуск оба дают Pro: подписка старше (см. resolveProStatus),
-  // но обе причины блокируют повторную покупку Pro и снимают кнопку.
-  const proSubscribed = pro && (reason === 'subscription' || reason === 'pass')
+  // Только живая подписка снимает кнопку покупки Pro и показывает «текущий план»:
+  // Пропуск даёт Pro, но не блокирует апгрейд до подписки (см. createCheckoutAction) -
+  // купивший пропуск должен по-прежнему видеть кнопку «Оформить Pro».
+  const proSubscribed = pro && reason === 'subscription'
   // Пропуск можно докупать поверх уже активного пропуска (grant_pro_pass продлевает
   // окно), заблокирована повторная покупка только поверх настоящей подписки.
   const passBuyBlocked = reason === 'subscription'
@@ -258,19 +259,18 @@ export function PricingPlans(props: PricingPlansProps) {
                 <span data-testid="pricing-current" className="text-[13px] font-semibold text-ink">
                   {t(locale, 'pricing.current')}
                 </span>
-                {currentPeriodEnd === null ? null : reason === 'pass' ? (
+                {currentPeriodEnd === null ? null : (
                   <span data-testid="pricing-period" className="text-xs text-ink-secondary">
-                    {t(locale, 'pricing.pass.until', { date: formatDate(currentPeriodEnd, locale) })}
-                  </span>
-                ) : (
-                  <span data-testid="pricing-period" className="text-xs text-ink-secondary">
+                    {/* proSubscribed теперь означает ровно reason === 'subscription' (см. фикс
+                        «Пропуск не запирает от Pro»): вариант «оплачено до по формату Пропуска»
+                        сюда больше не приходит, эта карточка показывает только настоящую подписку. */}
                     {/* Отменённая подписка честно говорит, что не продлится, а не «оплачено до». */}
                     {t(locale, cancelAtPeriodEnd ? 'pricing.canceling' : 'pricing.until', {
                       date: formatDate(currentPeriodEnd, locale),
                     })}
                   </span>
                 )}
-                {portalUrl.length === 0 || reason === 'pass' ? null : (
+                {portalUrl.length === 0 ? null : (
                   <a
                     href={portalUrl}
                     data-testid="pricing-manage"

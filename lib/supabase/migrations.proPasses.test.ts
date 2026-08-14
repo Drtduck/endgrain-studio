@@ -20,6 +20,15 @@ describe('20260814160000_pro_passes.sql: grant_pro_pass идемпотентен
     expect(body).toMatch(/where user_id = p_user_id/)
   })
 
+  it('берёт advisory-блокировку по пользователю раньше чтения текущего максимума expires_at', () => {
+    const body = extractFunctionBody(sql, 'grant_pro_pass')
+    expect(body).toMatch(/pg_advisory_xact_lock\(hashtextextended\(p_user_id::text, 0\)\)/)
+    const lockIdx = body.indexOf('pg_advisory_xact_lock')
+    const selectMaxIdx = body.indexOf('greatest(now()')
+    expect(lockIdx).toBeGreaterThan(-1)
+    expect(lockIdx).toBeLessThan(selectMaxIdx)
+  })
+
   it('повтор с тем же ref ловится unique_violation и не создаёт вторую строку', () => {
     const body = extractFunctionBody(sql, 'grant_pro_pass')
     expect(body).toMatch(/exception\s+when\s+unique_violation\s+then/)

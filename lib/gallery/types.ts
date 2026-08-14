@@ -19,7 +19,16 @@ export const GALLERY_MAX_PAGE = 10
 /** Выше стольки ячеек карточка рисует упрощённый плейсхолдер, а не полный SVG. */
 export const GALLERY_CELL_LIMIT = 2000
 
-export type GalleryError = 'unauthenticated' | 'invalid' | 'notFound' | 'failed' | 'limit' | 'needsPurchase'
+export type GalleryError =
+  | 'unauthenticated'
+  | 'invalid'
+  | 'notFound'
+  | 'failed'
+  | 'limit'
+  | 'needsPurchase'
+  | 'disabled'
+  | 'own'
+  | 'already'
 
 export interface GallerySummary {
   readonly widthMm: number

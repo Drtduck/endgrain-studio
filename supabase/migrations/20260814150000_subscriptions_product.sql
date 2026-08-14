@@ -7,6 +7,9 @@
 alter table public.subscriptions
   add column if not exists product text not null default 'pro';
 
+-- Идемпотентность: миграция может проехать по базе второй раз (ручной делта-прогон
+-- после конкурсного применения), без drop повторный add constraint падает на «уже существует».
+alter table public.subscriptions drop constraint if exists subscriptions_product_allowed;
 alter table public.subscriptions
   add constraint subscriptions_product_allowed check (product in ('pro', 'api'));
 

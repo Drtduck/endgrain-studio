@@ -78,15 +78,15 @@ describe('PricingPlans', () => {
     expect(period).not.toContain('Оплачено до')
   })
 
-  it('пропуск: показывает дату окончания без ссылки на портал и без записи «текущий план»', () => {
+  it('живой Пропуск не запирает от Pro: карточка Pro по-прежнему показывает кнопку покупки, а не «текущий план»', () => {
     const { container } = setup({
       pro: true,
       reason: 'pass',
       currentPeriodEnd: '2026-12-01T00:00:00.000Z',
     })
-    expect(container.querySelector('[data-testid="pricing-current"]')).not.toBe(null)
-    expect(container.querySelector('[data-testid="pricing-manage"]')).toBe(null)
-    expect(container.querySelector('[data-testid="pricing-buy-pro"]')).toBe(null)
+    const button = container.querySelector('[data-testid="pricing-buy-pro"]')
+    expect(button).not.toBe(null)
+    expect(container.querySelector('[data-testid="pricing-current"]')).toBe(null)
   })
 
   it('ошибка от экшена показывается текстом по коду', async () => {

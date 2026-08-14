@@ -37,6 +37,11 @@ export default async function PricingPage(props: PageProps<'/pricing'>) {
   // Без пользователя (не вошёл) спрашивать нечего - и без него getSubscriptionStatus
   // сама вернёт FREE.
   const apiStatus = await getSubscriptionStatus('api')
+  // passExpiresAt читается отдельным вызовом getSubscriptionStatus('pro'), а не из
+  // status (getProStatus): allowlist и аварийный флаг NEXT_PUBLIC_PRO_UNLOCK
+  // перекрывают status.reason на 'flag'/'allowlist' даже когда в базе лежит живой
+  // пропуск - карточка Пропуска тогда молчала бы о его настоящей дате окончания.
+  const proSubscription = await getSubscriptionStatus('pro')
 
   // Отмена оплаты возвращает человека сюда, а не в студию: с этой страницы
   // он может сразу попробовать ещё раз или выбрать другой тариф.
@@ -69,7 +74,7 @@ export default async function PricingPage(props: PageProps<'/pricing'>) {
             apiEnabled={hasApiPrices()}
             passEnabled={hasPassPrice()}
             apiSubscribed={apiStatus.reason === 'subscription'}
-            passExpiresAt={status.reason === 'pass' ? status.currentPeriodEnd : null}
+            passExpiresAt={proSubscription.reason === 'pass' ? proSubscription.currentPeriodEnd : null}
           />
         </div>
       </main>

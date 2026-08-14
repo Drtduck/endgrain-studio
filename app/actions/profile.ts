@@ -18,7 +18,16 @@ import { getSupabaseService, isSupabaseServiceConfigured } from '@/lib/supabase/
  * (auth.admin.deleteUser), поэтому тем же приёмом, что revokeApiKeyAction.
  */
 
-export type ProfileError = 'unauthenticated' | 'invalid' | 'taken' | 'failed' | 'googleOnly' | 'noPassword' | 'unavailable' | 'confirmMismatch'
+export type ProfileError =
+  | 'unauthenticated'
+  | 'invalid'
+  | 'taken'
+  | 'failed'
+  | 'googleOnly'
+  | 'noPassword'
+  | 'unavailable'
+  | 'confirmMismatch'
+  | 'wrongPassword'
 export type ProfileResult<T> = { readonly ok: true; readonly data: T } | { readonly ok: false; readonly error: ProfileError }
 
 const displayNameSchema = z.string().trim().min(PROFILE_DISPLAY_NAME_MIN).max(PROFILE_DISPLAY_NAME_MAX)
@@ -72,7 +81,12 @@ export async function updateProfileAction(input: UpdateProfileInput): Promise<Pr
       },
       { onConflict: 'user_id' },
     )
-    .select('user_id, display_name, bio, website, notify_email, created_at')
+    // notify_email намеренно не в RETURNING: authenticated-грант select больше не
+    // открывает эту колонку никому (см. миграцию 20260814100000, фикс приватности
+    // notify_email) - RETURNING в Postgres требует SELECT-привилегию на колонку
+    // ровно как обычный select, поэтому эта строка упала бы с 42501. Значение,
+    // которое мы только что успешно записали, и так известно из input.
+    .select('user_id, display_name, bio, website, created_at')
     .single()
 
   if (error || !data) return { ok: false, error: 'failed' }
@@ -84,7 +98,7 @@ export async function updateProfileAction(input: UpdateProfileInput): Promise<Pr
       displayName: data.display_name === null ? null : String(data.display_name),
       bio: data.bio === null ? null : String(data.bio),
       website: data.website === null ? null : String(data.website),
-      notifyEmail: Boolean(data.notify_email),
+      notifyEmail: input.notifyEmail,
       createdAt: String(data.created_at),
     },
   }
@@ -120,8 +134,14 @@ export async function changeEmailAction(email: string): Promise<ProfileResult<nu
   return { ok: true, data: null }
 }
 
-/** Смена пароля. Требует, чтобы у аккаунта уже был provider email (см. changeEmailAction). */
-export async function changePasswordAction(password: string): Promise<ProfileResult<null>> {
+/**
+ * Смена пароля. Требует, чтобы у аккаунта уже был provider email (см. changeEmailAction),
+ * и текущий пароль: без этой проверки открытая на чужом устройстве сессия (например
+ * в интернет-кафе или на общем компьютере) давала бы захватить аккаунт простой сменой
+ * пароля - signInWithPassword с текущим паролем подтверждает, что его действительно
+ * знает тот, кто меняет.
+ */
+export async function changePasswordAction(currentPassword: string, password: string): Promise<ProfileResult<null>> {
   const user = await getCurrentUser()
   if (!user) return { ok: false, error: 'unauthenticated' }
 
@@ -132,6 +152,10 @@ export async function changePasswordAction(password: string): Promise<ProfileRes
   if (!identity?.hasPassword) return { ok: false, error: 'noPassword' }
 
   const sb = await getSupabaseServer()
+
+  const { error: signInError } = await sb.auth.signInWithPassword({ email: user.email, password: currentPassword })
+  if (signInError) return { ok: false, error: 'wrongPassword' }
+
   const { error } = await sb.auth.updateUser({ password: parsed.data })
   if (error) return { ok: false, error: 'failed' }
   return { ok: true, data: null }

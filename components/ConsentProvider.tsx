@@ -72,6 +72,10 @@ export function ConsentProvider({ regime, initialDecision, children }: ConsentPr
   const [decision, setDecision] = useState<ConsentDecision | null>(
     () => gpcOverride(gpc, regime, initialDecision) ?? initialDecision
   )
+  // Показ баннера через «Настройки cookie» не должен гасить аналитику, пока живёт
+  // валидное granted-решение: decision(cookie) остаётся источником analytics,
+  // forceBannerVisible - чисто UI-флаг «баннер снова на экране».
+  const [forceBannerVisible, setForceBannerVisible] = useState(false)
   const strictDeniedSent = useRef(false)
   const gpcWriteSent = useRef(false)
 
@@ -80,6 +84,8 @@ export function ConsentProvider({ regime, initialDecision, children }: ConsentPr
     writeConsent(next)
     pushConsentUpdate(analytics)
     setDecision(next)
+    // Новый явный выбор закрывает баннер, открытый через reopen(), сам по себе.
+    setForceBannerVisible(false)
   }
 
   useEffect(() => {
@@ -103,15 +109,16 @@ export function ConsentProvider({ regime, initialDecision, children }: ConsentPr
 
   const validDecision = isDecisionValidFor(decision, regime) ? decision : null
 
-  // Ссылка «Настройки cookie» в футере зовёт это вместо навигации: cookie
-  // eg-consent не трогается, пока человек не сделает новый выбор в баннере,
-  // сброс только локального React-состояния, чтобы decided снова стало false.
-  const reopen = (): void => setDecision(null)
+  // Ссылка «Настройки cookie» в футере зовёт это вместо навигации: cookie eg-consent
+  // не трогается и decision не сбрасывается (аналитика продолжает идти по уже
+  // выданному granted-решению), баннер просто показывается снова поверх текущего
+  // состояния - до нового явного выбора в choose().
+  const reopen = (): void => setForceBannerVisible(true)
 
   const value: ConsentValue = {
     regime,
     analytics: validDecision?.analytics ?? false,
-    decided: validDecision !== null,
+    decided: validDecision !== null && !forceBannerVisible,
     gpc,
     decision,
     choose,

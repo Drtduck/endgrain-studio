@@ -36,8 +36,11 @@ export async function createCheckoutAction(plan: unknown): Promise<CheckoutResul
   // аварийном флаге NEXT_PUBLIC_PRO_UNLOCK=1 причина была бы 'flag', и защита
   // бы не сработала.
   if (product === 'pro') {
+    // Живой Пропуск не блокирует покупку Pro: подписка даёт больше, чем разовый
+    // пропуск (автопродление), и купивший пропуск должен мочь апгрейднуться, а не
+    // упереться в «already» до истечения 90 дней.
     const subscription = await getSubscriptionStatus('pro')
-    if (subscription.reason === 'subscription' || subscription.reason === 'pass') return { ok: false, error: 'already' }
+    if (subscription.reason === 'subscription') return { ok: false, error: 'already' }
   } else if (product === 'api') {
     const subscription = await getSubscriptionStatus('api')
     if (subscription.reason === 'subscription') return { ok: false, error: 'already' }

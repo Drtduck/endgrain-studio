@@ -48,17 +48,24 @@ create policy profiles_update_own on public.profiles
 -- Политики delete нет: строка живёт и умирает вместе с auth.users через каскад.
 
 -- Column-grants тем же приёмом, что и published_projects (миграция 20260813100000):
--- полный revoke, затем явный список колонок. anon не должен увидеть даже
--- notify_email чужого человека, а authenticated не должен мочь потрогать
--- user_id/created_at чужой или своей строки через сырой update.
+-- полный revoke, затем явный список колонок. select-политика profiles_select_all
+-- открыта using(true) на ВСЕ строки, поэтому notify_email не может быть в select-гранте
+-- ни anon, ни authenticated - иначе любой вошедший читал бы чужую приватную настройку
+-- уведомлений через обычный select. Свою notify_email владелец читает отдельно,
+-- через service-role клиент (lib/profile/read.ts getOwnProfile), в обход этого гранта.
 revoke select on public.profiles from anon;
 grant select (user_id, display_name, bio, website, created_at) on public.profiles to anon;
 
 revoke select on public.profiles from authenticated;
-grant select (user_id, display_name, bio, website, notify_email, created_at, updated_at) on public.profiles to authenticated;
+grant select (user_id, display_name, bio, website, created_at, updated_at) on public.profiles to authenticated;
 
+-- user_id обязателен в списке update-колонок, хотя with check и так не даёт его
+-- сменить: PostgREST-upsert (merge-duplicates, onConflict: user_id) компилируется в
+-- INSERT ... ON CONFLICT DO UPDATE SET user_id = EXCLUDED.user_id, ..., то есть
+-- user_id всегда попадает в SET-список, даже когда его значение не меняется.
+-- Без него в этом списке Postgres рубит любой upsert с 42501 column privilege.
 revoke update on public.profiles from authenticated;
-grant update (display_name, bio, website, notify_email) on public.profiles to authenticated;
+grant update (user_id, display_name, bio, website, notify_email) on public.profiles to authenticated;
 
 revoke insert on public.profiles from authenticated;
 grant insert (user_id, display_name, bio, website, notify_email) on public.profiles to authenticated;

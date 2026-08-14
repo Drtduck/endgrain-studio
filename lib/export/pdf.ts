@@ -224,9 +224,11 @@ async function drawOverviewPage(ctx: PdfContext): Promise<void> {
   ])
 
   y += 4
+  y = ensureRoom(ctx, y, LINE_MM)
   text(ctx, t(locale, 'meter.lumberBySpecies'), PAGE.marginMm, y, { size: FONT.h2, style: 'bold' })
   y += LINE_MM
   for (const need of calc.bySpecies) {
+    y = ensureRoom(ctx, y, LINE_MM)
     doc.setFillColor(speciesHex(need.speciesId))
     doc.rect(PAGE.marginMm, y - 3.2, 4, 4, 'F')
     text(

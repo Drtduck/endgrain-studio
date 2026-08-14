@@ -50,6 +50,11 @@ begin
     return null;
   end if;
 
+  -- Две сессии вебхука (например повтор доставки от Stripe вперемешку с реальным
+  -- новым событием) читают текущий максимум expires_at и пишут поверх друг друга -
+  -- без блокировки один grant теряется. Блокировка снимается сама в конце транзакции.
+  perform pg_advisory_xact_lock(hashtextextended(p_user_id::text, 0));
+
   select greatest(now(), coalesce(max(expires_at), now()))
     into v_base
     from public.pro_passes

@@ -150,6 +150,25 @@ export async function hasLiked(userId: string, publishedId: string): Promise<boo
   }
 }
 
+/** Купил ли текущий пользователь эту публикацию: под своей RLS-политикой select (purchases_select_buyer). */
+export async function hasPurchased(userId: string, publishedId: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false
+  try {
+    const sb = await getSupabaseServer()
+    const { data } = await sb
+      .from('project_purchases')
+      .select('id')
+      .eq('published_id', publishedId)
+      .eq('buyer_id', userId)
+      .eq('status', 'paid')
+      .maybeSingle()
+    return data !== null
+  } catch (err) {
+    console.error('hasPurchased failed', err)
+    return false
+  }
+}
+
 /** «Мои публикации»: собственные строки автора вне зависимости от статуса. */
 export async function listMyPublished(userId: string): Promise<readonly GalleryCard[]> {
   if (!isSupabaseConfigured()) return []

@@ -14,6 +14,14 @@ describe('20260814150000_subscriptions_product.sql: composite key и set_api_tie
     expect(sql).toMatch(/add primary key \(user_id, product\)/)
   })
 
+  it('constraint product_allowed идемпотентен: drop if exists перед повторным add', () => {
+    const dropIdx = sql.indexOf('drop constraint if exists subscriptions_product_allowed')
+    const addIdx = sql.indexOf("add constraint subscriptions_product_allowed check (product in ('pro', 'api'))")
+    expect(dropIdx, 'drop constraint if exists должен присутствовать').toBeGreaterThan(-1)
+    expect(addIdx, 'add constraint должен присутствовать').toBeGreaterThan(-1)
+    expect(dropIdx).toBeLessThan(addIdx)
+  })
+
   it('set_api_tier обновляет только неотозванные ключи пользователя', () => {
     const body = extractFunctionBody(sql, 'set_api_tier')
     expect(body).toMatch(/where user_id = p_user_id\s+and revoked_at is null/)

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { updateProfileAction, type ProfileError } from '@/app/actions/profile'
 import { Button } from '@/components/ui/button'
@@ -29,14 +30,22 @@ export function ProfileForm({ locale, userId, initial }: ProfileFormProps) {
   const [busy, startTransition] = useTransition()
   const [error, setError] = useState<ProfileError | null>(null)
   const [saved, setSaved] = useState(false)
+  const router = useRouter()
 
   const submit = (): void => {
     setError(null)
     setSaved(false)
     startTransition(async () => {
       const res = await updateProfileAction({ displayName, bio, website, notifyEmail })
-      if (res.ok) setSaved(true)
-      else setError(res.error)
+      if (res.ok) {
+        setSaved(true)
+        // Публичная страница /u/[id] и шапка (displayName в Avatar) читают профиль
+        // из серверного рендера - без refresh() правка была бы видна только после
+        // ручной перезагрузки страницы.
+        router.refresh()
+      } else {
+        setError(res.error)
+      }
     })
   }
 
