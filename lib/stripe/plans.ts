@@ -22,11 +22,13 @@ export function priceIdFor(plan: PlanId): string {
  * Цена, с которой стартует Checkout Session продукта. Для Pro решает
  * STRIPE_PRO_DEFAULT_PRICE (переключатель ветки A/B тумблера upsell из плана
  * тарифной витрины): вторая цена доступна на той же сессии через Upsell,
- * настроенный в Dashboard. Для API всегда годовая: у Developer нет тумблера,
- * only-yearly - самый простой старт, который потом может обрасти upsell'ом.
+ * настроенный в Dashboard. Для API - всегда месячная, и это не вкусовщина:
+ * upsell в Dashboard настроен веткой B «месячная -> годовая», а тумблер
+ * месяц/год Stripe рисует только когда сессия стартует с месячной цены.
+ * С годовой в line_items переключателя на Checkout не было вовсе.
  */
 export function checkoutPriceFor(product: Product): string {
-  if (product === 'api') return STRIPE_PRICE_API_YEARLY
+  if (product === 'api') return STRIPE_PRICE_API_MONTHLY
   return STRIPE_PRO_DEFAULT_PRICE === 'monthly' ? STRIPE_PRICE_MONTHLY : STRIPE_PRICE_YEARLY
 }
 

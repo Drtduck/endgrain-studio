@@ -538,6 +538,7 @@ const ru = {
   'developer.period': 'в месяц при оплате за год',
   'developer.note': '$200 в год или $20 в месяц. Два месяца в подарок.',
   'developer.cta': 'Подключить API: от $16.67 в месяц',
+  'developer.checkoutHint': 'На следующем шаге переключите на год: два месяца в подарок.',
   'developer.f.requests': '2000 запросов к API в сутки',
   'developer.f.keys': 'До 10 ключей',
   'developer.f.mcp': 'MCP-сервер',

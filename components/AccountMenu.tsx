@@ -23,7 +23,7 @@ import { useStudio } from '@/lib/store/studio'
  */
 export function AccountMenu() {
   const locale = useStudio((s) => s.locale)
-  const { user, enabled } = useSession()
+  const { user, enabled, avatarUrl = null } = useSession()
   const { status, billingEnabled, ai } = usePro()
   const [signingOut, startSignOut] = useTransition()
 
@@ -49,7 +49,7 @@ export function AccountMenu() {
         aria-label={t(locale, 'account.menuLabel', { email: user.email })}
         className="rounded-full data-popup-open:opacity-80"
       >
-        <Avatar seed={user.id} label={user.email} size="sm" />
+        <Avatar seed={user.id} label={user.email} url={avatarUrl} size="sm" />
         {/* Почта в доступном имени и заодно якорь для e2e: меню закрыто, а адрес в DOM есть. */}
         <span data-testid="account-email" className="sr-only">
           {user.email}
@@ -57,20 +57,25 @@ export function AccountMenu() {
       </MenuTrigger>
 
       <MenuContent data-testid="account-menu">
-        <div className="flex flex-col gap-0.5 px-3 pt-2 pb-2.5">
-          <span data-testid="account-menu-email" title={user.email} className="truncate text-[13px] font-medium text-ink">
-            {user.email}
-          </span>
-          {billingEnabled ? (
-            <span data-testid="account-menu-plan" className="text-[11px] text-ink-muted">
-              {t(locale, status.pro ? 'account.planPro' : 'account.planFree')}
+        {/* Тот же аватар в шапке меню: открытая выпадашка перекрывает кнопку,
+            и без картинки здесь непонятно, чей это аккаунт. */}
+        <div className="flex items-center gap-2.5 px-3 pt-2 pb-2.5">
+          <Avatar seed={user.id} label={user.email} url={avatarUrl} size="sm" />
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span data-testid="account-menu-email" title={user.email} className="truncate text-[13px] font-medium text-ink">
+              {user.email}
             </span>
-          ) : null}
-          {ai.state === 'pro' ? (
-            <span data-testid="account-menu-quota" className="text-[11px] text-ink-muted">
-              {t(locale, 'account.quota', { remaining: ai.remaining, limit: ai.limit })}
-            </span>
-          ) : null}
+            {billingEnabled ? (
+              <span data-testid="account-menu-plan" className="text-[11px] text-ink-muted">
+                {t(locale, status.pro ? 'account.planPro' : 'account.planFree')}
+              </span>
+            ) : null}
+            {ai.state === 'pro' ? (
+              <span data-testid="account-menu-quota" className="text-[11px] text-ink-muted">
+                {t(locale, 'account.quota', { remaining: ai.remaining, limit: ai.limit })}
+              </span>
+            ) : null}
+          </div>
         </div>
 
         <MenuSeparator />

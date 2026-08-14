@@ -16,6 +16,7 @@ import { isStripeConfigured } from "@/lib/stripe/config";
 import { getProStatus } from "@/lib/stripe/pro";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getCurrentUser } from "@/lib/supabase/session";
+import { getOwnAvatarUrl } from "@/lib/profile/read";
 import { getLandingLocale } from "@/lib/landing/locale";
 import { t } from "@/lib/i18n";
 import { appUrl } from "@/lib/seo/metadata";
@@ -36,6 +37,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const user = await getCurrentUser();
+  // Картинка аватара для шапки едет тем же путём, что и сам пользователь:
+  // пропсом с сервера, без клиентского fetch и без мигания инициала. После
+  // загрузки нового аватара AvatarPicker зовёт router.refresh(), layout
+  // пересчитывается и кружок в шапке обновляется сразу.
+  const avatarUrl = user === null ? null : await getOwnAvatarUrl(user.id);
   // Статус Pro считается на сервере и уезжает пропсом: клиент серверные ключи
   // Stripe не видит и isStripeConfigured() у себя вызвать не может.
   const proStatus = await getProStatus();
@@ -62,7 +68,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <NavProgress />
         </Suspense>
         <Analytics regime={consent.regime} initialDecision={consent.decision} />
-        <SessionProvider value={{ user, enabled: isSupabaseConfigured() }}>
+        <SessionProvider value={{ user, enabled: isSupabaseConfigured(), avatarUrl }}>
           <GoogleAuthProvider value={googleAuthAvailable}>
             <ProProvider value={{ status: proStatus, billingEnabled: isStripeConfigured(), ai: aiAccess }}>
               <ConsentProvider regime={consent.regime} initialDecision={consent.decision}>

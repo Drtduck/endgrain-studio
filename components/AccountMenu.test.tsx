@@ -51,6 +51,33 @@ describe('AccountMenu', () => {
     expect(screen.getByTestId('account-email').textContent).toBe('a@example.com')
   })
 
+  it('загруженный аватар показывается картинкой, а не инициалом', () => {
+    renderWith({ ...USER, avatarUrl: 'https://cdn.example.com/u1/avatar.webp' })
+    const trigger = screen.getByTestId('account-menu-trigger')
+    const img = trigger.querySelector('[data-testid="avatar"]')
+    expect(img?.getAttribute('data-avatar-kind')).toBe('image')
+    expect(img?.getAttribute('src')).toBe('https://cdn.example.com/u1/avatar.webp')
+  })
+
+  it('та же картинка стоит в шапке открытого меню', async () => {
+    renderWith({ ...USER, avatarUrl: 'https://cdn.example.com/u1/avatar.webp' })
+    fireEvent.click(screen.getByTestId('account-menu-trigger'))
+
+    await screen.findByTestId('account-menu-email')
+    const images = screen.getAllByTestId('avatar')
+    expect(images.length).toBe(2)
+    for (const img of images) {
+      expect(img.getAttribute('data-avatar-kind')).toBe('image')
+      expect(img.getAttribute('src')).toBe('https://cdn.example.com/u1/avatar.webp')
+    }
+  })
+
+  it('без avatarUrl остаётся инициал', () => {
+    renderWith(USER)
+    const img = screen.getByTestId('account-menu-trigger').querySelector('[data-testid="avatar"]')
+    expect(img?.getAttribute('data-avatar-kind')).toBe('initial')
+  })
+
   it('меню закрыто по умолчанию, клик открывает почту и выход', async () => {
     renderWith(USER)
     expect(screen.queryByTestId('account-signout')).toBe(null)

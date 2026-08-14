@@ -1,4 +1,5 @@
 import 'server-only'
+import { cache } from 'react'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { getSupabaseServer } from '@/lib/supabase/server'
 import { getSupabaseService, isSupabaseServiceConfigured } from '@/lib/supabase/service'
@@ -66,6 +67,30 @@ export async function getOwnProfile(userId: string): Promise<Profile | null> {
     return null
   }
 }
+
+/**
+ * Только avatar_url текущего пользователя - для шапки. Отдельная функция, а не
+ * getProfile: layout рендерится на каждой странице, и тащить туда весь профиль
+ * ради картинки в кружке 32 px незачем. Колонка avatar_url есть в select-гранте
+ * authenticated (миграция 20260814100000), поэтому хватает обычного клиента,
+ * service-role тут не нужен. Мемоизация react cache - как у getCurrentUser:
+ * один запрос на серверный рендер.
+ */
+export const getOwnAvatarUrl = cache(async (userId: string): Promise<string | null> => {
+  if (!isSupabaseConfigured() || userId.length === 0) return null
+  try {
+    const sb = await getSupabaseServer()
+    const { data, error } = await sb.from('profiles').select('avatar_url').eq('user_id', userId).maybeSingle()
+    if (error || !data) return null
+    const raw = (data as { readonly avatar_url: unknown }).avatar_url
+    if (raw === null || raw === undefined) return null
+    const value = String(raw)
+    return value.length === 0 ? null : value
+  } catch (err) {
+    console.error('getOwnAvatarUrl failed', err)
+    return null
+  }
+})
 
 /** Публичный профиль одного автора. null, если строки ещё нет (профиль не заполнялся). */
 export async function getProfile(userId: string): Promise<PublicProfile | null> {

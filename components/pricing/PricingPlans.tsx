@@ -355,7 +355,7 @@ export function PricingPlans(props: PricingPlansProps) {
               {t(locale, 'pricing.current')}
             </span>
           ) : (
-            <div className="mt-auto pt-1">
+            <div className="mt-auto flex flex-col gap-2 pt-1">
               <PlanCta
                 locale={locale}
                 enabled={billingEnabled}
@@ -368,6 +368,13 @@ export function PricingPlans(props: PricingPlansProps) {
                 needAuthTestId="pricing-api-need-auth"
                 needAuthHref="/login?next=/pricing"
               />
+              {/* Сессия Developer стартует с месячной цены, тумблер на год рисует
+                  Stripe своим upsell'ом: подсказка обещает ровно то, что там есть. */}
+              {billingEnabled ? (
+                <span data-testid="pricing-api-hint" className="text-xs text-ink-muted">
+                  {t(locale, 'developer.checkoutHint')}
+                </span>
+              ) : null}
             </div>
           )}
         </section>
