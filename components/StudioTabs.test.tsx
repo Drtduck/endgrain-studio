@@ -11,7 +11,7 @@ describe('StudioTabs', () => {
 
   it('помечает активную вкладку для скринридера', () => {
     render(<StudioTabs />)
-    expect(screen.getByTestId('tab-editor').getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByTestId('tab-home').getAttribute('aria-selected')).toBe('true')
     expect(screen.getByTestId('tab-view3d').getAttribute('aria-selected')).toBe('false')
   })
 
@@ -22,9 +22,9 @@ describe('StudioTabs', () => {
     expect(screen.getByTestId('tab-view3d').getAttribute('aria-selected')).toBe('true')
   })
 
-  it('показывает семь вкладок, включая генератор, фото, литературу и промо', () => {
+  it('показывает восемь вкладок, включая главную, генератор, фото, литературу и промо', () => {
     render(<StudioTabs />)
-    const views = ['editor', 'templates', 'generate', 'photo', 'view3d', 'books', 'promo']
+    const views = ['home', 'editor', 'templates', 'generate', 'photo', 'view3d', 'books', 'promo']
     for (const view of views) {
       expect(screen.getByTestId(`tab-${view}`)).toBeDefined()
     }

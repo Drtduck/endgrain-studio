@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 
 async function openStudio(page: Page): Promise<void> {
   await page.addInitScript(() => window.localStorage.clear())
-  await page.goto('/')
+  await page.goto('/?tab=editor')
   await expect(page.getByTestId('board-canvas')).toBeVisible()
 }
 
@@ -55,7 +55,7 @@ test('группа «Угловые узоры» видна и применяе�
 })
 
 test('шаблон переживает перезагрузку страницы', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/?tab=editor')
   await page.evaluate(() => window.localStorage.clear())
   await page.reload()
   await expect(page.getByTestId('board-canvas')).toBeVisible()

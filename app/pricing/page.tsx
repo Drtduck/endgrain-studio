@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import { AppHeader } from '@/components/AppHeader'
 import { TrackOnMount } from '@/components/analytics/TrackOnMount'
 import { CheckoutBanner } from '@/components/CheckoutBanner'
 import { PricingPlans } from '@/components/pricing/PricingPlans'
@@ -40,31 +40,31 @@ export default async function PricingPage(props: PageProps<'/pricing'>) {
   const state = checkout === 'cancel' ? 'cancel' : checkout === 'success' ? 'success' : null
 
   return (
-    <main className="min-h-screen bg-app px-4 py-10">
-      <JsonLd data={pricingJsonLd()} />
-      <TrackOnMount event="pricing_viewed" />
-      {state === null ? null : <CheckoutBanner state={state} locale={locale} />}
-      <div className="mx-auto flex max-w-4xl flex-col gap-6">
-        <div className="flex flex-col gap-1">
-          <Link href="/" data-testid="pricing-back" className="text-[13px] text-accent hover:underline">
-            {t(locale, 'app.title')}
-          </Link>
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-ink">{t(locale, 'pricing.title')}</h1>
-          <p className="max-w-[60ch] text-ink-secondary">{t(locale, 'pricing.subtitle')}</p>
-        </div>
+    <div className="min-h-screen bg-app">
+      <AppHeader />
+      <main className="px-4 py-10">
+        <JsonLd data={pricingJsonLd()} />
+        <TrackOnMount event="pricing_viewed" />
+        {state === null ? null : <CheckoutBanner state={state} locale={locale} />}
+        <div className="mx-auto flex max-w-4xl flex-col gap-6">
+          <div className="flex flex-col gap-1">
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-ink">{t(locale, 'pricing.title')}</h1>
+            <p className="max-w-[60ch] text-ink-secondary">{t(locale, 'pricing.subtitle')}</p>
+          </div>
 
-        <PricingPlans
-          locale={locale}
-          mode="checkout"
-          pro={status.pro}
-          reason={status.reason}
-          billingEnabled={isStripeConfigured()}
-          signedIn={user !== null}
-          currentPeriodEnd={status.currentPeriodEnd}
-          cancelAtPeriodEnd={status.cancelAtPeriodEnd}
-          portalUrl={STRIPE_PORTAL_URL}
-        />
-      </div>
-    </main>
+          <PricingPlans
+            locale={locale}
+            mode="checkout"
+            pro={status.pro}
+            reason={status.reason}
+            billingEnabled={isStripeConfigured()}
+            signedIn={user !== null}
+            currentPeriodEnd={status.currentPeriodEnd}
+            cancelAtPeriodEnd={status.cancelAtPeriodEnd}
+            portalUrl={STRIPE_PORTAL_URL}
+          />
+        </div>
+      </main>
+    </div>
   )
 }

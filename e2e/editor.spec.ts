@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
 /** Стартовый проект - шахматка, панели переиспользуются, поэтому покраска всегда идёт через форк. */
 async function openStudio(page: Page): Promise<void> {
   await page.addInitScript(() => window.localStorage.clear())
-  await page.goto('/')
+  await page.goto('/?tab=editor')
   await expect(page.getByTestId('board-canvas')).toBeVisible()
 }
 
@@ -58,7 +58,7 @@ test('смена толщины доски пересчитывает счётч
 test('толщина доски переживает перезагрузку страницы', async ({ page }) => {
   // openStudio вешает clear-localStorage init-скрипт на каждую навигацию этой страницы,
   // а нам как раз нужно, чтобы после reload() хранилище осталось нетронутым.
-  await page.goto('/')
+  await page.goto('/?tab=editor')
   await page.evaluate(() => window.localStorage.clear())
   await page.reload()
   await expect(page.getByTestId('board-canvas')).toBeVisible()

@@ -36,10 +36,20 @@ import { nextRowId } from './ids'
 
 export const DEFAULT_SPECIES_ID: SpeciesId = 'walnut'
 
-export type StudioView = 'editor' | 'templates' | 'generate' | 'photo' | 'view3d' | 'projects' | 'books' | 'promo'
+export type StudioView =
+  | 'home'
+  | 'editor'
+  | 'templates'
+  | 'generate'
+  | 'photo'
+  | 'view3d'
+  | 'projects'
+  | 'books'
+  | 'promo'
 
 /** Полный список вкладок студии - источник истины для валидации `?tab=` в URL. */
 export const STUDIO_VIEWS: readonly StudioView[] = [
+  'home',
   'editor',
   'templates',
   'generate',
@@ -181,7 +191,9 @@ export function selectIsDirty(s: StudioState): boolean {
 const UI_DEFAULTS = {
   locale: 'ru' as Locale,
   unit: 'mm' as UnitSystem,
-  view: 'editor' as StudioView,
+  // Стартовый экран - главная: человек после входа попадает на обзор разделов,
+  // а не сразу в редактор с чужой шахматкой.
+  view: 'home' as StudioView,
   activeSpeciesId: DEFAULT_SPECIES_ID,
   selectedCellId: null,
   selectedPanelId: null,

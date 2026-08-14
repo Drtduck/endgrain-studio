@@ -12,7 +12,7 @@ const noKeys = (process.env['GEMINI_API_KEY'] ?? '') === '' && (process.env['PRI
 
 async function openStudio(page: Page): Promise<void> {
   await page.addInitScript(() => window.localStorage.clear())
-  await page.goto('/')
+  await page.goto('/?tab=editor')
   await expect(page.getByTestId('board-canvas')).toBeVisible()
 }
 

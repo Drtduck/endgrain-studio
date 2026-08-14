@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { AppHeader } from '@/components/AppHeader'
 import { CopyToMyProjects } from '@/components/gallery/CopyToMyProjects'
 import { LikeButton } from '@/components/gallery/LikeButton'
 import { PriceBadge } from '@/components/gallery/PriceBadge'
@@ -46,52 +47,55 @@ export default async function GalleryProjectPage(props: PageProps<'/gallery/[id]
   const liked = user === null ? false : await hasLiked(user.id, row.id)
 
   return (
-    <main className="min-h-screen bg-app px-4 py-10">
-      <div className="mx-auto flex max-w-4xl flex-col gap-6">
-        <Link href="/gallery" data-testid="gallery-project-back" className="text-[13px] text-accent hover:underline">
-          {t(locale, 'gallery.title')}
-        </Link>
+    <div className="min-h-screen bg-app">
+      <AppHeader />
+      <main className="px-4 py-10">
+        <div className="mx-auto flex max-w-4xl flex-col gap-6">
+          <Link href="/gallery" data-testid="gallery-project-back" className="text-[13px] text-accent hover:underline">
+            {t(locale, 'gallery.title')}
+          </Link>
 
-        <div className="flex flex-col gap-6 md:flex-row">
-          <div className="flex flex-1 items-center justify-center rounded-lg bg-canvas p-6">
-            {previewSvg !== '' ? (
-              <div
-                data-testid="gallery-project-preview"
-                className="w-full [&_svg]:h-auto [&_svg]:w-full"
-                dangerouslySetInnerHTML={{ __html: previewSvg }}
-              />
-            ) : null}
-          </div>
-
-          <div className="flex w-full flex-col gap-4 md:w-72">
-            <div>
-              <h1 className="font-display text-2xl font-semibold" data-testid="gallery-project-title">
-                {row.title}
-              </h1>
-              {summary !== null ? (
-                <p className="font-mono text-[13px] text-ink-secondary">
-                  {summary.widthMm} x {summary.lengthMm} x {summary.thicknessMm} mm
-                </p>
+          <div className="flex flex-col gap-6 md:flex-row">
+            <div className="flex flex-1 items-center justify-center rounded-lg bg-canvas p-6">
+              {previewSvg !== '' ? (
+                <div
+                  data-testid="gallery-project-preview"
+                  className="w-full [&_svg]:h-auto [&_svg]:w-full"
+                  dangerouslySetInnerHTML={{ __html: previewSvg }}
+                />
               ) : null}
-              {species.length > 0 ? <p className="text-[13px] text-ink-secondary">{species.join(', ')}</p> : null}
             </div>
 
-            <PriceBadge locale={locale} priceCents={row.price_cents} />
+            <div className="flex w-full flex-col gap-4 md:w-72">
+              <div>
+                <h1 className="font-display text-2xl font-semibold" data-testid="gallery-project-title">
+                  {row.title}
+                </h1>
+                {summary !== null ? (
+                  <p className="font-mono text-[13px] text-ink-secondary">
+                    {summary.widthMm} x {summary.lengthMm} x {summary.thicknessMm} mm
+                  </p>
+                ) : null}
+                {species.length > 0 ? <p className="text-[13px] text-ink-secondary">{species.join(', ')}</p> : null}
+              </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <LikeButton locale={locale} publishedId={row.id} initialLiked={liked} initialCount={row.likes_count} />
+              <PriceBadge locale={locale} priceCents={row.price_cents} />
+
+              <div className="flex flex-wrap items-center gap-2">
+                <LikeButton locale={locale} publishedId={row.id} initialLiked={liked} initialCount={row.likes_count} />
+              </div>
+
+              {row.price_cents === 0 ? (
+                <CopyToMyProjects locale={locale} publishedId={row.id} />
+              ) : (
+                <Button size="sm" disabled data-testid="gallery-purchase-soon">
+                  {t(locale, 'gallery.purchaseSoon')}
+                </Button>
+              )}
             </div>
-
-            {row.price_cents === 0 ? (
-              <CopyToMyProjects locale={locale} publishedId={row.id} />
-            ) : (
-              <Button size="sm" disabled data-testid="gallery-purchase-soon">
-                {t(locale, 'gallery.purchaseSoon')}
-              </Button>
-            )}
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }

@@ -868,6 +868,28 @@ const en: Record<keyof typeof ru, string> = {
   'consent.settings.toggleLabel': 'Allow anonymized analytics',
 
   'legal.updatedAt': 'Updated: {date}',
+
+  'tabs.home': 'Home',
+  'home.greeting': 'Welcome back, {name}',
+  'home.greetingGuest': 'Hello',
+  'home.subtitle': 'This is where you build an end grain pattern and count the cuts, the lumber and the cost.',
+  'home.sections': 'Sections',
+  'home.card.editor.title': 'Editor',
+  'home.card.editor.body': 'Build the pattern from strips and rows: width, species, thickness. Board size and buildability checks sit next to it.',
+  'home.card.templates.title': 'Templates',
+  'home.card.templates.body': 'Ready patterns like checkerboard and brick. Take one as a base and fit it to your size.',
+  'home.card.generate.title': 'Generator',
+  'home.card.generate.body': 'Roll through pattern variants and send the one you like to the editor.',
+  'home.card.photo.title': 'Photo',
+  'home.card.photo.body': 'Upload a picture and it turns into strips and species. A photo becomes a working plan.',
+  'home.card.view3d.title': 'Board in 3D',
+  'home.card.view3d.body': 'Spin the board before you cut: see how the pattern lands on the end grain and the sides.',
+  'home.card.books.title': 'Books',
+  'home.card.books.body': 'Books and write-ups on end grain boards: what to read before the first glue-up.',
+  'home.card.promo.title': 'Promo',
+  'home.card.promo.body': 'Material for selling the board: pattern shots and print-ready mockups.',
+  'home.card.projects.title': 'My projects',
+  'home.card.projects.body': 'Saved boards: open one, carry on, take a copy.',
 }
 
 export default en

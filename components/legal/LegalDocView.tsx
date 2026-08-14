@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import type { ReactNode } from 'react'
+import { AppHeader } from '@/components/AppHeader'
 import type { LegalDoc } from '@/lib/legal'
 import { t, type Locale } from '@/lib/i18n'
 
@@ -24,36 +24,35 @@ export function LegalDocView({
   children?: ReactNode
 }) {
   return (
-    <main className="min-h-screen bg-app px-4 py-10">
-      <div className="mx-auto flex max-w-3xl flex-col gap-6" data-testid="legal-doc">
-        <Link href="/" data-testid="legal-back" className="text-[13px] text-accent hover:underline">
-          {t(locale, 'app.title')}
-        </Link>
+    <div className="min-h-screen bg-app">
+      <AppHeader />
+      <main className="px-4 py-10">
+        <div className="mx-auto flex max-w-3xl flex-col gap-6" data-testid="legal-doc">
+          <div className="flex flex-col gap-1">
+            <h1 data-testid="legal-title" className="font-display text-3xl font-semibold tracking-tight text-ink">
+              {doc.title}
+            </h1>
+            <p data-testid="legal-updated-at" className="text-xs text-ink-muted">
+              {t(locale, 'legal.updatedAt', { date: formatDate(doc.updatedAt, locale) })}
+            </p>
+          </div>
 
-        <div className="flex flex-col gap-1">
-          <h1 data-testid="legal-title" className="font-display text-3xl font-semibold tracking-tight text-ink">
-            {doc.title}
-          </h1>
-          <p data-testid="legal-updated-at" className="text-xs text-ink-muted">
-            {t(locale, 'legal.updatedAt', { date: formatDate(doc.updatedAt, locale) })}
-          </p>
+          <div className="flex flex-col gap-6">
+            {doc.sections.map((section, i) => (
+              <section key={i} data-testid="legal-section" className="flex flex-col gap-2">
+                <h2 className="font-display text-lg font-semibold text-ink">{section.heading}</h2>
+                {section.paragraphs.map((paragraph, j) => (
+                  <p key={j} className="text-[14px] leading-relaxed text-ink-secondary">
+                    {paragraph}
+                  </p>
+                ))}
+              </section>
+            ))}
+          </div>
+
+          {children}
         </div>
-
-        <div className="flex flex-col gap-6">
-          {doc.sections.map((section, i) => (
-            <section key={i} data-testid="legal-section" className="flex flex-col gap-2">
-              <h2 className="font-display text-lg font-semibold text-ink">{section.heading}</h2>
-              {section.paragraphs.map((paragraph, j) => (
-                <p key={j} className="text-[14px] leading-relaxed text-ink-secondary">
-                  {paragraph}
-                </p>
-              ))}
-            </section>
-          ))}
-        </div>
-
-        {children}
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }

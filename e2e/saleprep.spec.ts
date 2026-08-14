@@ -8,7 +8,7 @@ import { expect, test } from '@playwright/test'
  */
 
 async function openListing(page: import('@playwright/test').Page): Promise<void> {
-  await page.goto('/')
+  await page.goto('/?tab=editor')
   await expect(page.getByTestId('board-canvas')).toBeVisible()
   await page.getByTestId('tab-promo').click()
   await expect(page.getByTestId('promo-listing')).toBeVisible()
@@ -40,7 +40,7 @@ test('кнопка «Скопировать» кладёт текст в буф�
 // не доходит вовсе. Живой прогон с настоящим списанием требует Supabase и
 // аккаунта, здесь без ключей проверяем только гейт по входу.
 test('видео-панель недоступна без входа: кошелёк требует пользователя', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/?tab=editor')
   await page.getByTestId('tab-promo').click()
   await expect(page.getByTestId('promo-video')).toBeVisible()
   await expect(page.getByTestId('video-gate')).toBeVisible()

@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 
 async function openStudio(page: Page): Promise<void> {
   await page.addInitScript(() => window.localStorage.clear())
-  await page.goto('/')
+  await page.goto('/?tab=editor')
   await expect(page.getByTestId('board-canvas')).toBeVisible()
 }
 
@@ -15,6 +15,7 @@ const DESKTOP = { width: 1280, height: 900 }
 const MOBILE = { width: 375, height: 812 }
 
 const TABS: readonly { readonly tab: string; readonly marker: string }[] = [
+  { tab: 'home', marker: 'home-view' },
   { tab: 'editor', marker: 'board-canvas' },
   { tab: 'templates', marker: 'template-gallery' },
   { tab: 'generate', marker: 'generator-panel' },

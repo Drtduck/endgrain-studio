@@ -1,7 +1,6 @@
 'use client'
 
-import Link from 'next/link'
-import { AccountMenu } from '@/components/AccountMenu'
+import { AppHeader } from '@/components/AppHeader'
 import { LiteratureSection } from '@/components/affiliate/LiteratureSection'
 import { ToolRecommendations } from '@/components/affiliate/ToolRecommendations'
 import { Board3DPanel } from '@/components/Board3DPanel'
@@ -14,122 +13,50 @@ import { FeedbackButton } from '@/components/FeedbackButton'
 import { ForkDialog } from '@/components/ForkDialog'
 import { GeneratorPanel } from '@/components/GeneratorPanel'
 import { HistoryControls } from '@/components/HistoryControls'
-import { LocaleToggle } from '@/components/LocaleToggle'
+import { HomeView } from '@/components/home/HomeView'
 import { PanelInspector } from '@/components/PanelInspector'
 import { PhotoImport } from '@/components/PhotoImport'
 import { ProjectsPanel } from '@/components/ProjectsPanel'
 import { PromoPanel } from '@/components/promo/PromoPanel'
 import { ResetButton } from '@/components/ResetButton'
 import { RowInspector } from '@/components/RowInspector'
-import { useSession } from '@/components/SessionProvider'
 import { SpeciesPalette } from '@/components/SpeciesPalette'
-import { StudioTabs } from '@/components/StudioTabs'
 import { TemplateGallery } from '@/components/TemplateGallery'
 import { HelpHint } from '@/components/ui/help-hint'
 import { Separator } from '@/components/ui/separator'
 import { t } from '@/lib/i18n'
-import { SITE_ORIGIN } from '@/lib/routing/host'
 import { useDerived } from '@/lib/store/derived'
-import { rememberLocale } from '@/lib/store/locale'
 import { useStudioPersistence } from '@/lib/store/persist'
 import { useStudio, type StudioView } from '@/lib/store/studio'
-import type { UnitSystem } from '@/lib/units'
-import { cn } from '@/lib/utils'
 
-const FULL_WIDTH: readonly StudioView[] = ['templates', 'generate', 'photo', 'projects', 'books', 'promo']
+const FULL_WIDTH: readonly StudioView[] = ['home', 'templates', 'generate', 'photo', 'projects', 'books', 'promo']
 
 export function StudioShell() {
   const locale = useStudio((s) => s.locale)
   const unit = useStudio((s) => s.unit)
-  const setUnit = useStudio((s) => s.setUnit)
   const view = useStudio((s) => s.view)
-  const setLocale = useStudio((s) => s.setLocale)
   const { model, calc } = useDerived()
-  const { user, enabled } = useSession()
   useStudioPersistence()
 
   return (
     <div className="min-h-screen bg-app">
-      <header
-        data-testid="app-header"
-        className="flex min-h-14 flex-wrap items-center gap-4 border-b border-line bg-surface px-4 py-2"
-      >
-        <div className="flex items-center gap-2">
-          <img src="/brand/beaver-mark.png" alt="" width={24} height={24} className="size-6 shrink-0" />
-          <span className="font-display text-[17px] font-semibold">{t(locale, 'app.title')}</span>
-        </div>
-
-        <a
-          href={`${SITE_ORIGIN}/blog`}
-          data-testid="app-blog-link"
-          className="hidden font-sans text-sm text-ink-secondary hover:text-ink sm:inline"
-        >
-          {t(locale, 'blog.navTitle')}
-        </a>
-
-        <Separator orientation="vertical" className="h-6" />
-
-        <StudioTabs />
-
-        <div className="flex-1" />
-
-        <div className="inline-flex rounded-md bg-surface-sunken p-0.5" role="group" aria-label={t(locale, 'aria.unitGroup')}>
-          {(['mm', 'in'] as const).map((u: UnitSystem) => (
-            <button
-              key={u}
-              type="button"
-              data-testid={`unit-${u}`}
-              onClick={() => setUnit(u)}
-              className={cn(
-                'rounded-sm px-2 py-1 font-mono text-xs transition-colors duration-hover',
-                u === unit ? 'bg-surface-raised shadow-sm' : 'text-ink-secondary',
-              )}
-            >
-              {t(locale, u === 'mm' ? 'units.mm' : 'units.in')}
-            </button>
-          ))}
-        </div>
-
-        <LocaleToggle
-          locale={locale}
-          onChange={(next) => {
-            setLocale(next)
-            rememberLocale(next)
-          }}
-        />
-
-        <Link
-          href="/gallery"
-          data-testid="studio-nav-gallery"
-          className="rounded-sm px-2 py-1.5 text-sm font-medium text-ink-secondary transition-colors duration-hover hover:bg-app hover:text-ink"
-        >
-          {t(locale, 'appShell.nav.gallery')}
-        </Link>
-
-        {enabled && user ? (
-          <Link
-            href="/account/api"
-            data-testid="studio-nav-api"
-            className="rounded-sm px-2 py-1.5 text-sm font-medium text-ink-secondary transition-colors duration-hover hover:bg-app hover:text-ink"
-          >
-            {t(locale, 'apiKeys.navTitle')}
-          </Link>
-        ) : null}
-
-        <AccountMenu />
-
-        <Separator orientation="vertical" className="h-6" />
-
-        <HistoryControls />
-
-        <Separator orientation="vertical" className="h-6" />
-
-        <ResetButton />
-      </header>
+      <AppHeader
+        tabs
+        units
+        tools={
+          <>
+            <HistoryControls />
+            <Separator orientation="vertical" className="h-6" />
+            <ResetButton />
+          </>
+        }
+      />
 
       <main className="mx-auto flex max-w-[1440px] flex-col gap-6 px-4 py-4">
         {FULL_WIDTH.includes(view) ? (
-          view === 'templates' ? (
+          view === 'home' ? (
+            <HomeView />
+          ) : view === 'templates' ? (
             <TemplateGallery />
           ) : view === 'generate' ? (
             <GeneratorPanel />

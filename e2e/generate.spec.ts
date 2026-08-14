@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 
 async function openGenerator(page: Page): Promise<void> {
   await page.addInitScript(() => window.localStorage.clear())
-  await page.goto('/')
+  await page.goto('/?tab=editor')
   await expect(page.getByTestId('board-canvas')).toBeVisible()
   await page.getByTestId('tab-generate').click()
   await expect(page.getByTestId('generator-panel')).toBeVisible()
@@ -73,7 +73,7 @@ test('выбранный узор уезжает в редактор', async ({ 
 
 test('узор поверх правок сначала спрашивает', async ({ page }) => {
   await page.addInitScript(() => window.localStorage.clear())
-  await page.goto('/')
+  await page.goto('/?tab=editor')
   await expect(page.getByTestId('board-canvas')).toBeVisible()
   const thickness = page.getByTestId('board-thickness')
   await thickness.fill('58')
