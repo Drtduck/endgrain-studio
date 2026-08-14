@@ -26,7 +26,7 @@ test.describe('страница API-ключей', () => {
 
   test('несёт AppShell (шапку и подвал) и панель ключей', async ({ page }) => {
     await page.goto('/account/api')
-    await expect(page.getByTestId('app-shell-header')).toBeVisible()
+    await expect(page.getByTestId('app-header')).toBeVisible()
     await expect(page.getByTestId('app-shell-footer')).toBeVisible()
     await expect(page.getByTestId('api-keys-panel')).toBeVisible()
   })
@@ -44,7 +44,7 @@ test.describe('страница API-ключей', () => {
 
   test('студия под логином показывает ссылки на галерею и API', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByTestId('studio-nav-gallery')).toBeVisible()
-    await expect(page.getByTestId('studio-nav-api')).toBeVisible()
+    await expect(page.getByTestId('app-shell-nav-gallery')).toBeVisible()
+    await expect(page.getByTestId('app-shell-nav-api')).toBeVisible()
   })
 })

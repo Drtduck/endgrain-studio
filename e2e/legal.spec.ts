@@ -18,7 +18,7 @@ for (const path of PATHS) {
 
   test(`${path} несёт общую шапку и подвал app-домена (AppShell)`, async ({ page }) => {
     await page.goto(path)
-    await expect(page.getByTestId('app-shell-header')).toBeVisible()
+    await expect(page.getByTestId('app-header')).toBeVisible()
     await expect(page.getByTestId('app-shell-footer')).toBeVisible()
     await expect(page.getByTestId('app-shell-nav-studio')).toBeVisible()
   })

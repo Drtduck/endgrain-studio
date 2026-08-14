@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { AppHeader } from '@/components/AppHeader'
 import type { LegalDoc } from '@/lib/legal'
 import { t, type Locale } from '@/lib/i18n'
 
@@ -25,7 +24,6 @@ export function LegalDocView({
 }) {
   return (
     <div className="min-h-screen bg-app">
-      <AppHeader />
       <main className="px-4 py-10">
         <div className="mx-auto flex max-w-3xl flex-col gap-6" data-testid="legal-doc">
           <div className="flex flex-col gap-1">

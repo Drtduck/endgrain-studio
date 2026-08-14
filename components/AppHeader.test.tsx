@@ -61,4 +61,18 @@ describe('AppHeader', () => {
     renderHeader({ tools: <button data-testid="header-tool" type="button" /> })
     expect(screen.getByTestId('header-tool')).toBeDefined()
   })
+
+  it('набор разделов одинаков и для студии, и для остальных страниц', () => {
+    const { unmount } = render(<AppHeader />)
+    const outside = ['app-shell-nav-gallery', 'app-shell-nav-pricing', 'app-blog-link']
+    for (const id of outside) expect(screen.getByTestId(id)).toBeInTheDocument()
+    // Гостю ключи API не нужны: страница всё равно попросит войти.
+    expect(screen.queryByTestId('app-shell-nav-api')).toBeNull()
+    unmount()
+
+    render(<AppHeader tabs />)
+    for (const id of outside) expect(screen.getByTestId(id)).toBeInTheDocument()
+    // В студии ссылка «Студия» лишняя: туда ведут вкладки и логотип.
+    expect(screen.queryByTestId('app-shell-nav-studio')).toBeNull()
+  })
 })
