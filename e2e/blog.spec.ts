@@ -1,24 +1,36 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type APIRequestContext } from '@playwright/test'
 
 // Хост 127.0.0.1 это роль unknown (см. lib/routing/host.ts): домены не разводятся,
 // /blog открывается напрямую без редиректа на app.endgrain.app.
 
-test('лента блога открывается без логина и показывает три карточки', async ({ page }) => {
+// Число статей растёт с каждой публикацией, поэтому счётчики выводятся из фида
+// (одна тема = две записи в rss, ru и en), а не зашиваются числом в тест.
+async function topicCount(request: APIRequestContext): Promise<number> {
+  const xml = await (await request.get('/blog/rss.xml')).text()
+  const items = (xml.match(/<item>/g) ?? []).length
+  expect(items).toBeGreaterThanOrEqual(6)
+  expect(items % 2).toBe(0)
+  return items / 2
+}
+
+test('лента блога открывается без логина и показывает по карточке на тему', async ({ page, request }) => {
+  const topics = await topicCount(request)
   await page.goto('/blog')
   const cards = page.getByTestId('blog-post-card')
-  await expect(cards).toHaveCount(3)
+  await expect(cards).toHaveCount(topics)
   for (const card of await cards.all()) {
     await expect(card.locator('h2')).not.toBeEmpty()
     await expect(card.locator('time').first()).not.toBeEmpty()
   }
 })
 
-test('лента блога на английской локали показывает английские версии статей', async ({ page }) => {
+test('лента блога на английской локали показывает английские версии статей', async ({ page, request }) => {
+  const topics = await topicCount(request)
   await page.context().addCookies([{ name: 'eg-locale', value: 'en', url: 'http://127.0.0.1:3100' }])
   await page.goto('/blog')
   const cards = page.getByTestId('blog-post-card')
-  await expect(cards).toHaveCount(3)
-  // Ни одна карточка не помечена бейджем «на другом языке»: для всех трёх тем
+  await expect(cards).toHaveCount(topics)
+  // Ни одна карточка не помечена бейджем «на другом языке»: для каждой темы
   // нашёлся английский перевод, оригиналы на русском в ленту не попадают.
   await expect(page.getByTestId('blog-post-card-lang-badge')).toHaveCount(0)
 })
@@ -76,13 +88,15 @@ test('канон статьи указывает на endgrain.app/blog/<slug>',
   await expect(canonical).toHaveAttribute('href', 'https://endgrain.app/blog/kerf-i-pripuski')
 })
 
-test('страница тега отдаёт подмножество статей и стоит noindex', async ({ page }) => {
+test('страница тега отдаёт подмножество статей и стоит noindex', async ({ page, request }) => {
+  const topics = await topicCount(request)
   await page.goto('/blog/tag/раскрой')
   await expect(page.getByTestId('blog-tag-feed')).toBeVisible()
   const cards = page.getByTestId('blog-post-card')
   const count = await cards.count()
   expect(count).toBeGreaterThan(0)
-  expect(count).toBeLessThan(3)
+  // Подмножество, а не вся лента: тег стоит не на каждой статье.
+  expect(count).toBeLessThan(topics)
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/)
 })
 
@@ -93,8 +107,13 @@ test('rss.xml парсится как XML и содержит все стать�
   const xml = await response.text()
   expect(xml).toContain('<rss version="2.0">')
   // Фид отдаёт все статьи разом (обе локали): у него нет читателя с локалью,
-  // а лента /blog фильтрует по языку только в интерфейсе.
-  expect((xml.match(/<item>/g) ?? []).length).toBe(6)
+  // а лента /blog фильтрует по языку только в интерфейсе. Отсюда чётное число
+  // записей: каждой русской статье соответствует английская.
+  const items = (xml.match(/<item>/g) ?? []).length
+  expect(items).toBeGreaterThanOrEqual(6)
+  expect(items % 2).toBe(0)
+  const links = xml.match(/<link>[^<]+<\/link>/g) ?? []
+  expect(new Set(links).size).toBe(links.length)
 })
 
 test('несуществующий slug статьи отдаёт 404', async ({ page }) => {
