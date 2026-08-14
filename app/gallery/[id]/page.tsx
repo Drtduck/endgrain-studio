@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { AppHeader } from '@/components/AppHeader'
+import { AuthorLine } from '@/components/gallery/AuthorLine'
 import { CopyToMyProjects } from '@/components/gallery/CopyToMyProjects'
 import { LikeButton } from '@/components/gallery/LikeButton'
 import { PriceBadge } from '@/components/gallery/PriceBadge'
@@ -12,6 +13,7 @@ import { getPublishedProject, getPublishedProjectDesign, hasLiked } from '@/lib/
 import { parseSummary, speciesDisplayNames } from '@/lib/gallery/summary'
 import { t } from '@/lib/i18n'
 import { getLandingLocale } from '@/lib/landing/locale'
+import { getProfile } from '@/lib/profile/read'
 import { getCurrentUser } from '@/lib/supabase/session'
 
 const PROJECT_PX = 720
@@ -45,6 +47,7 @@ export default async function GalleryProjectPage(props: PageProps<'/gallery/[id]
   }
   const species = summary === null ? [] : speciesDisplayNames(summary.species, locale)
   const liked = user === null ? false : await hasLiked(user.id, row.id)
+  const authorProfile = await getProfile(row.author_id)
 
   return (
     <div className="min-h-screen bg-app">
@@ -78,6 +81,8 @@ export default async function GalleryProjectPage(props: PageProps<'/gallery/[id]
                 ) : null}
                 {species.length > 0 ? <p className="text-[13px] text-ink-secondary">{species.join(', ')}</p> : null}
               </div>
+
+              <AuthorLine locale={locale} author={{ id: row.author_id, displayName: authorProfile?.displayName ?? null }} />
 
               <PriceBadge locale={locale} priceCents={row.price_cents} />
 

@@ -158,6 +158,15 @@ describe('assertAiAllowed', () => {
       expect(verdict.ok).toBe(true)
       if (!verdict.ok || verdict.tier !== 'trial') throw new Error('ожидался пробный доступ')
       expect(verdict.remaining).toBe(2)
+    })
+
+    it('saleListing (карточка Amazon/Etsy) тоже доступна в пробном тире гостю', async () => {
+      user = null
+      rpc.mockResolvedValue({ data: { ok: true, remaining: 2 }, error: null })
+      const verdict = await assertAiAllowed('saleListing')
+      expect(verdict.ok).toBe(true)
+      if (!verdict.ok || verdict.tier !== 'trial') throw new Error('ожидался пробный доступ')
+      expect(verdict.remaining).toBe(2)
       expect(verdict.subjects.map((s) => s.kind)).toEqual(['guest', 'ip'])
     })
 

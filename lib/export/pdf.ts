@@ -16,6 +16,28 @@ const PAGE = { widthMm: 210, heightMm: 297, marginMm: 14 } as const
 const LINE_MM = 5.2
 const BOTTOM_RESERVE_MM = 30
 
+// Единый колонтитул: сверху логотип-текст + разделительная линейка, снизу линейка + адрес + номер страницы.
+// Контент сдвинут вниз до CONTENT_TOP_MM ради шапки; снизу для подвала уже есть свободная
+// зона - BOTTOM_RESERVE_MM ниже отсекает контент раньше нижнего поля, туда и вписан футер.
+const HEADER_TEXT_Y = PAGE.marginMm + 5
+const HEADER_RULE_Y = PAGE.marginMm + 8
+const CONTENT_TOP_MM = PAGE.marginMm + 13
+const FOOTER_RULE_Y = PAGE.heightMm - PAGE.marginMm - 12
+const FOOTER_TEXT_Y = PAGE.heightMm - PAGE.marginMm - 7
+const PROMO_Y = PAGE.heightMm - PAGE.marginMm - 1
+
+const SITE_URL = 'endgrain.app'
+const BRAND_COLOR = '#6d4426'
+const RULE_COLOR = '#cccccc'
+
+/** Единая типографика: не более пары размеров на блок, см. правку тех. долга #16. */
+const FONT = {
+  h1: 14, // заголовок страницы (название проекта, "Схема распила", "Порядок сборки")
+  h2: 11, // подзаголовок секции (щит, "Порода древесины", ряды)
+  body: 9.5,
+  caption: 7.5,
+} as const
+
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 
 export interface PdfInput {
@@ -62,8 +84,20 @@ export async function buildInstructionPdf(input: PdfInput): Promise<Blob> {
 
   // Мягкий гейт, см. комментарий в ExportPanel. Строка не увечит инструкцию,
   // она подписывает её: PDF уходит в чужую мастерскую и работает как визитка.
+  // Пишется на текущей (последней) странице - переполнение cut map / steps может
+  // добавить страниц сверх трёх исходных, и промо должно остаться на самой последней.
   if (!input.pro) {
-    text(ctx, t(locale, 'export.pdfPromo'), PAGE.marginMm, PAGE.heightMm - 6, { size: 7, color: '#888888' })
+    text(ctx, t(locale, 'export.pdfPromo'), PAGE.marginMm, PROMO_Y, { size: FONT.caption, color: '#888888' })
+  }
+
+  // Колонтитул печатается финальным проходом по уже готовым страницам: до этого момента
+  // их итоговое число неизвестно (ensureRoom могла добавить лишние).
+  const projectName = designDisplayName(input.design, locale)
+  const totalPages = doc.getNumberOfPages()
+  for (let page = 1; page <= totalPages; page += 1) {
+    doc.setPage(page)
+    drawHeader(ctx, projectName)
+    drawFooter(ctx, page, totalPages)
   }
 
   return doc.output('blob')
@@ -93,13 +127,36 @@ function text(ctx: PdfContext, value: string, x: number, y: number, options: Tex
 function ensureRoom(ctx: PdfContext, y: number, needed: number): number {
   if (y + needed <= PAGE.heightMm - PAGE.marginMm - BOTTOM_RESERVE_MM) return y
   ctx.doc.addPage()
-  return PAGE.marginMm
+  return CONTENT_TOP_MM
 }
 
+/** Колонтитул: слева текстовый логотип, справа название проекта, снизу - линейка-разделитель. */
+function drawHeader(ctx: PdfContext, projectName: string): void {
+  const { doc } = ctx
+  text(ctx, 'Endgrain', PAGE.marginMm, HEADER_TEXT_Y, { size: FONT.h2, style: 'bold', color: BRAND_COLOR })
+  text(ctx, projectName, PAGE.widthMm - PAGE.marginMm, HEADER_TEXT_Y, { size: FONT.body, color: '#555555', align: 'right' })
+  doc.setDrawColor(RULE_COLOR)
+  doc.setLineWidth(0.2)
+  doc.line(PAGE.marginMm, HEADER_RULE_Y, PAGE.widthMm - PAGE.marginMm, HEADER_RULE_Y)
+}
+
+/** Подвал: линейка-разделитель, адрес сайта слева, номер страницы справа. */
+function drawFooter(ctx: PdfContext, page: number, totalPages: number): void {
+  const { doc } = ctx
+  doc.setDrawColor(RULE_COLOR)
+  doc.setLineWidth(0.2)
+  doc.line(PAGE.marginMm, FOOTER_RULE_Y, PAGE.widthMm - PAGE.marginMm, FOOTER_RULE_Y)
+  text(ctx, SITE_URL, PAGE.marginMm, FOOTER_TEXT_Y, { size: FONT.caption, color: '#888888' })
+  text(ctx, `${page} / ${totalPages}`, PAGE.widthMm - PAGE.marginMm, FOOTER_TEXT_Y, { size: FONT.caption, color: '#888888', align: 'right' })
+}
+
+/** Колонка значений выровнена по правому краю сетки - число видно с одного взгляда, а не вычитывается из строки. */
 function drawKeyValues(ctx: PdfContext, startY: number, rows: ReadonlyArray<readonly [string, string]>): number {
   let y = startY
+  const valueX = PAGE.widthMm - PAGE.marginMm
   for (const [label, value] of rows) {
-    text(ctx, `${label}: ${value}`, PAGE.marginMm, y, { size: 9.5 })
+    text(ctx, label, PAGE.marginMm, y, { size: FONT.body })
+    text(ctx, value, valueX, y, { size: FONT.body, align: 'right' })
     y += LINE_MM
   }
   return y
@@ -127,15 +184,15 @@ async function drawSvg(doc: jsPDF, svg: string, x: number, y: number, width: num
 
 async function drawOverviewPage(ctx: PdfContext): Promise<void> {
   const { doc, locale, model, calc, design } = ctx
-  let y: number = PAGE.marginMm
+  let y: number = CONTENT_TOP_MM
 
-  text(ctx, designDisplayName(design, locale), PAGE.marginMm, y, { size: 16, style: 'bold' })
+  text(ctx, designDisplayName(design, locale), PAGE.marginMm, y, { size: FONT.h1, style: 'bold' })
   y += 8
-  text(ctx, t(locale, 'app.tagline'), PAGE.marginMm, y, { size: 9, color: '#666666' })
+  text(ctx, t(locale, 'app.tagline'), PAGE.marginMm, y, { size: FONT.caption, color: '#666666' })
   y += 8
 
   if (model.truncated) {
-    text(ctx, t(locale, 'cut.truncated'), PAGE.marginMm, y, { size: 9, color: '#b00020' })
+    text(ctx, t(locale, 'cut.truncated'), PAGE.marginMm, y, { size: FONT.body, color: '#b00020' })
     y += 6
   }
 
@@ -167,7 +224,7 @@ async function drawOverviewPage(ctx: PdfContext): Promise<void> {
   ])
 
   y += 4
-  text(ctx, t(locale, 'meter.lumberBySpecies'), PAGE.marginMm, y, { style: 'bold' })
+  text(ctx, t(locale, 'meter.lumberBySpecies'), PAGE.marginMm, y, { size: FONT.h2, style: 'bold' })
   y += LINE_MM
   for (const need of calc.bySpecies) {
     doc.setFillColor(speciesHex(need.speciesId))
@@ -183,7 +240,7 @@ async function drawOverviewPage(ctx: PdfContext): Promise<void> {
       }),
       PAGE.marginMm + 6,
       y,
-      { size: 9 },
+      { size: FONT.body },
     )
     y += LINE_MM
   }
@@ -211,14 +268,14 @@ function drawStripStack(ctx: PdfContext, panel: PanelCutPlan, y: number): number
 
 function drawCutMapPage(ctx: PdfContext): void {
   const { locale, plan } = ctx
-  let y: number = PAGE.marginMm
+  let y: number = CONTENT_TOP_MM
 
-  text(ctx, t(locale, 'cut.title'), PAGE.marginMm, y, { size: 14, style: 'bold' })
+  text(ctx, t(locale, 'cut.title'), PAGE.marginMm, y, { size: FONT.h1, style: 'bold' })
   y += 8
 
   for (const panel of plan.panels) {
     y = ensureRoom(ctx, y, 30)
-    text(ctx, t(locale, 'cut.panel', { panel: panel.panelId }), PAGE.marginMm, y, { size: 11, style: 'bold' })
+    text(ctx, t(locale, 'cut.panel', { panel: panel.panelId }), PAGE.marginMm, y, { size: FONT.h2, style: 'bold' })
     y += LINE_MM
 
     y = ensureRoom(ctx, y, 20)
@@ -230,7 +287,7 @@ function drawCutMapPage(ctx: PdfContext): void {
         piece.kind === 'strip'
           ? t(locale, 'cut.strip', { index: piece.elementIndex + 1, species: speciesName(piece.speciesId, locale), width: bothUnits(piece.widthMm, locale) })
           : t(locale, 'cut.sliceIn', { source: piece.sourcePanelId, thickness: bothUnits(piece.thicknessMm, locale) })
-      text(ctx, line, PAGE.marginMm, y, { size: 9 })
+      text(ctx, line, PAGE.marginMm, y, { size: FONT.body })
       y += LINE_MM
     }
 
@@ -240,7 +297,7 @@ function drawCutMapPage(ctx: PdfContext): void {
       t(locale, 'cut.panelSummary', { width: bothUnits(panel.widthMm, locale), length: bothUnits(panel.lengthMm, locale), thickness: bothUnits(panel.planedThicknessMm, locale) }),
       PAGE.marginMm,
       y,
-      { size: 9, color: '#444444' },
+      { size: FONT.body, color: '#444444' },
     )
     y += LINE_MM
 
@@ -253,14 +310,14 @@ function drawCutMapPage(ctx: PdfContext): void {
       // Угловой рез получает явную приписку "рез под углом X°" и честную длину заготовки
       // (sourceWidthMm / cos φ вместо просто ширины щита): превью не должно расходиться со схемой.
       const angleNote = cut.angleDeg === 0 ? '' : `, ${t(locale, 'cut.angleColumn', { angleDeg: cut.angleDeg })}, ${bothUnits(cut.lengthMm, locale)}`
-      text(ctx, line + angleNote, PAGE.marginMm, y, { size: 9 })
+      text(ctx, line + angleNote, PAGE.marginMm, y, { size: FONT.body })
       y += LINE_MM
     })
 
     if (panel.angledWasteMm2 > 0) {
       y = ensureRoom(ctx, y, LINE_MM)
       text(ctx, t(locale, 'cut.wasteAngled', { panel: panel.panelId, waste: areaMm2(panel.angledWasteMm2, locale) }), PAGE.marginMm, y, {
-        size: 9,
+        size: FONT.body,
         color: '#b00020',
       })
       y += LINE_MM
@@ -271,7 +328,7 @@ function drawCutMapPage(ctx: PdfContext): void {
 
   y = ensureRoom(ctx, y, LINE_MM)
   text(ctx, t(locale, 'cut.totals', { strips: plan.stripCount, cuts: plan.crosscutCount, glueUps: ctx.calc.glueUpCount }), PAGE.marginMm, y, {
-    size: 9.5,
+    size: FONT.body,
     style: 'bold',
   })
 }
@@ -279,26 +336,26 @@ function drawCutMapPage(ctx: PdfContext): void {
 function drawStepsPage(ctx: PdfContext): void {
   const { doc, locale, plan } = ctx
   const usableMm = PAGE.widthMm - PAGE.marginMm * 2
-  let y: number = PAGE.marginMm
+  let y: number = CONTENT_TOP_MM
 
-  text(ctx, t(locale, 'steps.title'), PAGE.marginMm, y, { size: 14, style: 'bold' })
+  text(ctx, t(locale, 'steps.title'), PAGE.marginMm, y, { size: FONT.h1, style: 'bold' })
   y += 8
 
   for (const step of ctx.steps) {
     const line = `${step.number}. ${t(locale, step.messageKey, step.params)}`
     doc.setFont(ctx.family, 'normal')
-    doc.setFontSize(9.5)
+    doc.setFontSize(FONT.body)
     const wrapped: string[] = doc.splitTextToSize(line, usableMm)
     y = ensureRoom(ctx, y, wrapped.length * LINE_MM)
     for (const part of wrapped) {
-      text(ctx, part, PAGE.marginMm, y, { size: 9.5 })
+      text(ctx, part, PAGE.marginMm, y, { size: FONT.body })
       y += LINE_MM
     }
   }
 
   y += 6
   y = ensureRoom(ctx, y, plan.rows.length * 7 + 20)
-  text(ctx, t(locale, 'rows.title'), PAGE.marginMm, y, { size: 12, style: 'bold' })
+  text(ctx, t(locale, 'rows.title'), PAGE.marginMm, y, { size: FONT.h2, style: 'bold' })
   y += 7
 
   const maxThickness = Math.max(1, ...plan.rows.map((row) => row.thicknessMm))

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { useGoogleAuthAvailable } from '@/components/GoogleAuthProvider'
 import { safeNextPath } from '@/lib/auth/access'
 import { CONSENT_VERSION } from '@/lib/consent/cookie'
-import { hardNavigate } from '@/lib/routing/navigate'
+import { hardReplace } from '@/lib/routing/navigate'
 import { t, type Locale } from '@/lib/i18n'
 import { getSupabaseBrowser } from '@/lib/supabase/browser'
 
@@ -95,25 +95,30 @@ export function AuthForm({ mode, locale, redirectOrigin, onSuccess, onConfirmSen
     // Полная навигация, а не router.push: клиентский переход успевает уйти за RSC
     // раньше, чем браузер закоммитит свежую cookie сессии, и proxy отправляет
     // человека обратно на форму входа. Проверено на проде после смены домена cookie.
-    hardNavigate(next)
+    // replace, а не assign: форма логина не должна оставаться в истории, иначе
+    // «назад» после входа возвращает на неё.
+    hardReplace(next)
   }
 
   async function onGoogleSignIn(): Promise<void> {
     setError(null)
     setBusy(true)
     const sb = getSupabaseBrowser()
-    const { error: oauthError } = await sb.auth.signInWithOAuth({
+    const { data, error: oauthError } = await sb.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${originBase()}/auth/callback?next=${encodeURIComponent(nextFromLocation())}`,
+        skipBrowserRedirect: true,
       },
     })
-    if (oauthError) {
+    if (oauthError || !data.url) {
       setBusy(false)
       setError(t(locale, 'auth.errorOAuth'))
+      return
     }
-    // При успехе браузер уходит на Google редиректом: busy остаётся true,
-    // пока не начнётся навигация - лишний сброс состояния здесь не нужен.
+    // Сами уводим браузер тем же способом, что и после пароля: без записи формы
+    // логина в историю, иначе «назад» с экрана Google возвращает на неё.
+    hardReplace(data.url)
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {

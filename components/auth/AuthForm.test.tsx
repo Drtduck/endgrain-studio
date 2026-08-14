@@ -5,11 +5,15 @@ import { GoogleAuthProvider } from '@/components/GoogleAuthProvider'
 
 const signInWithPassword = vi.fn(async () => ({ error: null }))
 const signUp = vi.fn(async () => ({ data: { session: {} }, error: null }))
-const signInWithOAuth = vi.fn(async () => ({ error: null }))
+const signInWithOAuth = vi.fn(async () => ({ data: { url: 'https://accounts.google.com/x' }, error: null }))
 // Успех формы это полная навигация: клиентский переход обгонял бы запись cookie сессии.
 const assign = vi.fn()
+const replace = vi.fn()
 
-vi.mock('@/lib/routing/navigate', () => ({ hardNavigate: (url: string) => assign(url) }))
+vi.mock('@/lib/routing/navigate', () => ({
+  hardNavigate: (url: string) => assign(url),
+  hardReplace: (url: string) => replace(url),
+}))
 vi.mock('@/lib/supabase/browser', () => ({
   getSupabaseBrowser: () => ({ auth: { signInWithPassword, signUp, signInWithOAuth } }),
 }))
@@ -32,6 +36,7 @@ describe('AuthForm', () => {
     signUp.mockClear()
     signInWithOAuth.mockClear()
     assign.mockClear()
+    replace.mockClear()
     // Адресную строку читает сама форма, поэтому каждый тест стартует с чистой.
     window.history.replaceState({}, '', '/login')
   })
@@ -41,7 +46,8 @@ describe('AuthForm', () => {
     fillCredentials(container, 'a@example.com', 'password123')
     const form = container.querySelector('[data-testid="auth-form-login"]') as HTMLFormElement
     fireEvent.submit(form)
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('/'))
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/'))
+    expect(assign).not.toHaveBeenCalled()
     expect(signInWithPassword).toHaveBeenCalledWith({ email: 'a@example.com', password: 'password123' })
   })
 
@@ -55,6 +61,7 @@ describe('AuthForm', () => {
     const alert = container.querySelector('[role="alert"]')
     expect(alert?.textContent).toBe('Неверная почта или пароль')
     expect(assign).not.toHaveBeenCalled()
+    expect(replace).not.toHaveBeenCalled()
   })
 
   it('rejects a short password on registration without calling the network', async () => {
@@ -76,6 +83,7 @@ describe('AuthForm', () => {
     fireEvent.submit(form)
     await waitFor(() => expect(container.querySelector('[data-testid="auth-confirm-sent"]')).toBeDefined())
     expect(assign).not.toHaveBeenCalled()
+    expect(replace).not.toHaveBeenCalled()
   })
 
   it('регистрация без галочки согласия не вызывает signUp и показывает ошибку', async () => {
@@ -124,8 +132,13 @@ describe('AuthForm', () => {
     await waitFor(() => expect(signInWithOAuth).toHaveBeenCalledTimes(1))
     expect(signInWithOAuth).toHaveBeenCalledWith({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=%2F` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=%2F`,
+        skipBrowserRedirect: true,
+      },
     })
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('https://accounts.google.com/x'))
+    expect(assign).not.toHaveBeenCalled()
   })
 
   it('возвращает на next после входа по паролю', async () => {
@@ -133,7 +146,7 @@ describe('AuthForm', () => {
     const { container } = render(<AuthForm mode="login" locale="ru" />)
     fillCredentials(container, 'a@example.com', 'password123')
     fireEvent.submit(container.querySelector('[data-testid="auth-form-login"]') as HTMLFormElement)
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('/?tab=cut'))
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/?tab=cut'))
   })
 
   it('игнорирует открытый редирект в next и уводит на корень', async () => {
@@ -141,7 +154,7 @@ describe('AuthForm', () => {
     const { container } = render(<AuthForm mode="login" locale="ru" />)
     fillCredentials(container, 'a@example.com', 'password123')
     fireEvent.submit(container.querySelector('[data-testid="auth-form-login"]') as HTMLFormElement)
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('/'))
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/'))
   })
 
   it('возвращает на next после регистрации и прокидывает его в письмо', async () => {
@@ -150,7 +163,7 @@ describe('AuthForm', () => {
     fillCredentials(container, 'a@example.com', 'password123')
     checkConsent(container)
     fireEvent.submit(container.querySelector('[data-testid="auth-form-register"]') as HTMLFormElement)
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('/?tab=projects'))
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/?tab=projects'))
     expect(signUp).toHaveBeenCalledWith({
       email: 'a@example.com',
       password: 'password123',
@@ -178,6 +191,7 @@ describe('AuthForm', () => {
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/?tab=cut')}`,
+        skipBrowserRedirect: true,
       },
     })
   })
@@ -214,7 +228,10 @@ describe('AuthForm', () => {
     await waitFor(() => expect(signInWithOAuth).toHaveBeenCalledTimes(1))
     expect(signInWithOAuth).toHaveBeenCalledWith({
       provider: 'google',
-      options: { redirectTo: 'https://app.endgrain.app/auth/callback?next=%2F' },
+      options: {
+        redirectTo: 'https://app.endgrain.app/auth/callback?next=%2F',
+        skipBrowserRedirect: true,
+      },
     })
   })
 
@@ -226,10 +243,11 @@ describe('AuthForm', () => {
     fireEvent.submit(container.querySelector('[data-testid="auth-form-login"]') as HTMLFormElement)
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('/?tab=cut'))
     expect(assign).not.toHaveBeenCalled()
+    expect(replace).not.toHaveBeenCalled()
   })
 
   it('shows an error and stays interactive when Google OAuth fails to start', async () => {
-    signInWithOAuth.mockResolvedValueOnce({ error: { message: 'network error' } } as never)
+    signInWithOAuth.mockResolvedValueOnce({ data: { url: null }, error: { message: 'network error' } } as never)
     const { container } = render(<AuthForm mode="login" locale="ru" />)
     const button = container.querySelector('[data-testid="auth-google"]') as HTMLButtonElement
     fireEvent.click(button)
@@ -237,5 +255,20 @@ describe('AuthForm', () => {
     expect(container.querySelector('[role="alert"]')?.textContent).toBe(
       'Не получилось войти через Google. Попробуйте ещё раз'
     )
+    expect(replace).not.toHaveBeenCalled()
+    expect(button.hasAttribute('disabled')).toBe(false)
+  })
+
+  it('shows an error and stays interactive when Google OAuth returns no url', async () => {
+    signInWithOAuth.mockResolvedValueOnce({ data: { url: null }, error: null } as never)
+    const { container } = render(<AuthForm mode="login" locale="ru" />)
+    const button = container.querySelector('[data-testid="auth-google"]') as HTMLButtonElement
+    fireEvent.click(button)
+    await waitFor(() => expect(container.querySelector('[role="alert"]')).not.toBeNull())
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+      'Не получилось войти через Google. Попробуйте ещё раз'
+    )
+    expect(replace).not.toHaveBeenCalled()
+    expect(button.hasAttribute('disabled')).toBe(false)
   })
 })

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ConsentSettingsLink } from '@/components/ConsentSettingsLink'
 import { t, type Locale } from '@/lib/i18n'
 import { APP_ORIGIN } from '@/lib/routing/host'
 
@@ -58,13 +59,7 @@ export function LandingFooter({ locale }: { locale: Locale }) {
           >
             {t(locale, 'landing.footer.legal.consentDocLink')}
           </a>
-          <a
-            href={`${APP_ORIGIN}/legal/privacy`}
-            data-testid="landing-footer-consent-settings"
-            className="font-sans text-xs text-ink-secondary hover:text-ink"
-          >
-            {t(locale, 'landing.footer.legal.cookieSettings')}
-          </a>
+          <ConsentSettingsLink locale={locale} testId="landing-footer-consent-settings" />
         </div>
       </div>
 

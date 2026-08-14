@@ -27,8 +27,7 @@ test.describe('оплата без ключей', () => {
   test('вместо кнопок оплаты стоит честная строка', async ({ page }) => {
     await page.goto('/pricing')
     await expect(page.getByTestId('pricing-disabled')).toBeVisible()
-    await expect(page.getByTestId('pricing-buy-monthly')).toHaveCount(0)
-    await expect(page.getByTestId('pricing-buy-yearly')).toHaveCount(0)
+    await expect(page.getByTestId('pricing-buy-pro')).toHaveCount(0)
   })
 
   test('в шапке студии нет кнопки «Улучшить»', async ({ page }) => {
@@ -93,7 +92,7 @@ test.describe('оплата с живыми ключами', () => {
     await expect(page.getByTestId('tab-projects')).toBeVisible({ timeout: 15_000 })
 
     await page.goto('/pricing')
-    await page.getByTestId('pricing-buy-monthly').click()
+    await page.getByTestId('pricing-buy-pro').click()
     // dataLayer ловит checkout_started ещё до редиректа: событие пушится в buy()
     // синхронно, редирект на hosted checkout идёт следом асинхронно.
     // gtag.js разбирает dataLayer в arguments-форме (['event', name, params]),
@@ -102,7 +101,7 @@ test.describe('оплата с живыми ключами', () => {
       .poll(() =>
         page.evaluate(() =>
           (window.dataLayer ?? []).some(
-            (e: unknown) => Array.isArray(e) && e[0] === 'event' && e[1] === 'checkout_started' && (e[2] as { plan?: string } | undefined)?.plan === 'monthly'
+            (e: unknown) => Array.isArray(e) && e[0] === 'event' && e[1] === 'checkout_started' && (e[2] as { plan?: string } | undefined)?.plan === 'pro'
           )
         )
       )

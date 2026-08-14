@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useTransition } from 'react'
 import { CreditCard, LogIn, LogOut, Sparkles, User } from 'lucide-react'
 import { signOutAction } from '@/app/actions/auth'
+import { Avatar } from '@/components/account/Avatar'
 import { useSession } from '@/components/SessionProvider'
 import { UpgradeButton } from '@/components/UpgradeButton'
 import { usePro } from '@/components/ProProvider'
@@ -40,21 +41,15 @@ export function AccountMenu() {
     )
   }
 
-  const initial = user.email.trim().charAt(0).toUpperCase()
-
   return (
     <Menu>
       <MenuTrigger
         data-testid="account-menu-trigger"
         aria-haspopup="menu"
         aria-label={t(locale, 'account.menuLabel', { email: user.email })}
-        className="size-8 rounded-full border border-line bg-surface-sunken font-mono text-xs font-semibold text-ink-secondary hover:bg-app hover:text-ink data-popup-open:bg-app data-popup-open:text-ink"
+        className="rounded-full data-popup-open:opacity-80"
       >
-        {initial ? (
-          <span aria-hidden="true">{initial}</span>
-        ) : (
-          <User aria-hidden="true" className="size-4" />
-        )}
+        <Avatar seed={user.id} label={user.email} size="sm" />
         {/* Почта в доступном имени и заодно якорь для e2e: меню закрыто, а адрес в DOM есть. */}
         <span data-testid="account-email" className="sr-only">
           {user.email}
@@ -77,6 +72,13 @@ export function AccountMenu() {
             </span>
           ) : null}
         </div>
+
+        <MenuSeparator />
+
+        <MenuLinkItem data-testid="account-menu-profile" render={<Link href="/account" />}>
+          <User />
+          {t(locale, 'account.profile')}
+        </MenuLinkItem>
 
         <MenuSeparator />
 

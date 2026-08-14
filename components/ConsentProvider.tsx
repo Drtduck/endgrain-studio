@@ -16,6 +16,8 @@ export interface ConsentValue {
   readonly gpc: boolean
   readonly decision: ConsentDecision | null
   readonly choose: (analytics: boolean, source: ConsentSource) => void
+  /** Сбрасывает текущее решение локально (cookie не трогает) - баннер снова видим. */
+  readonly reopen: () => void
 }
 
 const ConsentContext = createContext<ConsentValue | null>(null)
@@ -101,6 +103,11 @@ export function ConsentProvider({ regime, initialDecision, children }: ConsentPr
 
   const validDecision = isDecisionValidFor(decision, regime) ? decision : null
 
+  // Ссылка «Настройки cookie» в футере зовёт это вместо навигации: cookie
+  // eg-consent не трогается, пока человек не сделает новый выбор в баннере,
+  // сброс только локального React-состояния, чтобы decided снова стало false.
+  const reopen = (): void => setDecision(null)
+
   const value: ConsentValue = {
     regime,
     analytics: validDecision?.analytics ?? false,
@@ -108,6 +115,7 @@ export function ConsentProvider({ regime, initialDecision, children }: ConsentPr
     gpc,
     decision,
     choose,
+    reopen,
   }
 
   return <ConsentContext value={value}>{children}</ConsentContext>

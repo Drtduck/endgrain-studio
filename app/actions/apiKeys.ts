@@ -3,7 +3,8 @@
 import { z } from 'zod'
 import { currentUtcDay } from '@/lib/api/auth'
 import { generateApiKey } from '@/lib/api/keys'
-import { API_KEYS_PER_USER } from '@/lib/api/limits'
+import { API_KEYS_PER_USER, type ApiTier } from '@/lib/api/limits'
+import { getSubscriptionStatus } from '@/lib/stripe/pro'
 import { getCurrentUser } from '@/lib/supabase/session'
 import { getSupabaseServer } from '@/lib/supabase/server'
 import { getSupabaseService, isSupabaseServiceConfigured } from '@/lib/supabase/service'
@@ -97,19 +98,24 @@ export async function createApiKeyAction(name: string): Promise<ApiKeysResult<{ 
   if (!isSupabaseServiceConfigured()) return { ok: false, error: 'unavailable' }
   const sb = getSupabaseService()
 
+  // Тир на выдаче берётся из живой подписки Developer, а не всегда 'free':
+  // подписавшийся человек заводит новый ключ и сразу получает 2000 запросов
+  // в сутки, а не пишет в поддержку с просьбой поднять tier руками.
+  const apiSubscription = await getSubscriptionStatus('api')
+  const tier: ApiTier = apiSubscription.reason === 'subscription' ? 'developer' : 'free'
+
   const { count, error: countError } = await sb
     .from('api_keys')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
     .is('revoked_at', null)
   if (countError) return { ok: false, error: 'failed' }
-  // Тир на выдаче всегда free: раздел 9.3 - апгрейд на developer только руками в базе.
-  if ((count ?? 0) >= API_KEYS_PER_USER.free) return { ok: false, error: 'limit' }
+  if ((count ?? 0) >= API_KEYS_PER_USER[tier]) return { ok: false, error: 'limit' }
 
   const key = await generateApiKey('live')
   const { data, error } = await sb
     .from('api_keys')
-    .insert({ user_id: userId, name: parsedName.data, prefix: key.prefix, key_hash: key.hash })
+    .insert({ user_id: userId, name: parsedName.data, prefix: key.prefix, key_hash: key.hash, tier })
     .select('id, name, prefix, tier, created_at, last_used_at, revoked_at')
     .single()
   if (error || !data) return { ok: false, error: 'failed' }

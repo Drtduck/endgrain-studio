@@ -208,6 +208,15 @@ test('подвал несёт дисклеймер Amazon и ссылки на �
   await expect(footer.getByTestId('landing-footer-consent-settings')).toBeVisible()
 })
 
+test('«Настройки cookie» в подвале снова открывает баннер согласия', async ({ page }) => {
+  await openLanding(page)
+  // presetConsent в beforeEach уже даёт валидное решение - баннер скрыт.
+  await expect(page.getByTestId('consent-banner')).toHaveCount(0)
+
+  await page.getByTestId('landing-footer-consent-settings').click()
+  await expect(page.getByTestId('consent-banner')).toBeVisible()
+})
+
 test('форма подписки требует согласие и валидирует адрес', async ({ page }) => {
   await openLanding(page)
   await page.getByTestId('subscribe-email').fill('stas@example.com')

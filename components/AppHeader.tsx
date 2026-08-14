@@ -101,6 +101,16 @@ export function AppHeader({
 
       {enabled && user ? (
         <Link
+          href="/account"
+          data-testid="studio-nav-account"
+          className="rounded-sm px-2 py-1.5 text-sm font-medium text-ink-secondary transition-colors duration-hover hover:bg-app hover:text-ink"
+        >
+          {t(locale, 'account.profile')}
+        </Link>
+      ) : null}
+
+      {enabled && user ? (
+        <Link
           href="/account/api"
           data-testid="studio-nav-api"
           className="rounded-sm px-2 py-1.5 text-sm font-medium text-ink-secondary transition-colors duration-hover hover:bg-app hover:text-ink"

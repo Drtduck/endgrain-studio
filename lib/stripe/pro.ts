@@ -4,7 +4,7 @@ import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { getSupabaseServer } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/supabase/session'
 import { isAllowlistedEmail, isProUnlockedForAll } from './allowlist'
-import type { PlanId } from './plans'
+import type { PlanId, Product } from './plans'
 
 /**
  * flag - поднят аварийный рубильник, allowlist - адрес в конкурсном списке,
@@ -13,8 +13,10 @@ import type { PlanId } from './plans'
  * то есть один незаведённый ключ на проде открывал платные AI-фичи анонимам.
  * Отсутствие кассы теперь значит ровно одно: витрину цен не показываем
  * (за это отвечает отдельный флаг billingEnabled), а прав это никому не даёт.
+ * 'pass' - разовый Пропуск (mode=payment, $19, все возможности Pro на 90 дней):
+ * действует, только пока нет живой подписки (см. resolveProStatus).
  */
-export type ProReason = 'flag' | 'allowlist' | 'subscription' | 'free'
+export type ProReason = 'flag' | 'allowlist' | 'subscription' | 'pass' | 'free'
 
 export interface ProStatus {
   readonly pro: boolean
@@ -56,51 +58,93 @@ function planOf(value: string): PlanId | null {
  * Чистое ядро: никаких походов в сеть, поэтому покрыто unit-тестом без единого мока.
  * past_due считается Pro сознательно: карта не прошла, Stripe будет пробовать ещё
  * несколько дней, и отобрать доступ именно в этот момент значит поругаться с платящим.
+ *
+ * pass - живой ли разовый Пропуск (см. таблицу pro_passes). Подписка всегда
+ * старше пропуска: если у человека есть и то и другое (купил пропуск, потом
+ * оформил подписку), причина - 'subscription'. Пропуск смотрят, только когда
+ * подписки нет или она не живая.
  */
-export function resolveProStatus(row: SubscriptionRecord | null, nowMs: number): ProStatus {
-  if (row === null) return FREE
+export function resolveProStatus(
+  row: SubscriptionRecord | null,
+  nowMs: number,
+  pass: { readonly expiresAt: string } | null = null,
+): ProStatus {
+  if (row !== null) {
+    const plan = planOf(row.plan)
+    const alive =
+      LIVE_STATUSES.includes(row.status) &&
+      (row.currentPeriodEnd === null || Date.parse(row.currentPeriodEnd) + GRACE_MS > nowMs)
 
-  const plan = planOf(row.plan)
-  const alive =
-    LIVE_STATUSES.includes(row.status) &&
-    (row.currentPeriodEnd === null || Date.parse(row.currentPeriodEnd) + GRACE_MS > nowMs)
+    if (alive) {
+      return {
+        pro: true,
+        reason: 'subscription',
+        plan,
+        currentPeriodEnd: row.currentPeriodEnd,
+        cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+      }
+    }
 
+    if (pass !== null && Date.parse(pass.expiresAt) > nowMs) return passStatus(pass)
+
+    return {
+      pro: false,
+      reason: 'free',
+      // План и дату сохраняем и для истёкшей подписки: страница тарифов
+      // покажет «оплачено до такого-то числа», а не пустоту.
+      plan,
+      currentPeriodEnd: row.currentPeriodEnd,
+      cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+    }
+  }
+
+  if (pass !== null && Date.parse(pass.expiresAt) > nowMs) return passStatus(pass)
+
+  return FREE
+}
+
+function passStatus(pass: { readonly expiresAt: string }): ProStatus {
   return {
-    pro: alive,
-    reason: alive ? 'subscription' : 'free',
-    // План и дату сохраняем и для истёкшей подписки: страница тарифов
-    // покажет «оплачено до такого-то числа», а не пустоту.
-    plan,
-    currentPeriodEnd: row.currentPeriodEnd,
-    cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+    pro: true,
+    reason: 'pass',
+    plan: null,
+    currentPeriodEnd: pass.expiresAt,
+    // Пропуск не продлевается сам: карта не запоминается, автопродления нет.
+    cancelAtPeriodEnd: true,
   }
 }
 
 /**
- * Читает строку подписки текущего пользователя, минуя и аварийный флаг, и
- * гвард кассы. Нужна ровно одному месту: createCheckoutAction, где вопрос стоит
- * не «открыт ли Pro», а «есть ли уже живая подписка в Stripe». С флагом
+ * Читает строку подписки текущего пользователя по продукту, минуя и аварийный
+ * флаг, и гвард кассы. Нужна createCheckoutAction, где вопрос стоит не «открыт
+ * ли Pro», а «есть ли уже живая подписка данного продукта в Stripe». С флагом
  * NEXT_PUBLIC_PRO_UNLOCK=1 getProStatus() отдаёт reason 'flag', и подписчик
  * увидел бы кнопки покупки, а Stripe завёл бы вторую подписку и списал дважды.
+ * Пропуск считается только для product='pro': он не даёт доступа к API.
  */
-export const getSubscriptionStatus: () => Promise<ProStatus> = cache(async (): Promise<ProStatus> => {
-  if (!isSupabaseConfigured()) return FREE
-  try {
-    const user = await getCurrentUser()
-    if (!user) return FREE
-    return resolveProStatus(await readSubscriptionRow(user.id), Date.now())
-  } catch (err) {
-    console.error('getSubscriptionStatus failed', err)
-    return FREE
-  }
-})
+export const getSubscriptionStatus: (product?: Product) => Promise<ProStatus> = cache(
+  async (product: Product = 'pro'): Promise<ProStatus> => {
+    if (!isSupabaseConfigured()) return FREE
+    try {
+      const user = await getCurrentUser()
+      if (!user) return FREE
+      const row = await readSubscriptionRow(user.id, product)
+      const pass = product === 'pro' ? await readPassRow(user.id) : null
+      return resolveProStatus(row, Date.now(), pass)
+    } catch (err) {
+      console.error('getSubscriptionStatus failed', err)
+      return FREE
+    }
+  },
+)
 
-async function readSubscriptionRow(userId: string): Promise<SubscriptionRecord | null> {
+async function readSubscriptionRow(userId: string, product: Product): Promise<SubscriptionRecord | null> {
   const sb = await getSupabaseServer()
   const { data, error } = await sb
     .from('subscriptions')
     .select('status, plan, current_period_end, cancel_at_period_end')
     .eq('user_id', userId)
+    .eq('product', product)
     .maybeSingle()
   if (error || !data) return null
   return {
@@ -109,6 +153,20 @@ async function readSubscriptionRow(userId: string): Promise<SubscriptionRecord |
     currentPeriodEnd: data.current_period_end === null ? null : String(data.current_period_end),
     cancelAtPeriodEnd: data.cancel_at_period_end === true,
   }
+}
+
+/** Живой ли разовый Пропуск пользователя. Таблица pro_passes, миграция 20260814XXXXXX_pro_passes.sql. */
+async function readPassRow(userId: string): Promise<{ readonly expiresAt: string } | null> {
+  const sb = await getSupabaseServer()
+  const { data, error } = await sb
+    .from('pro_passes')
+    .select('expires_at')
+    .eq('user_id', userId)
+    .order('expires_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error || !data) return null
+  return { expiresAt: String(data.expires_at) }
 }
 
 /**
@@ -124,7 +182,8 @@ export async function proStatusForUser(userId: string): Promise<ProStatus> {
   if (flags.pro || isProUnlockedForAll()) return UNLOCKED
   if (!isSupabaseConfigured()) return FREE
   try {
-    return resolveProStatus(await readSubscriptionRow(userId), Date.now())
+    const [row, pass] = await Promise.all([readSubscriptionRow(userId, 'pro'), readPassRow(userId)])
+    return resolveProStatus(row, Date.now(), pass)
   } catch (err) {
     console.error('proStatusForUser failed', err)
     return FREE

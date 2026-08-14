@@ -11,9 +11,15 @@ vi.mock('@/lib/stripe/config', () => ({
   STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET,
   STRIPE_PRICE_MONTHLY: PRICE_MONTHLY,
   STRIPE_PRICE_YEARLY: 'price_yearly',
+  STRIPE_PRICE_API_MONTHLY: 'price_api_monthly',
+  STRIPE_PRICE_API_YEARLY: 'price_api_yearly',
+  STRIPE_PRICE_PASS: 'price_pass',
+  STRIPE_PRO_DEFAULT_PRICE: 'yearly',
   STRIPE_PORTAL_URL: '',
   isStripeConfigured: () => true,
   hasPublicPrices: () => true,
+  hasApiPrices: () => true,
+  hasPassPrice: () => true,
 }))
 
 const supabase = { from: vi.fn(), rpc: vi.fn() }
@@ -34,11 +40,14 @@ function mockSupabase(options: SbOptions = {}) {
     data: options.existing ?? null,
     error: options.readError ?? null,
   })
-  const eq = vi.fn().mockReturnValue({ maybeSingle })
+  // Прочтение существующей строки идёт .eq('user_id', ...).eq('product', ...).maybeSingle():
+  // второй .eq возвращает объект с maybeSingle, первый - объект со вторым .eq.
+  const eq2 = vi.fn().mockReturnValue({ maybeSingle })
+  const eq = vi.fn().mockReturnValue({ eq: eq2 })
   const select = vi.fn().mockReturnValue({ eq })
   const upsert = vi.fn().mockResolvedValue({ error: options.upsertError ?? null })
   supabase.from.mockReturnValue({ select, upsert })
-  return { select, eq, maybeSingle, upsert }
+  return { select, eq, eq2, maybeSingle, upsert }
 }
 
 const CREATED_SEC = 1_760_000_000
@@ -91,7 +100,8 @@ describe('POST /api/stripe/webhook', () => {
     expect(row['stripe_subscription_id']).toBe('sub_B')
     expect(row['plan']).toBe('monthly')
     expect(row['status']).toBe('active')
-    expect(sb.upsert.mock.calls[0]?.[1]).toEqual({ onConflict: 'user_id' })
+    expect(row['product']).toBe('pro')
+    expect(sb.upsert.mock.calls[0]?.[1]).toEqual({ onConflict: 'user_id,product' })
   })
 
   it('ошибка чтения last_event_at даёт 500 и ничего не пишет', async () => {
@@ -265,5 +275,67 @@ describe('POST /api/stripe/webhook: разовый платёж', () => {
 
     expect(res.status).toBe(200)
     expect(supabase.rpc).not.toHaveBeenCalled()
+  })
+
+  it('pro_pass зовёт grant_pro_pass с p_days = 90 и p_ref = session.id', async () => {
+    mockSupabase()
+    supabase.rpc.mockResolvedValue({ data: null, error: null })
+    const { POST } = await import('./route')
+
+    const res = await POST(
+      signedRequest(topupEventBody({ metadata: { supabase_user_id: 'user-1', kind: 'pro_pass' }, amount_total: 1900 })),
+    )
+
+    expect(res.status).toBe(200)
+    expect(await res.text()).toBe('ok')
+    expect(supabase.rpc).toHaveBeenCalledWith('grant_pro_pass', { p_user_id: 'user-1', p_ref: 'cs_1', p_days: 90 })
+  })
+
+  it('ошибка базы при выдаче пропуска даёт 500: Stripe переотправит', async () => {
+    mockSupabase()
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'db down' } })
+    const { POST } = await import('./route')
+
+    const res = await POST(
+      signedRequest(topupEventBody({ metadata: { supabase_user_id: 'user-1', kind: 'pro_pass' }, amount_total: 1900 })),
+    )
+    expect(res.status).toBe(500)
+  })
+
+  it('живая подписка product=api поднимает тир ключей до developer', async () => {
+    const sb = mockSupabase({ existing: null })
+    supabase.rpc.mockResolvedValue({ error: null })
+    const { POST } = await import('./route')
+
+    const res = await POST(
+      signedRequest(
+        eventBody({
+          items: { data: [{ price: { id: 'price_api_yearly' }, current_period_end: CREATED_SEC + 2_592_000 }] },
+        }),
+      ),
+    )
+
+    expect(res.status).toBe(200)
+    expect(sb.upsert.mock.calls[0]?.[0]).toMatchObject({ product: 'api' })
+    expect(supabase.rpc).toHaveBeenCalledWith('set_api_tier', { p_user_id: 'user-1', p_tier: 'developer' })
+  })
+
+  it('отменённая подписка product=api опускает тир ключей до free', async () => {
+    const sb = mockSupabase({ existing: null })
+    supabase.rpc.mockResolvedValue({ error: null })
+    const { POST } = await import('./route')
+
+    const res = await POST(
+      signedRequest(
+        eventBody({
+          status: 'canceled',
+          items: { data: [{ price: { id: 'price_api_yearly' }, current_period_end: CREATED_SEC + 2_592_000 }] },
+        }),
+      ),
+    )
+
+    expect(res.status).toBe(200)
+    expect(sb.upsert.mock.calls[0]?.[0]).toMatchObject({ product: 'api' })
+    expect(supabase.rpc).toHaveBeenCalledWith('set_api_tier', { p_user_id: 'user-1', p_tier: 'free' })
   })
 })

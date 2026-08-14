@@ -50,6 +50,24 @@ test.describe('аккаунт', () => {
     await page.getByTestId('projects-save').click()
     await expect(page.getByTestId('projects-error')).toBeHidden()
   })
+
+  test('после входа назад не возвращает форму логина', async ({ page }) => {
+    await page.goto('/pricing')
+    await page.goto('/login')
+    await page.getByTestId('auth-email').fill(process.env['E2E_AUTH_EMAIL'] ?? '')
+    await page.getByTestId('auth-password').fill(process.env['E2E_AUTH_PASSWORD'] ?? '')
+    await page.getByTestId('auth-submit').click()
+    await expect(page.getByTestId('tab-projects')).toBeVisible({ timeout: 15_000 })
+
+    await page.goBack()
+    await expect(page).toHaveURL(/\/pricing/)
+    await expect(page.getByTestId('auth-form-login')).toHaveCount(0)
+
+    // Форма логина заменена в истории, а не переиспользована, поэтому и прямой
+    // заход на неё уже авторизованного человека тоже не должен возвращать.
+    await page.goto('/login')
+    await expect(page.getByTestId('tab-projects')).toBeVisible({ timeout: 15_000 })
+  })
 })
 
 // Гейт студии проверяется только на сборке без аварийного флага: playwright.config.ts

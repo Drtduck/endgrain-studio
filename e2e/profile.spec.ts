@@ -1,0 +1,77 @@
+import { expect, test } from '@playwright/test'
+import { presetConsent } from './helpers/consent'
+
+/**
+ * CI поднимает студию с PUBLIC_STUDIO=1 и без ключей Supabase (см. playwright.config.ts,
+ * тот же приём, что в gallery.spec.ts и api-keys-ui.spec.ts). Без Supabase getCurrentUser()
+ * в app/account/page.tsx честно возвращает null, поэтому страница сама уводит на /login -
+ * ровно то же второй-слой поведение, что у /account/api. Публичный /u/[id] без Supabase
+ * не находит ни профиля, ни работ автора и отдаёт 404. Живой сценарий (заполнение профиля,
+ * смена почты/пароля, публичная карточка автора) гоняется руками на проде с ключами
+ * (E2E_AUTH=1, см. api-keys-ui.spec.ts).
+ */
+
+test.beforeEach(async ({ page }) => {
+  await presetConsent(page)
+})
+
+test('/account без пользователя уводит на /login', async ({ page }) => {
+  await page.goto('/account')
+  await expect(page).toHaveURL(/\/login/)
+  await expect(page).toHaveURL(/next=%2Faccount/)
+})
+
+test('/u/[id] без Supabase и без работ отдаёт 404', async ({ page }) => {
+  const response = await page.goto('/u/00000000-0000-0000-0000-000000000000')
+  expect(response?.status()).toBe(404)
+})
+
+const enabled = process.env['E2E_AUTH'] === '1'
+
+test.describe('страница профиля с живым Supabase', () => {
+  test.skip(!enabled, 'Требует живого Supabase: запускать локально с E2E_AUTH=1')
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login')
+    await page.getByTestId('auth-email').fill(process.env['E2E_AUTH_EMAIL'] ?? '')
+    await page.getByTestId('auth-password').fill(process.env['E2E_AUTH_PASSWORD'] ?? '')
+    await page.getByTestId('auth-submit').click()
+    await expect(page.getByTestId('tab-projects')).toBeVisible({ timeout: 15_000 })
+  })
+
+  test('несёт единый AppHeader и все секции формы', async ({ page }) => {
+    await page.goto('/account')
+    await expect(page.getByTestId('app-header')).toBeVisible()
+    await expect(page.getByTestId('profile-form')).toBeVisible()
+    await expect(page.getByTestId('email-section')).toBeVisible()
+    await expect(page.getByTestId('password-section')).toBeVisible()
+    await expect(page.getByTestId('danger-zone')).toBeVisible()
+  })
+
+  test('сохранение публичного профиля показывает подтверждение и ссылку «как меня видят»', async ({ page }) => {
+    await page.goto('/account')
+    await page.getByTestId('profile-display-name').fill('Тестовый мастер')
+    await page.getByTestId('profile-save').click()
+    await expect(page.getByTestId('profile-saved')).toBeVisible()
+    await expect(page.getByTestId('profile-view-public')).toHaveAttribute('href', /^\/u\//)
+  })
+
+  test('опасная зона требует ввод своей почты, кнопка удаления неактивна до совпадения', async ({ page }) => {
+    await page.goto('/account')
+    await page.getByTestId('danger-open').click()
+    await expect(page.getByTestId('danger-confirm-dialog')).toBeVisible()
+    await expect(page.getByTestId('danger-confirm')).toBeDisabled()
+    await page.getByTestId('danger-confirm-email').fill('не-моя-почта@example.com')
+    await expect(page.getByTestId('danger-confirm')).toBeDisabled()
+    await page.getByTestId('danger-cancel').click()
+    await expect(page.getByTestId('danger-confirm-dialog')).not.toBeVisible()
+  })
+
+  test('AccountMenu ведёт на /account, шапка студии несёт ссылку на профиль', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByTestId('studio-nav-account')).toHaveAttribute('href', '/account')
+    await page.getByTestId('account-menu-trigger').click()
+    await page.getByTestId('account-menu-profile').click()
+    await expect(page).toHaveURL(/\/account$/)
+  })
+})

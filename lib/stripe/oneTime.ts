@@ -12,7 +12,7 @@ import { z } from 'zod'
  * (kind, ref) в public.wallet_transactions / stripe_session_id в project_purchases.
  */
 
-export type OneTimeKind = 'wallet_topup' | 'gallery_purchase'
+export type OneTimeKind = 'wallet_topup' | 'gallery_purchase' | 'pro_pass'
 
 export interface OneTimePayment {
   readonly kind: OneTimeKind
@@ -26,7 +26,7 @@ export interface OneTimePayment {
   readonly publishedId: string | null
 }
 
-const kindSchema = z.enum(['wallet_topup', 'gallery_purchase'])
+const kindSchema = z.enum(['wallet_topup', 'gallery_purchase', 'pro_pass'])
 
 const sessionSchema = z.object({
   id: z.string(),

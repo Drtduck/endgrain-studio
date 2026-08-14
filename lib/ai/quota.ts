@@ -52,7 +52,7 @@ export function aiCost(feature: AiFeature, units = 1): number {
  * мерча остаются Pro-фичами: у vision-разбора подменять нечем, а kontext-модели
  * с картинкой на входе стоят на порядок дороже flux/schnell.
  */
-export const AI_TRIAL_FEATURES: readonly AiFeature[] = ['promoShots', 'referenceShots']
+export const AI_TRIAL_FEATURES: readonly AiFeature[] = ['promoShots', 'referenceShots', 'saleListing']
 
 /**
  * Почему отказали. anonymous - не вошёл (и гостевой тир недоступен), notPro -

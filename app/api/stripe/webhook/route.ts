@@ -31,6 +31,28 @@ async function handleOneTime(payment: import('@/lib/stripe/oneTime').OneTimePaym
     return text('ok', 200)
   }
 
+  if (payment.kind === 'pro_pass') {
+    try {
+      const sb = getSupabaseAdmin()
+      // Идемпотентна по stripe_session_id (on conflict do nothing) и продлевает
+      // от greatest(now(), max(expires_at)) при живом пропуске - см. миграцию
+      // 20260814XXXXXX_pro_passes.sql.
+      const { error } = await sb.rpc('grant_pro_pass', {
+        p_user_id: payment.userId,
+        p_ref: payment.sessionId,
+        p_days: 90,
+      })
+      if (error) {
+        console.error('stripe webhook: grant_pro_pass failed', error)
+        return text('write failed', 500)
+      }
+    } catch (err) {
+      console.error('stripe webhook: grant_pro_pass threw', err)
+      return text('write failed', 500)
+    }
+    return text('ok', 200)
+  }
+
   try {
     const sb = getSupabaseAdmin()
     const { error } = await sb.rpc('wallet_topup', {
@@ -86,11 +108,14 @@ export async function POST(request: Request): Promise<Response> {
 
     // Защита от гонки. Stripe при ретрае может доставить created после updated,
     // и без проверки активная подписка откатилась бы в incomplete. Условие .lte()
-    // в upsert не работает, поэтому сначала читаем сохранённую строку.
+    // в upsert не работает, поэтому сначала читаем сохранённую строку. Продукт
+    // в условии: у пользователя может быть живая Pro-подписка и отдельно API,
+    // и они друг друга не должны видеть как «чужую» подписку поверх живой.
     const { data: existing, error: readError } = await sb
       .from('subscriptions')
       .select('last_event_at, stripe_subscription_id, status')
       .eq('user_id', upsert.userId)
+      .eq('product', upsert.product)
       .maybeSingle()
     if (readError) {
       // Молча писать поверх непрочитанной строки нельзя: именно эта строка и
@@ -129,6 +154,7 @@ export async function POST(request: Request): Promise<Response> {
     const { error } = await sb.from('subscriptions').upsert(
       {
         user_id: upsert.userId,
+        product: upsert.product,
         stripe_customer_id: upsert.customerId,
         stripe_subscription_id: upsert.subscriptionId,
         price_id: upsert.priceId,
@@ -138,12 +164,22 @@ export async function POST(request: Request): Promise<Response> {
         cancel_at_period_end: upsert.cancelAtPeriodEnd,
         last_event_at: upsert.eventAt,
       },
-      { onConflict: 'user_id' },
+      { onConflict: 'user_id,product' },
     )
     if (error) {
       console.error('stripe webhook upsert failed', error)
       // 500 значит «попробуйте ещё раз»: Stripe переотправит событие.
       return text('write failed', 500)
+    }
+
+    // Подписка Developer управляет тиром ключей API: живой статус поднимает
+    // все неотозванные ключи пользователя до 'developer', смерть подписки
+    // возвращает их на 'free'. Ошибка здесь не 500: событие подписки уже
+    // записано, а set_api_tier идемпотентна и досчитается на следующем событии.
+    if (upsert.product === 'api') {
+      const tier = LIVE_STATUSES.includes(upsert.status) ? 'developer' : 'free'
+      const { error: tierError } = await sb.rpc('set_api_tier', { p_user_id: upsert.userId, p_tier: tier })
+      if (tierError) console.error('stripe webhook: set_api_tier failed', tierError)
     }
   } catch (err) {
     console.error('stripe webhook threw', err)

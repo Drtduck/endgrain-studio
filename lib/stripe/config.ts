@@ -17,8 +17,24 @@ export const STRIPE_WEBHOOK_SECRET: string = process.env['STRIPE_WEBHOOK_SECRET'
 export const STRIPE_PRICE_MONTHLY: string = process.env.NEXT_PUBLIC_STRIPE_PRICE_MONTHLY ?? ''
 export const STRIPE_PRICE_YEARLY: string = process.env.NEXT_PUBLIC_STRIPE_PRICE_YEARLY ?? ''
 
+/**
+ * API-подписка Developer (волна 2) и разовый Пропуск (волна 1). Те же правила: id
+ * цены не секрет, только точечная нотация process.env.NEXT_PUBLIC_*.
+ */
+export const STRIPE_PRICE_API_MONTHLY: string = process.env.NEXT_PUBLIC_STRIPE_PRICE_API_MONTHLY ?? ''
+export const STRIPE_PRICE_API_YEARLY: string = process.env.NEXT_PUBLIC_STRIPE_PRICE_API_YEARLY ?? ''
+export const STRIPE_PRICE_PASS: string = process.env.NEXT_PUBLIC_STRIPE_PRICE_PASS ?? ''
+
 /** Ссылка на hosted Customer Portal (no-code link из Stripe Dashboard). Необязательна. */
 export const STRIPE_PORTAL_URL: string = process.env.NEXT_PUBLIC_STRIPE_PORTAL_URL ?? ''
+
+/**
+ * Серверная: какая цена Pro предвыбрана в тумблере Checkout upsell (см. план
+ * тарифной витрины). Значение читает только сервер при создании сессии, поэтому
+ * без NEXT_PUBLIC_-префикса. Дефолт 'yearly' - ветка A из плана.
+ */
+export const STRIPE_PRO_DEFAULT_PRICE: 'yearly' | 'monthly' =
+  process.env['STRIPE_PRO_DEFAULT_PRICE'] === 'monthly' ? 'monthly' : 'yearly'
 
 /**
  * Без всех четырёх обязательных значений касса не существует: Pro открыт всем,
@@ -38,4 +54,17 @@ export function isStripeConfigured(): boolean {
 /** Клиентская половина гварда: только публичные переменные, зовётся из клиентских компонентов. */
 export function hasPublicPrices(): boolean {
   return STRIPE_PRICE_MONTHLY.length > 0 && STRIPE_PRICE_YEARLY.length > 0
+}
+
+/**
+ * API-подписка Developer заведена в кассе: обе цены на месте. Без них карточка
+ * остаётся блоком «Скоро» с почтой (волна 1), кнопка оплаты не рендерится вовсе.
+ */
+export function hasApiPrices(): boolean {
+  return STRIPE_PRICE_API_MONTHLY.length > 0 && STRIPE_PRICE_API_YEARLY.length > 0
+}
+
+/** Разовый Пропуск заведён в кассе. Без цены карточка Пропуска скрывается. */
+export function hasPassPrice(): boolean {
+  return STRIPE_PRICE_PASS.length > 0
 }

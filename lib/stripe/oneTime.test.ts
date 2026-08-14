@@ -31,6 +31,14 @@ describe('parseOneTimeEvent', () => {
     expect(res?.eventAt).toBe(new Date(1_760_000_000 * 1000).toISOString())
   })
 
+  it('разбирает разовую покупку Пропуска (pro_pass)', () => {
+    const res = parseOneTimeEvent(topupEvent({ metadata: { supabase_user_id: 'user-1', kind: 'pro_pass' }, amount_total: 1900 }))
+    expect(res).not.toBeNull()
+    expect(res?.kind).toBe('pro_pass')
+    expect(res?.userId).toBe('user-1')
+    expect(res?.amountCents).toBe(1900)
+  })
+
   it('разбирает покупку из галереи с published_id', () => {
     const res = parseOneTimeEvent(
       topupEvent({ metadata: { supabase_user_id: 'user-1', kind: 'gallery_purchase', published_id: 'pub-1' } }),

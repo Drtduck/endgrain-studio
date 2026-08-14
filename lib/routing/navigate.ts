@@ -8,3 +8,13 @@
 export function hardNavigate(url: string): void {
   window.location.assign(url)
 }
+
+/**
+ * То же самое, но без записи в историю браузера: заменяет текущую запись вместо
+ * добавления новой. Нужна для перехода со страницы входа - иначе кнопка «назад»
+ * возвращает на форму логина, которую сразу же перехватывает свежая cookie сессии
+ * и уводит обратно вперёд, ломая саму навигацию «назад».
+ */
+export function hardReplace(url: string): void {
+  window.location.replace(url)
+}

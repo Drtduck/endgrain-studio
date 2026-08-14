@@ -30,6 +30,12 @@ export interface GallerySummary {
   readonly species: readonly string[]
 }
 
+/** Автор карточки для AuthorLine. Отсутствует, если профиль ещё не заполнялся. */
+export interface GalleryCardAuthor {
+  readonly id: string
+  readonly displayName: string | null
+}
+
 export interface GalleryCard {
   readonly id: string
   readonly authorId: string
@@ -41,6 +47,7 @@ export interface GalleryCard {
   readonly status: 'public' | 'unlisted' | 'removed'
   readonly summary: GallerySummary
   readonly createdAt: string
+  readonly author?: GalleryCardAuthor
 }
 
 export interface GalleryPage {
