@@ -1,6 +1,7 @@
 'use client'
 
 import { AppHeader } from '@/components/AppHeader'
+import { StudioToolbar } from '@/components/StudioToolbar'
 import { LiteratureSection } from '@/components/affiliate/LiteratureSection'
 import { ToolRecommendations } from '@/components/affiliate/ToolRecommendations'
 import { Board3DPanel } from '@/components/Board3DPanel'
@@ -12,18 +13,15 @@ import { ExportPanel } from '@/components/ExportPanel'
 import { FeedbackButton } from '@/components/FeedbackButton'
 import { ForkDialog } from '@/components/ForkDialog'
 import { GeneratorPanel } from '@/components/GeneratorPanel'
-import { HistoryControls } from '@/components/HistoryControls'
 import { HomeView } from '@/components/home/HomeView'
 import { PanelInspector } from '@/components/PanelInspector'
 import { PhotoImport } from '@/components/PhotoImport'
 import { ProjectsPanel } from '@/components/ProjectsPanel'
 import { PromoPanel } from '@/components/promo/PromoPanel'
-import { ResetButton } from '@/components/ResetButton'
 import { RowInspector } from '@/components/RowInspector'
 import { SpeciesPalette } from '@/components/SpeciesPalette'
 import { TemplateGallery } from '@/components/TemplateGallery'
 import { HelpHint } from '@/components/ui/help-hint'
-import { Separator } from '@/components/ui/separator'
 import { t } from '@/lib/i18n'
 import { useDerived } from '@/lib/store/derived'
 import { useStudioPersistence } from '@/lib/store/persist'
@@ -40,17 +38,8 @@ export function StudioShell() {
 
   return (
     <div className="min-h-screen bg-app">
-      <AppHeader
-        tabs
-        units
-        tools={
-          <>
-            <HistoryControls />
-            <Separator orientation="vertical" className="h-6" />
-            <ResetButton />
-          </>
-        }
-      />
+      <AppHeader />
+      <StudioToolbar />
 
       <main className="mx-auto flex max-w-[1440px] flex-col gap-6 px-4 py-4">
         {FULL_WIDTH.includes(view) ? (

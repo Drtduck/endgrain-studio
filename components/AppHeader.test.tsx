@@ -12,11 +12,11 @@ vi.mock('@/app/actions/auth', () => ({ signOutAction: vi.fn() }))
 
 const FREE: ProStatus = { pro: false, reason: 'free', plan: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }
 
-function renderHeader(props: Parameters<typeof AppHeader>[0] = {}) {
+function renderHeader() {
   return render(
     <SessionProvider value={{ user: null, enabled: true }}>
       <ProProvider value={{ status: FREE, billingEnabled: false, ai: aiAccess('mock') }}>
-        <AppHeader {...props} />
+        <AppHeader />
       </ProProvider>
     </SessionProvider>,
   )
@@ -30,7 +30,7 @@ describe('AppHeader', () => {
     useStudio.getState().setUnit('mm')
   })
 
-  it('по умолчанию рисует бренд, язык и профиль без вкладок и единиц', () => {
+  it('рисует бренд, язык и профиль, а студийных органов управления не несёт', () => {
     renderHeader()
     expect(screen.getByTestId('app-header')).toBeDefined()
     expect(screen.getByTestId('locale-ru')).toBeDefined()
@@ -44,35 +44,18 @@ describe('AppHeader', () => {
     expect(screen.getByTestId('app-header-home').getAttribute('href')).toBe('/')
   })
 
-  it('в режиме студии добавляет вкладки и переключатель единиц', () => {
-    renderHeader({ tabs: true, units: true })
-    expect(screen.getByTestId('tab-editor')).toBeDefined()
-    fireEvent.click(screen.getByTestId('unit-in'))
-    expect(useStudio.getState().unit).toBe('in')
-  })
-
   it('переключатель языка меняет локаль стора', () => {
     renderHeader()
     fireEvent.click(screen.getByTestId('locale-en'))
     expect(useStudio.getState().locale).toBe('en')
   })
 
-  it('инструменты студии рендерятся только когда переданы', () => {
-    renderHeader({ tools: <button data-testid="header-tool" type="button" /> })
-    expect(screen.getByTestId('header-tool')).toBeDefined()
-  })
-
-  it('набор разделов одинаков и для студии, и для остальных страниц', () => {
-    const { unmount } = render(<AppHeader />)
-    const outside = ['app-shell-nav-gallery', 'app-shell-nav-pricing', 'app-blog-link']
-    for (const id of outside) expect(screen.getByTestId(id)).toBeInTheDocument()
+  it('набор разделов один и тот же в любом месте приложения', () => {
+    renderHeader()
+    for (const id of ['app-shell-nav-studio', 'app-shell-nav-gallery', 'app-shell-nav-pricing', 'app-blog-link']) {
+      expect(screen.getByTestId(id)).toBeDefined()
+    }
     // Гостю ключи API не нужны: страница всё равно попросит войти.
-    expect(screen.queryByTestId('app-shell-nav-api')).toBeNull()
-    unmount()
-
-    render(<AppHeader tabs />)
-    for (const id of outside) expect(screen.getByTestId(id)).toBeInTheDocument()
-    // В студии ссылка «Студия» лишняя: туда ведут вкладки и логотип.
-    expect(screen.queryByTestId('app-shell-nav-studio')).toBeNull()
+    expect(screen.queryByTestId('app-shell-nav-api')).toBe(null)
   })
 })

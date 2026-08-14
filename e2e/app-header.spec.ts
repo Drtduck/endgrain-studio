@@ -24,17 +24,21 @@ for (const route of ROUTES) {
   })
 }
 
-test('вкладки и единицы живут только в студии', async ({ page }) => {
+test('органы управления студией живут на втором уровне, а не в шапке', async ({ page }) => {
   await presetConsent(page)
 
   await page.goto('/')
-  await expect(page.getByTestId('unit-mm')).toBeVisible()
-  await expect(page.getByTestId('tab-editor')).toBeVisible()
+  const toolbar = page.getByTestId('studio-toolbar')
+  await expect(toolbar).toBeVisible()
+  // Вкладки, единицы, отмена и сброс собраны в одной полосе под шапкой.
+  for (const id of ['tab-editor', 'unit-mm', 'undo', 'redo', 'reset-studio']) {
+    await expect(toolbar.getByTestId(id)).toBeVisible()
+  }
+  await expect(page.getByTestId('app-header').getByTestId('tab-editor')).toHaveCount(0)
 
   await page.goto('/pricing')
   await expect(page.getByTestId('app-header')).toBeVisible()
-  await expect(page.getByTestId('unit-mm')).toHaveCount(0)
-  await expect(page.getByTestId('tab-editor')).toHaveCount(0)
+  await expect(page.getByTestId('studio-toolbar')).toHaveCount(0)
 })
 
 /**

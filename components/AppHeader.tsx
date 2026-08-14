@@ -1,18 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import type { ReactNode } from 'react'
 import { AccountMenu } from '@/components/AccountMenu'
 import { LocaleToggle } from '@/components/LocaleToggle'
 import { useSession } from '@/components/SessionProvider'
-import { StudioTabs } from '@/components/StudioTabs'
-import { Separator } from '@/components/ui/separator'
 import { t, type MessageKey } from '@/lib/i18n'
 import { BLOG_PATH, SITE_ORIGIN } from '@/lib/routing/host'
 import { rememberLocale } from '@/lib/store/locale'
 import { useStudio } from '@/lib/store/studio'
-import type { UnitSystem } from '@/lib/units'
-import { cn } from '@/lib/utils'
 
 const NAV_LINK_CLASS =
   'rounded-sm px-2 py-1.5 text-sm font-medium text-ink-secondary transition-colors duration-hover hover:bg-app hover:text-ink'
@@ -31,29 +26,18 @@ const NAV_LINKS: readonly {
 ]
 
 /**
- * Единственная шапка приложения. Раньше она жила внутри StudioShell, поэтому
+ * Единственная шапка приложения: состав одинаков в любом разделе. Раньше она жила внутри StudioShell, поэтому
  * галерея, тарифы, ключи API и правовые страницы рисовали вместо неё маленькую
  * ссылку «Endgrain App» и выглядели чужими разделами. Теперь состав бренда,
  * языка и профиля одинаков везде.
  *
- * Вкладки и единицы измерения управляют состоянием студии: на остальных
- * страницах они бы ничего не делали, поэтому включаются пропсами и по
- * умолчанию выключены. Логотип всегда ведёт на главную приложения.
+ * Всё, что имеет смысл только внутри студии (вкладки, единицы, отмена и сброс),
+ * живёт этажом ниже, в StudioToolbar: иначе меню то появляется, то пропадает от
+ * раздела к разделу. Логотип всегда ведёт на главную приложения.
  */
 
-export function AppHeader({
-  tabs = false,
-  units = false,
-  tools,
-}: {
-  readonly tabs?: boolean
-  readonly units?: boolean
-  /** Инструменты только для студии: отмена/повтор и сброс. */
-  readonly tools?: ReactNode
-}) {
+export function AppHeader() {
   const locale = useStudio((s) => s.locale)
-  const unit = useStudio((s) => s.unit)
-  const setUnit = useStudio((s) => s.setUnit)
   const setLocale = useStudio((s) => s.setLocale)
   const { user, enabled } = useSession()
 
@@ -67,37 +51,7 @@ export function AppHeader({
         <span className="font-display text-[17px] font-semibold">{t(locale, 'app.title')}</span>
       </Link>
 
-      {tabs ? (
-        <>
-          <Separator orientation="vertical" className="h-6" />
-          <StudioTabs />
-        </>
-      ) : null}
-
       <div className="flex-1" />
-
-      {units ? (
-        <div
-          className="inline-flex rounded-md bg-surface-sunken p-0.5"
-          role="group"
-          aria-label={t(locale, 'aria.unitGroup')}
-        >
-          {(['mm', 'in'] as const).map((u: UnitSystem) => (
-            <button
-              key={u}
-              type="button"
-              data-testid={`unit-${u}`}
-              onClick={() => setUnit(u)}
-              className={cn(
-                'rounded-sm px-2 py-1 font-mono text-xs transition-colors duration-hover',
-                u === unit ? 'bg-surface-raised shadow-sm' : 'text-ink-secondary',
-              )}
-            >
-              {t(locale, u === 'mm' ? 'units.mm' : 'units.in')}
-            </button>
-          ))}
-        </div>
-      ) : null}
 
       {/*
         Один и тот же набор разделов на всех страницах приложения. Ключи API нужны
@@ -106,7 +60,7 @@ export function AppHeader({
       */}
       <nav aria-label={t(locale, 'appShell.nav.aria')} className="flex flex-wrap items-center gap-1">
         {NAV_LINKS.map((link) =>
-          (link.authOnly && !(enabled && user)) || (tabs && link.href === '/') ? null : (
+          link.authOnly && !(enabled && user) ? null : (
             <Link key={link.testId} href={link.href} data-testid={link.testId} className={NAV_LINK_CLASS}>
               {t(locale, link.labelKey)}
             </Link>
@@ -128,12 +82,6 @@ export function AppHeader({
 
       <AccountMenu />
 
-      {tools ? (
-        <>
-          <Separator orientation="vertical" className="h-6" />
-          {tools}
-        </>
-      ) : null}
     </header>
   )
 }
