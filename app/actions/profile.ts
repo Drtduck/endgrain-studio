@@ -11,11 +11,19 @@ import { getSupabaseService, isSupabaseServiceConfigured } from '@/lib/supabase/
 
 /**
  * Server actions страницы «Аккаунт» (app/account/page.tsx). Публичный профиль
- * (display_name/bio/website/notify_email) пишется под обычной cookie-сессией:
- * у profiles есть update-политика на свою строку (миграция 20260814100000),
- * service-role тут не нужен. Смена почты/пароля и удаление аккаунта идут через
- * auth-методы Supabase - удаление отдельно требует service-role
- * (auth.admin.deleteUser), поэтому тем же приёмом, что revokeApiKeyAction.
+ * (display_name/bio/website/notify_email) пишется service-role клиентом
+ * (getSupabaseService): PostgREST-upsert с onConflict компилирует
+ * INSERT ... ON CONFLICT DO UPDATE, а RETURNING этого запроса требует
+ * table-level SELECT-привилегию - у роли authenticated её нет и не будет
+ * (column-grant в миграции 20260814100000 намеренно режет notify_email,
+ * иначе select с policy using(true) отдавал бы чужую приватную настройку
+ * уведомлений). Расширять гранты нельзя, поэтому сама запись идёт мимо
+ * PostgREST-роли authenticated: user.id берётся из серверной сессии
+ * (getCurrentUser), валидация полей остаётся здесь же, а пишется строго
+ * в свою строку - client input на user_id никогда не влияет. Смена
+ * почты/пароля и удаление аккаунта идут через auth-методы Supabase -
+ * удаление отдельно требует service-role (auth.admin.deleteUser), поэтому
+ * тем же приёмом, что revokeApiKeyAction.
  */
 
 export type ProfileError =
@@ -68,8 +76,9 @@ export async function updateProfileAction(input: UpdateProfileInput): Promise<Pr
     if (!websiteParsed.success) return { ok: false, error: 'invalid' }
   }
 
-  const sb = await getSupabaseServer()
-  const { data, error } = await sb
+  if (!isSupabaseServiceConfigured()) return { ok: false, error: 'unavailable' }
+  const service = getSupabaseService()
+  const { data, error } = await service
     .from('profiles')
     .upsert(
       {
@@ -81,11 +90,9 @@ export async function updateProfileAction(input: UpdateProfileInput): Promise<Pr
       },
       { onConflict: 'user_id' },
     )
-    // notify_email намеренно не в RETURNING: authenticated-грант select больше не
-    // открывает эту колонку никому (см. миграцию 20260814100000, фикс приватности
-    // notify_email) - RETURNING в Postgres требует SELECT-привилегию на колонку
-    // ровно как обычный select, поэтому эта строка упала бы с 42501. Значение,
-    // которое мы только что успешно записали, и так известно из input.
+    // notify_email по-прежнему не в RETURNING: сервис-роль обходит RLS и грант,
+    // но отдавать приватное поле обратно клиенту незачем - значение, которое
+    // мы только что записали, и так известно из input.
     .select('user_id, display_name, bio, website, created_at')
     .single()
 

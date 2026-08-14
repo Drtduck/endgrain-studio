@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 /**
- * app/actions/profile: два фикса ревью покрыты здесь.
+ * app/actions/profile: несколько фиксов ревью покрыты здесь.
  * 1) updateProfileAction больше не просит notify_email обратно в RETURNING (upsert().select()) -
  *    authenticated-грант select больше не открывает эту колонку никому (см. миграцию
  *    20260814100000), и Postgres требует SELECT-привилегию на колонку и для RETURNING.
@@ -9,6 +9,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
  * 2) changePasswordAction требует текущий пароль и проверяет его через
  *    signInWithPassword до updateUser({password}) - без этого чужая открытая сессия
  *    на общем компьютере могла бы захватить аккаунт простой сменой пароля.
+ * 3) hotfix account-save: тот же RETURNING/SELECT-грант рубит upsert и под cookie-сессией
+ *    (authenticated не имеет table-level SELECT, а PostgREST-upsert с onConflict его требует)
+ *    - updateProfileAction переведён на getSupabaseService() (service-role, мимо RLS и грантов).
+ *    user_id для записи берётся только из getCurrentUser(), а не из input - строку чужого
+ *    пользователя записать нельзя, даже имея прямой доступ к action.
  */
 
 const getUser = vi.fn()
@@ -19,6 +24,9 @@ const from = vi.fn()
 const signInWithPassword = vi.fn()
 const updateUser = vi.fn()
 
+let serviceConfigured = true
+const serviceFrom = vi.fn()
+
 vi.mock('@/lib/supabase/config', () => ({ isSupabaseConfigured: () => true }))
 vi.mock('@/lib/supabase/server', () => ({
   getSupabaseServer: async () => ({
@@ -27,10 +35,8 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }))
 vi.mock('@/lib/supabase/service', () => ({
-  isSupabaseServiceConfigured: () => false,
-  getSupabaseService: () => {
-    throw new Error('getSupabaseService should not be called from this file')
-  },
+  isSupabaseServiceConfigured: () => serviceConfigured,
+  getSupabaseService: () => ({ from: serviceFrom }),
 }))
 
 function mockUser(overrides: Partial<{ id: string; email: string; identities: readonly { provider: string }[] }> = {}) {
@@ -49,18 +55,20 @@ describe('app/actions/profile updateProfileAction', () => {
     upsertSelect.mockReset()
     upsert.mockReset()
     from.mockReset()
+    serviceFrom.mockReset()
     signInWithPassword.mockReset()
     updateUser.mockReset()
+    serviceConfigured = true
 
     upsertSelect.mockImplementation(() => ({ single: upsertSelectSingle }))
     upsert.mockImplementation(() => ({ select: upsertSelect }))
-    from.mockImplementation((table: string) => {
+    serviceFrom.mockImplementation((table: string) => {
       if (table === 'profiles') return { upsert }
       throw new Error(`unexpected table ${table}`)
     })
   })
 
-  it('RETURNING не запрашивает notify_email, ответ берёт значение из input', async () => {
+  it('пишет через service-role (не через cookie-сессию), RETURNING не запрашивает notify_email', async () => {
     mockUser()
     upsertSelectSingle.mockResolvedValue({
       data: { user_id: 'user-1', display_name: 'Стас', bio: null, website: null, created_at: '2026-08-14T00:00:00.000Z' },
@@ -81,8 +89,44 @@ describe('app/actions/profile updateProfileAction', () => {
         createdAt: '2026-08-14T00:00:00.000Z',
       },
     })
-    // RETURNING-список не содержит notify_email: колонка больше не в select-гранте authenticated.
+    // Пишем service-ролью, а не под cookie-сессией: authenticated не имеет
+    // table-level SELECT, которого требует RETURNING PostgREST-upsert'а.
+    expect(serviceFrom).toHaveBeenCalledWith('profiles')
+    expect(from).not.toHaveBeenCalledWith('profiles')
+    // user_id в записи - строго из серверной сессии, не из input.
+    const upsertArg = upsert.mock.calls[0]?.[0] as { user_id: string }
+    expect(upsertArg.user_id).toBe('user-1')
+    // RETURNING-список не содержит notify_email: колонка не в select-гранте authenticated,
+    // а лишний select клиенту тут и не нужен.
     expect(upsertSelect).toHaveBeenCalledWith('user_id, display_name, bio, website, created_at')
+  })
+
+  it('чужой user_id подставить нельзя: запись всегда идёт в строку из сессии', async () => {
+    mockUser({ id: 'user-1' })
+    upsertSelectSingle.mockResolvedValue({
+      data: { user_id: 'user-1', display_name: 'Стас', bio: null, website: null, created_at: '2026-08-14T00:00:00.000Z' },
+      error: null,
+    })
+    const { updateProfileAction } = await import('./profile')
+
+    // UpdateProfileInput вообще не принимает userId - это и есть защита: у типа
+    // action нет способа передать чужой id, поэтому здесь просто проверяем,
+    // что записанный user_id совпадает с id из сессии, а не с чем-то ещё.
+    await updateProfileAction({ displayName: 'Стас', bio: '', website: '', notifyEmail: true })
+
+    const upsertArg = upsert.mock.calls[0]?.[0] as { user_id: string }
+    expect(upsertArg.user_id).toBe('user-1')
+  })
+
+  it('без service-role даёт unavailable и не пишет в базу', async () => {
+    serviceConfigured = false
+    mockUser()
+    const { updateProfileAction } = await import('./profile')
+
+    const res = await updateProfileAction({ displayName: 'Стас', bio: '', website: '', notifyEmail: true })
+
+    expect(res).toEqual({ ok: false, error: 'unavailable' })
+    expect(serviceFrom).not.toHaveBeenCalled()
   })
 
   it('неаутентифицированный запрос не трогает базу', async () => {
@@ -93,6 +137,7 @@ describe('app/actions/profile updateProfileAction', () => {
 
     expect(res).toEqual({ ok: false, error: 'unauthenticated' })
     expect(from).not.toHaveBeenCalled()
+    expect(serviceFrom).not.toHaveBeenCalled()
   })
 })
 
