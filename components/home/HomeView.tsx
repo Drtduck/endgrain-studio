@@ -1,5 +1,6 @@
 'use client'
 
+import { HowToGuide } from '@/components/home/HowToGuide'
 import { useSession } from '@/components/SessionProvider'
 import { t, type MessageKey } from '@/lib/i18n'
 import { useStudio, type StudioView } from '@/lib/store/studio'
@@ -59,6 +60,8 @@ export function HomeView() {
           <p className="max-w-2xl text-[13px] text-ink-secondary sm:text-sm">{t(locale, 'home.subtitle')}</p>
         </div>
       </header>
+
+      <HowToGuide />
 
       <div className="flex flex-col gap-4">
         <h2 className="font-display text-lg text-ink-secondary">{t(locale, 'home.sections')}</h2>

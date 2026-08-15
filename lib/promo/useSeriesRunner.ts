@@ -5,6 +5,7 @@ import { cancelPromoSeriesAction, createPromoSeriesAction, editPromoShotAction, 
 import { runSeries, type RunnerHandle } from '@/lib/promo/runner'
 import type { PromoSeriesInput } from '@/lib/promo/schema'
 import type { PromoSeriesView, PromoShotView } from '@/lib/promo/types'
+import { useAiAccessStore } from '@/lib/store/aiAccess'
 import { usePromoStore } from '@/lib/store/promo'
 import { useStudio } from '@/lib/store/studio'
 
@@ -152,6 +153,12 @@ export function useSeriesRunner(): SeriesRunner {
       setError('failed')
     } finally {
       setBusy(false)
+      // Кадры резервируются на сервере в момент заведения серии (assertAiAllowed),
+      // поэтому остаток под кнопкой перечитываем сразу, а не после последнего
+      // готового кадра: иначе счётчик до перезагрузки страницы показывал бы число
+      // «до списания» (баг ручной приёмки 15.08.2026). Отказ сервера тоже повод
+      // перечитать: он и означает, что снапшот разошёлся с реальностью.
+      void useAiAccessStore.getState().refresh()
     }
   }, [reset, upsertShot])
 
@@ -298,6 +305,9 @@ export function useSeriesRunner(): SeriesRunner {
     }
 
     const res = await editPromoShotAction({ shotId: shot.id, instruction, walletRef: crypto.randomUUID() })
+    // Правка стоит ровно один кадр: счётчик под кнопкой обязан это увидеть, не
+    // дожидаясь перезагрузки страницы (баг ручной приёмки 15.08.2026).
+    void useAiAccessStore.getState().refresh()
     if (!res.ok) {
       setError(res.error)
       return { ok: false }

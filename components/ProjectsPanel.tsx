@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import {
   deleteProjectAction,
   listProjectsAction,
@@ -72,12 +72,27 @@ export function ProjectsPanel() {
     })
   }
 
-  // Автозагрузки по эффекту нет сознательно: правило react-hooks/set-state-in-effect
-  // видит setState внутри refresh() даже через async-колбэк startTransition и падает
-  // на build. Это допустимая деградация UX (см. задачу 4 брифа фазы 7): список грузится
-  // по явному клику на "Обновить список", подсказка ниже написана нейтрально и не
-  // подразумевает, что загрузка уже случилась сама.
-  //
+  // Первая загрузка при открытии вкладки (баг ручной приёмки 15.08.2026): раньше
+  // список ждал явного клика по «Обновить список», и человек видел пустоту со
+  // счётчиком «Занято 0 из 3», хотя проекты в облаке были, а сохранение тут же
+  // упиралось в лимит. Правило react-hooks/set-state-in-effect по-прежнему не
+  // нарушено: эффект не трогает ни один useState, он пишет только в общий стор
+  // (lib/store/projects.ts) через getState(), поэтому startTransition тут не нужен.
+  const autoLoadRef = useRef(false)
+  useEffect(() => {
+    if (autoLoadRef.current || useProjectsStore.getState().loaded) return
+    autoLoadRef.current = true
+    void (async () => {
+      try {
+        const res = await listProjectsAction()
+        if (res.ok) useProjectsStore.getState().setItems(res.data)
+        else useProjectsStore.getState().markLoaded()
+      } catch (err) {
+        console.error('listProjectsAction failed', err)
+      }
+    })()
+  }, [])
+
   // Список - общий стор lib/store/projects.ts (мелочь 2, приёмка 15.08.2026): и
   // здесь, и в SaveProjectButton (кнопка в редакторе) успешное сохранение пишет
   // upsertItem в тот же стор, поэтому список не отстаёт от реальности, когда
@@ -177,8 +192,11 @@ export function ProjectsPanel() {
             {pending ? t(locale, 'projects.busy') : t(locale, 'projects.save')}
           </Button>
         </div>
-        {/* Счётчик мест показываем, только когда касса работает и лимит реально действует. */}
-        {!status.pro && billingEnabled ? (
+        {/* Счётчик мест показываем, только когда касса работает, лимит реально
+            действует и список уже приехал с сервера: до этого items пуст, и
+            надпись врала «Занято 0 из 3» при трёх занятых местах в облаке
+            (баг ручной приёмки 15.08.2026). */}
+        {!status.pro && billingEnabled && loaded ? (
           <p data-testid="projects-limit-hint" className="text-[11px] text-ink-muted">
             {t(locale, 'projects.limitHint', { used: items.length, limit: FREE_PROJECT_LIMIT })}
           </p>

@@ -22,6 +22,7 @@ import { MAX_PNG_CHARS } from '@/lib/promo/schema'
 import { PROMO_DEFAULT_SHOTS, PROMO_SHOT_META, type PromoSeriesView, type PromoShotKind, type PromoShotStatus, type PromoShotView } from '@/lib/promo/types'
 import { useSeriesRunner } from '@/lib/promo/useSeriesRunner'
 import { useDerived } from '@/lib/store/derived'
+import { usePromoStore } from '@/lib/store/promo'
 import { selectDesign, useStudio } from '@/lib/store/studio'
 
 const STATUS_TESTID: Readonly<Record<PromoShotStatus, string>> = {
@@ -43,9 +44,16 @@ export function PhotoSeries() {
   const trialMode = gate.access.state === 'trial'
   const demoMode = gate.access.state === 'mock'
 
-  const [selected, setSelected] = useState<readonly PromoShotKind[]>(() =>
-    trialMode ? PROMO_DEFAULT_SHOTS.slice(0, FREE_TRIAL_MAX_UNITS) : PROMO_DEFAULT_SHOTS,
-  )
+  // Выбор пресетов живёт в общем сторе, а не в локальном useState (баг ручной
+  // приёмки 15.08.2026): StudioShell рисует одну вкладку за раз, поэтому уход на
+  // «Проекты» и обратно размонтировал панель вместе с её состоянием, и вместо
+  // одного отмеченного кадра снова оказывались дефолтные четыре («Спишется 4»).
+  // null в сторе значит «руками ещё не выбирали»: тогда показываем набор по
+  // умолчанию, и только тогда гидратация прошлой серии вправе его заменить.
+  const storedKinds = usePromoStore((s) => s.selectedKinds)
+  const setSelectedKinds = usePromoStore((s) => s.setSelectedKinds)
+  const defaultKinds = trialMode ? PROMO_DEFAULT_SHOTS.slice(0, FREE_TRIAL_MAX_UNITS) : PROMO_DEFAULT_SHOTS
+  const selected: readonly PromoShotKind[] = storedKinds ?? defaultKinds
   // Правки текста сцены по кадру (спека 6.1): только отмеченные пресеты, ключ - kind.
   const [sceneEdits, setSceneEdits] = useState<Readonly<Record<string, string>>>({})
   const runner = useSeriesRunner()
@@ -72,7 +80,12 @@ export function PhotoSeries() {
         .filter((s) => s.seriesId === hydratedSeries.id && s.parentShotId === null)
         .sort((a, b) => a.ordinal - b.ordinal)
         .map((s) => s.kindSlug as PromoShotKind)
-      if (kinds.length > 0) setSelected(kinds)
+      // Только когда выбора ещё не делали руками: иначе поздний ответ сервера
+      // (или повторный вход на вкладку) затирал бы отмеченные кадры набором из
+      // прошлой серии, и клики по пресетам откатывались назад сами собой.
+      if (kinds.length > 0 && usePromoStore.getState().selectedKinds === null) {
+        usePromoStore.getState().setSelectedKinds(kinds)
+      }
       runner.hydrate(hydratedSeries, shots)
     }
 
@@ -141,10 +154,12 @@ export function PhotoSeries() {
         : 'promo.cost.mixed'
 
   const toggle = (kind: PromoShotKind): void => {
-    setSelected((prev) => {
-      if (prev.includes(kind)) return prev.filter((k) => k !== kind)
-      return trialMode ? [kind] : [...prev, kind]
-    })
+    const prev = usePromoStore.getState().selectedKinds ?? defaultKinds
+    if (prev.includes(kind)) {
+      setSelectedKinds(prev.filter((k) => k !== kind))
+      return
+    }
+    setSelectedKinds(trialMode ? [kind] : [...prev, kind])
   }
 
   const run = async (): Promise<void> => {

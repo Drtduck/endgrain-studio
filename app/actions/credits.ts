@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import { getAiAccess } from '@/lib/ai/entitlements'
 import { readCreditTransactions, type CreditTransactionRow } from '@/lib/ai/credits'
 import { aiPack, isAiPackId } from '@/lib/ai/packs'
+import type { AiAccess } from '@/lib/ai/quota'
 import { APP_ORIGIN } from '@/lib/routing/host'
 import { STRIPE_SECRET_KEY, isStripeConfigured } from '@/lib/stripe/config'
 import { getCurrentUser } from '@/lib/supabase/session'
@@ -63,6 +64,17 @@ export async function createPackCheckoutAction(packId: unknown): Promise<PackChe
     console.error('ai pack checkout threw', err)
     return { ok: false, error: 'failed' }
   }
+}
+
+/**
+ * Свежий остаток кадров для интерфейса. ProProvider отдаёт снапшот, посчитанный
+ * серверным layout один раз на загрузку страницы, и после генерации счётчик под
+ * кнопкой врал ровно на списанное (баг ручной приёмки 15.08.2026: «Осталось 7
+ * кадров» при двух на балансе). Клиент перечитывает остаток этим действием
+ * сразу после списания, не перезагружая страницу.
+ */
+export async function readAiAccessAction(): Promise<AiAccess> {
+  return await getAiAccess()
 }
 
 export interface CreditsView {
