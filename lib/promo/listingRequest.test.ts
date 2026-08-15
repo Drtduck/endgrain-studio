@@ -20,7 +20,19 @@ function validPayload(): unknown {
     title: 'Walnut End-Grain Cutting Board',
     bullets: ['one', 'two', 'three', 'four', 'five'],
     keywords: Array.from({ length: ETSY_TAG_COUNT }, (_, i) => `tag${i}`),
-    description: 'A handmade board.',
+    description: 'A handmade end-grain cutting board made of real walnut hardwood.',
+    materials: ['Black walnut'],
+    care: 'Hand wash only.',
+  }
+}
+
+/** Огрызок с плейсхолдерами вместо title/description: имитирует nemotron, у которой reasoning съел max_tokens. */
+function placeholderPayload(): unknown {
+  return {
+    title: '...',
+    bullets: ['one', 'two', 'three', 'four', 'five'],
+    keywords: Array.from({ length: ETSY_TAG_COUNT }, (_, i) => `tag${i}`),
+    description: '...',
     materials: ['Black walnut'],
     care: 'Hand wash only.',
   }
@@ -76,6 +88,47 @@ describe('lib/promo/listingRequest', () => {
     expect(openRouterCall).toBeDefined()
     const body = JSON.parse((openRouterCall?.[1] as { body: string }).body) as { model: string }
     expect(body.model).toBe('nvidia/nemotron-3-super-120b-a12b:free')
+  })
+
+  it('тело запроса к OpenRouter отключает reasoning и содержит system-сообщение', async () => {
+    geminiKeySet = false
+    const fetchMock = vi.fn().mockResolvedValue(openRouterOk(JSON.stringify(validPayload())))
+    vi.stubGlobal('fetch', fetchMock)
+    const { requestListing } = await import('./listingRequest')
+    const res = await requestListing('prompt')
+    expect(res.ok).toBe(true)
+    const openRouterCall = fetchMock.mock.calls.find((c) => isOpenRouterCall(c))
+    const body = JSON.parse((openRouterCall?.[1] as { body: string }).body) as {
+      reasoning?: { enabled: boolean }
+      messages: { role: string; content: string }[]
+    }
+    expect(body.reasoning).toEqual({ enabled: false })
+    expect(body.messages[0]?.role).toBe('system')
+    expect(body.messages[1]?.role).toBe('user')
+  })
+
+  it('OpenRouter отвечает огрызком с плейсхолдерами (title/description = "..."): карточка отбрасывается, ok:false', async () => {
+    geminiKeySet = false
+    const fetchMock = vi.fn().mockResolvedValue(openRouterOk(JSON.stringify(placeholderPayload())))
+    vi.stubGlobal('fetch', fetchMock)
+    const { requestListing } = await import('./listingRequest')
+    const res = await requestListing('prompt')
+    expect(res).toEqual({ ok: false })
+    // основная модель + запасной автороутер: обе попытки отбракованы валидацией содержательности
+    expect(fetchMock.mock.calls.filter((c) => isOpenRouterCall(c))).toHaveLength(2)
+  })
+
+  it('Gemini отвечает огрызком с плейсхолдерами: отбрасывается, OpenRouter пробуется дальше', async () => {
+    const fetchMock = vi.fn().mockImplementation((...args: unknown[]) =>
+      isOpenRouterCall(args)
+        ? Promise.resolve(openRouterOk(JSON.stringify(validPayload())))
+        : Promise.resolve({ ok: true, json: () => Promise.resolve({ candidates: [{ content: { parts: [{ text: JSON.stringify(placeholderPayload()) }] } }] }) }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const { requestListing } = await import('./listingRequest')
+    const res = await requestListing('prompt')
+    expect(res.ok).toBe(true)
+    expect(fetchMock.mock.calls.filter((c) => isOpenRouterCall(c))).toHaveLength(1)
   })
 
   it('основная бесплатная модель падает, запасной автороутер отвечает: ok:true', async () => {

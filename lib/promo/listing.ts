@@ -88,6 +88,32 @@ export function parseListing(text: string): SaleListing | null {
   return null
 }
 
+/** Плейсхолдер: пусто, только пробелы или точки/многоточия ('...', '…', '.  .'). */
+const PLACEHOLDER_ONLY = /^[.\s…]*$/
+
+/**
+ * Содержательная проверка ПОСЛЕ parseListing: схема гарантирует форму (длины,
+ * количество элементов), но не смысл. Reasoning-модели вроде nemotron иногда
+ * укладываются в лимит токенов на "размышления" и отдают валидный по форме
+ * JSON с полями-огрызками ('...' вместо текста) - это уже поймано на проде
+ * (см. lib/promo/listingRequest.ts). Здесь - последний рубеж перед тем, как
+ * карточка уйдёт пользователю и спишет кадр: слишком короткие или пустые по
+ * смыслу title/description отбраковываются, буллеты и keywords чистятся от
+ * пустышек поштучно (сами массивы могут остаться пустыми - площадка не всегда
+ * их требует).
+ */
+export function isMeaningfulListing(listing: SaleListing): SaleListing | null {
+  const title = listing.title.trim()
+  const description = listing.description.trim()
+  if (title.length < 10 || PLACEHOLDER_ONLY.test(title)) return null
+  if (description.length < 40 || PLACEHOLDER_ONLY.test(description)) return null
+
+  const bullets = listing.bullets.filter((bullet) => !PLACEHOLDER_ONLY.test(bullet.trim()))
+  const keywords = listing.keywords.filter((keyword) => !PLACEHOLDER_ONLY.test(keyword.trim()))
+
+  return { ...listing, bullets, keywords }
+}
+
 /**
  * Демо-карточка без единого запроса наружу: ключа Gemini нет, значит платить не
  * за что, и вкладка «Промо» рисует детерминированную карточку из реальных чисел

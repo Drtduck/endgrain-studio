@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { GEMINI_API_KEY, OPENROUTER_API_KEY, OPENROUTER_TEXT_MODEL, isGeminiConfigured, isOpenRouterConfigured } from '@/lib/promo/config'
-import { LISTING_RESPONSE_SCHEMA, parseListing, type SaleListing } from '@/lib/promo/listing'
+import { isMeaningfulListing, LISTING_RESPONSE_SCHEMA, parseListing, type SaleListing } from '@/lib/promo/listing'
 
 /**
  * Сетевой ход к моделям за карточкой товара, вынесен из server action по тому
@@ -82,12 +82,20 @@ async function requestGemini(prompt: string): Promise<SaleListing | null> {
       console.error('gemini listing: ответ без карточки')
       return null
     }
-    return listing
+    const meaningful = isMeaningfulListing(listing)
+    if (meaningful === null) {
+      console.error('gemini listing: карточка без содержания (плейсхолдеры)')
+      return null
+    }
+    return meaningful
   } catch (err) {
     console.error(`gemini listing: ${err instanceof Error ? err.name : 'unknown error'}`)
     return null
   }
 }
+
+/** System-сообщение под reasoning:false - жёстко задаёт формат ответа отдельно от пользовательского промпта. */
+const OPENROUTER_SYSTEM_PROMPT = 'You write marketplace product listings. Output ONLY a JSON object matching the given schema, no commentary.'
 
 /** Жёсткая инструкция по формату ответа: у OpenRouter нет responseSchema, модель без неё иногда добавляет прозу или ```-заборы. */
 function openRouterListingPrompt(prompt: string): string {
@@ -119,7 +127,19 @@ async function requestOpenRouterModel(prompt: string, model: string): Promise<Sa
     const res = await fetch(OPENROUTER_URL, {
       method: 'POST',
       headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages: [{ role: 'user', content: openRouterListingPrompt(prompt) }], max_tokens: OPENROUTER_MAX_TOKENS }),
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: OPENROUTER_SYSTEM_PROMPT },
+          { role: 'user', content: openRouterListingPrompt(prompt) },
+        ],
+        max_tokens: OPENROUTER_MAX_TOKENS,
+        // nemotron - reasoning-модель: без явного отключения "размышления" съедают
+        // max_tokens целиком, а в ответ прилетает огрызок JSON с плейсхолдерами
+        // ('...' вместо title/description) - баг с прода, воспроизведён и подтверждён
+        // живым запросом. С этим флагом модель отвечает чистым JSON без раздумий.
+        reasoning: { enabled: false },
+      }),
       cache: 'no-store',
       signal: AbortSignal.timeout(OPENROUTER_REQUEST_TIMEOUT_MS),
     })
@@ -144,7 +164,12 @@ async function requestOpenRouterModel(prompt: string, model: string): Promise<Sa
       console.error(`openrouter listing: ответ без карточки (${model})`)
       return null
     }
-    return listing
+    const meaningful = isMeaningfulListing(listing)
+    if (meaningful === null) {
+      console.error(`openrouter listing: карточка без содержания (плейсхолдеры) (${model})`)
+      return null
+    }
+    return meaningful
   } catch (err) {
     console.error(`openrouter listing: ${err instanceof Error ? err.name : 'unknown error'} (${model})`)
     return null
