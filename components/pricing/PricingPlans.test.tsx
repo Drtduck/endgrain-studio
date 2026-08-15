@@ -106,6 +106,13 @@ describe('PricingPlans', () => {
     expect(container.querySelector('[data-testid="pricing-free-badge"]')).not.toBe(null)
   })
 
+  // Мелочь 4 (приёмка 15.08.2026): гость ещё не завёл аккаунт, у него нет
+  // никакого плана вовсе - бейдж «ваш план» на Free ему не положен.
+  it('гостю Free-карточка НЕ помечена как текущий план', () => {
+    const { container } = setup({ reason: 'free', signedIn: false })
+    expect(container.querySelector('[data-testid="pricing-free-badge"]')).toBe(null)
+  })
+
   it('ошибка от экшена показывается текстом по коду', async () => {
     createCheckoutAction.mockResolvedValue({ ok: false, error: 'failed' })
     const { container } = setup()

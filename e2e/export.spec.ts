@@ -107,7 +107,9 @@ test('печатный режим: ключевые секции видимы и
 
   // Полоса ряда красится через bg-neutral-100: без print-color-adjust браузер
   // печатает фон как полностью прозрачный, и полоса превращается в пустой прямоугольник.
-  const rowBar = printed.getByTestId('print-rows').locator('li').first().locator('span').nth(1)
+  // nth(2), не nth(1): между номером ряда и полосой встала буква щита (мелочь 5,
+  // приёмка 15.08.2026) - порядок теперь номер/буква/полоса/F-M.
+  const rowBar = printed.getByTestId('print-rows').locator('li').first().locator('span').nth(2)
   const background = await rowBar.evaluate((el) => window.getComputedStyle(el).backgroundColor)
   expect(background).not.toBe('rgba(0, 0, 0, 0)')
   expect(background).not.toBe('transparent')

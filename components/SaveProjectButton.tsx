@@ -10,6 +10,7 @@ import { track } from '@/lib/analytics/events'
 import { loginRedirectPath } from '@/lib/auth/access'
 import { designDisplayName } from '@/lib/designs/name'
 import { t, type MessageKey } from '@/lib/i18n'
+import { useProjectsStore } from '@/lib/store/projects'
 import { selectDesign, selectProjectSaveStatus, useStudio } from '@/lib/store/studio'
 
 /**
@@ -39,6 +40,7 @@ export function SaveProjectButton() {
   const currentProjectId = useStudio((s) => s.currentProjectId)
   const saveStatus = useStudio(selectProjectSaveStatus)
   const markProjectSaved = useStudio((s) => s.markProjectSaved)
+  const upsertProjectListItem = useProjectsStore((s) => s.upsertItem)
   const pathname = usePathname()
 
   const [error, setError] = useState<ProjectsError | null>(null)
@@ -50,12 +52,26 @@ export function SaveProjectButton() {
     const idAtClick = currentProjectId
     const designAtClick = design
     startTransition(async () => {
-      const res = await upsertProjectAction({ projectId: idAtClick, name, design: designAtClick })
-      if (res.ok) {
-        markProjectSaved(res.data.id, designAtClick)
-        track('project_saved')
-      } else {
-        setError(res.error)
+      try {
+        const res = await upsertProjectAction({ projectId: idAtClick, name, design: designAtClick })
+        if (res.ok) {
+          markProjectSaved(res.data.id, designAtClick)
+          // Список «Мои проекты» - общий стор (мелочь 2, приёмка 15.08.2026): без
+          // этой строки вкладка «Проекты» показывала список, устаревший на момент
+          // последнего её открытия, а не то, что реально сохранено только что.
+          upsertProjectListItem(res.data)
+          track('project_saved')
+        } else {
+          setError(res.error)
+        }
+      } catch (err) {
+        // Реджект самого server action (например, UnrecognizedActionError при
+        // перекосе деплоя между клиентским и серверным бандлом) раньше не
+        // ловился ничем: startTransition проглатывал исключение, кнопка молчала
+        // (мелочь 1, приёмка 15.08.2026). Любой отказ обязан показать человеку
+        // текст, а не тишину.
+        console.error('project save action failed', err)
+        setError('failed')
       }
     })
   }

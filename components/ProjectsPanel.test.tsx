@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, fireEvent, render, waitFor } from '@testing-library/react'
 import { makeCheckerboard } from '@/lib/designs/samples'
+import { useProjectsStore } from '@/lib/store/projects'
 import { selectDesign, useStudio } from '@/lib/store/studio'
 import { ProjectsPanel } from './ProjectsPanel'
 
@@ -40,6 +41,9 @@ describe('ProjectsPanel', () => {
     deleteProjectAction.mockReset()
     act(() => {
       useStudio.getState().resetStudio(makeCheckerboard({ cols: 2, rows: 2 }))
+      // Список - общий стор (lib/store/projects.ts), а не локальный useState:
+      // без сброса тесты видят проекты, оставленные предыдущим кейсом.
+      useProjectsStore.setState({ items: [], loaded: false })
     })
   })
 
@@ -98,6 +102,22 @@ describe('ProjectsPanel', () => {
       expect(alert).not.toBe(null)
       expect(alert?.textContent).toBe('Облако не ответило. Попробуйте ещё раз')
     })
+  })
+
+  // Мелочь 2 (приёмка 15.08.2026): раньше сохранение кнопкой SaveProjectButton в
+  // редакторе не имело способа обновить список внутри ProjectsPanel - теперь оба
+  // пишут в общий useProjectsStore, и панель видит проект без похода на сервер.
+  it('проект, добавленный извне в общий стор (как это делает SaveProjectButton), виден без "Обновить список"', () => {
+    act(() => {
+      useProjectsStore.getState().upsertItem({
+        id: '55555555-5555-5555-5555-555555555555',
+        name: 'Сохранено из редактора',
+        updatedAt: new Date().toISOString(),
+      })
+    })
+    const { container } = render(<ProjectsPanel />)
+    expect(container.textContent).toContain('Сохранено из редактора')
+    expect(listProjectsAction).not.toHaveBeenCalled()
   })
 
   it('удаление требует двух кликов', async () => {

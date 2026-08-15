@@ -212,7 +212,11 @@ export function PricingPlans(props: PricingPlansProps) {
 
   const proBadge = currentPlan === 'pro' || currentPlan === 'granted'
   const devBadge = apiSubscribed
-  const freeBadge = currentPlan === 'free' && !apiSubscribed
+  // Бейдж «ваш план» на Free уместен только вошедшему (мелочь 4, приёмка
+  // 15.08.2026): анониму currentPlan тоже считается 'free' по дефолту (нет
+  // подписки, нет служебного доступа), но это не значит, что у него ЕСТЬ
+  // именно этот план - он ещё даже не завёл аккаунт.
+  const freeBadge = currentPlan === 'free' && !apiSubscribed && signedIn
 
   return (
     <div data-testid="pricing-plans" className="flex flex-col gap-4">

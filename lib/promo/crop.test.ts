@@ -65,6 +65,19 @@ describe('cropForMarketplace', () => {
     expect(meta.format).toBe('png')
   }, 15_000)
 
+  // Мелочь 6 (приёмка 15.08.2026): Etsy (padColor: null) отдавал 1365x1024 вместо
+  // целевых 2000x1500 - без белого поля и без апскейла канва честно ужималась
+  // до вписанного в аспект исходника прямоугольника, что не проходит минимальные
+  // требования площадки. Площадки с padColor (Amazon, eBay) не задеты - см.
+  // тест выше «не апскейлит исходник меньше цели».
+  it('Etsy (padColor: null): исходник меньше цели - апскейлит канву до заявленного target, а не ужимает', async () => {
+    const input = await squareFixture(1024) // как реальный кадр nano banana 2 (1K)
+    const spec = marketplaceById('etsy').image
+    const result = await cropForMarketplace(input, spec)
+    expect(result.width).toBe(spec.target.width)
+    expect(result.height).toBe(spec.target.height)
+  }, 15_000)
+
   it('не превышает maxBytes площадки', async () => {
     const input = await squareFixture(1200)
     const spec = { ...marketplaceById('ebay').image, maxBytes: 20_000 }

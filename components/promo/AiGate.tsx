@@ -64,7 +64,14 @@ export function useAiGate(remainingOverride: number | null = null, feature: AiFe
         return { locked: true, noteKey: 'ai.gate.trialLocked', params, showPricing: true, showBuyFrames: false, showPaywall: false, access: ai }
       }
       // Не заперто: пробные генерации ещё есть, кнопка активна, счётчик под ней.
-      return { locked: false, noteKey: 'ai.trial.left', params, showPricing: false, showBuyFrames: false, showPaywall: false, access: ai }
+      // ai.credits > 0 значит, что у аккаунта на балансе есть купленные кадры
+      // ПОВЕРХ пробных (P0-блокер приёмки 15.08.2026): ai.remaining тогда включает
+      // и то, и другое, а ai.trial.left считает его строго против лимита пробного
+      // тира ({limit}=3) - отсюда враньё вида «Осталось 13 из 3 пробных генераций».
+      // Честная формулировка - та же, что и в состоянии 'credits'/на /account/billing.
+      return ai.credits > 0
+        ? { locked: false, noteKey: 'ai.quota', params, showPricing: false, showBuyFrames: false, showPaywall: false, access: ai }
+        : { locked: false, noteKey: 'ai.trial.left', params, showPricing: false, showBuyFrames: false, showPaywall: false, access: ai }
     case 'trialSpent':
       // Заперто, и вместо строки-замка панель рисует TrialPaywall целиком.
       return { locked: true, noteKey: 'ai.gate.trialSpent', params, showPricing: false, showBuyFrames: false, showPaywall: true, access: ai }

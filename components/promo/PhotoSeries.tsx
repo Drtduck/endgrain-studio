@@ -120,6 +120,14 @@ export function PhotoSeries() {
 
   const cost = aiCost('promoShots', selected.length)
   const meta = new Map(PROMO_SHOT_META.map((m) => [m.kind, m]))
+  // Формулировка списания подбирается по факту, а не захардкожена под месячную
+  // квоту Pro (P0-блокер приёмки 15.08.2026): аккаунт без подписки может тратить
+  // пробные или купленные кадры, и текст обязан говорить правду про источник.
+  // access.credits проверяется раньше tier === 'trial': состояние 'trial' само по
+  // себе означает только «пробное не исчерпано», а купленные кадры могут лежать
+  // на балансе поверх него (ровно тот сценарий, что породил блокер).
+  const costKey: MessageKey =
+    gate.access.credits > 0 ? 'promo.cost.credits' : gate.access.tier === 'trial' ? 'promo.cost.trial' : 'promo.cost'
 
   const toggle = (kind: PromoShotKind): void => {
     setSelected((prev) => {
@@ -229,7 +237,7 @@ export function PhotoSeries() {
         <p data-testid="promo-cost" className="text-[13px] text-ink-secondary">
           {selected.length === 0
             ? t(locale, 'promo.pickAtLeastOne')
-            : t(locale, 'promo.cost', { count: selected.length, cost })}
+            : t(locale, costKey, { count: selected.length, cost })}
         </p>
       </fieldset>
 

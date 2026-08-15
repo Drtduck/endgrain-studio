@@ -59,9 +59,14 @@ export default async function BillingPage() {
                   {t(locale, 'pricing.manage')}
                 </a>
               ) : null}
-              <a href="/pricing" className="text-accent hover:underline">
-                {t(locale, 'account.upgrade')}
-              </a>
+              {/* «Go Pro» уместно только тому, у кого сейчас нет активного платного плана
+                  (мелочь 3, приёмка 15.08.2026): у уже вошедшего в Pro/API кнопка звала
+                  оформить то, что уже оформлено. */}
+              {activePlan === null ? (
+                <a href="/pricing" className="text-accent hover:underline">
+                  {t(locale, 'account.upgrade')}
+                </a>
+              ) : null}
             </div>
           </section>
 
