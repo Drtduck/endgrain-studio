@@ -61,6 +61,21 @@ describe('PrintInstruction', () => {
     expect(screen.getByTestId('print-steps').querySelectorAll('li').length).toBeGreaterThan(0)
   })
 
+  // Мелочь 5 (приёмка 15.08.2026): раздел «Ряды доски» рисовал восемь одинаковых
+  // серых полосок без буквы щита - непонятно, какая полоска в какую панель идёт.
+  it('каждый ряд подписан буквой щита', async () => {
+    setUrl(currentHash())
+    renderPro(true)
+    await waitFor(() => expect(screen.getByTestId('print-rows')).toBeInTheDocument())
+    const rowItems = screen.getByTestId('print-rows').querySelectorAll('ul > li')
+    expect(rowItems.length).toBeGreaterThan(0)
+    for (const li of Array.from(rowItems)) {
+      // Вторая колонка (после номера ряда) - буква щита, непустая строка.
+      const panelLabel = li.querySelectorAll('span')[1]?.textContent ?? ''
+      expect(panelLabel.trim()).not.toBe('')
+    }
+  })
+
   it('поднимает проект из localStorage, когда хэша нет', async () => {
     const { saveToLocalStorage } = await import('@/lib/persist')
     saveToLocalStorage(selectDesign(useStudio.getState()))

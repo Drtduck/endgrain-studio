@@ -182,3 +182,79 @@ describe('useStudioPersistence: привязка к облачному прое�
     unmount()
   })
 })
+
+/**
+ * P0-блокер приёмки 15.08.2026 (слой а): выход из аккаунта и вход под другим
+ * не чистили eg-current-project - чужой projectId переживал смену пользователя,
+ * плашка показывала чужой проект, а генерация молча уходила в отказ на сервере.
+ * ref теперь привязан к userId, и при несовпадении (или входе в тот же браузер
+ * под другим человеком) он не восстанавливается и сразу стирается.
+ */
+describe('useStudioPersistence: ref привязан к userId (P0-блокер приёмки 15.08.2026)', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+    window.location.hash = ''
+    useStudio.getState().resetStudio(baseDesign())
+  })
+  afterEach(() => {
+    window.location.hash = ''
+    useStudio.getState().resetStudio(baseDesign())
+  })
+
+  it('ref, сохранённый пользователем A, не восстанавливается под пользователем B и стирается', () => {
+    const design = baseDesign({ id: 'проект-A', name: 'проект A' })
+    window.localStorage.setItem(LS_CURRENT_KEY, serializeDesign(design))
+    window.localStorage.setItem(
+      PROJECT_ID_KEY,
+      JSON.stringify({ id: 'project-A', name: 'проект A', savedAt: Date.now(), userId: 'user-A' }),
+    )
+
+    const { unmount } = renderHook(() => useStudioPersistence('user-B'))
+    expect(useStudio.getState().currentProjectId).toBeNull()
+    expect(window.localStorage.getItem(PROJECT_ID_KEY)).toBeNull()
+
+    unmount()
+  })
+
+  it('ref пользователя A восстанавливается снова под тем же пользователем A', () => {
+    const design = baseDesign({ id: 'проект-A', name: 'проект A' })
+    window.localStorage.setItem(LS_CURRENT_KEY, serializeDesign(design))
+    window.localStorage.setItem(
+      PROJECT_ID_KEY,
+      JSON.stringify({ id: 'project-A', name: 'проект A', savedAt: Date.now(), userId: 'user-A' }),
+    )
+
+    const { unmount } = renderHook(() => useStudioPersistence('user-A'))
+    expect(useStudio.getState().currentProjectId).toBe('project-A')
+
+    unmount()
+  })
+
+  it('гостевой ref (без userId) не восстанавливается после логина', () => {
+    const design = baseDesign({ id: 'проект-гостя', name: 'проект гостя' })
+    window.localStorage.setItem(LS_CURRENT_KEY, serializeDesign(design))
+    window.localStorage.setItem(
+      PROJECT_ID_KEY,
+      JSON.stringify({ id: 'project-guest', name: 'проект гостя', savedAt: Date.now(), userId: null }),
+    )
+
+    const { unmount } = renderHook(() => useStudioPersistence('user-A'))
+    expect(useStudio.getState().currentProjectId).toBeNull()
+    expect(window.localStorage.getItem(PROJECT_ID_KEY)).toBeNull()
+
+    unmount()
+  })
+
+  it('markProjectSaved пишет ref с userId текущего пользователя', () => {
+    const { unmount } = renderHook(() => useStudioPersistence('user-A'))
+
+    act(() => {
+      useStudio.getState().markProjectSaved('project-new', useStudio.getState().history.present)
+    })
+    const raw = window.localStorage.getItem(PROJECT_ID_KEY)
+    expect(raw).not.toBeNull()
+    expect(JSON.parse(raw as string).userId).toBe('user-A')
+
+    unmount()
+  })
+})

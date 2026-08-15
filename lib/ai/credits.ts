@@ -10,10 +10,22 @@ export interface CreditsState {
 export interface CreditTransactionRow {
   readonly id: string
   readonly kind: 'purchase' | 'grant' | 'spend' | 'refund'
+  /**
+   * В кадрах, со знаком, но только про КУПЛЕННЫЕ кадры: списание, полностью
+   * покрытое бесплатной месячной квотой Pro, хранится нулём по дизайну БД
+   * (см. комментарий у столбца в 20260815100000_ai_credits.sql - строка нужна
+   * для идемпотентности, даже если из платного баланса ничего не ушло). Для
+   * честной истории «сколько кадров вообще нарисовано» это не то поле - см.
+   * freeUnits/creditUnits и components/credits/CreditsHistory.tsx.
+   */
   readonly amount: number
   readonly balanceAfter: number
   readonly feature: string | null
   readonly createdAt: string
+  /** Сколько из этого списания покрыто бесплатной месячной квотой Pro (kind='spend'). */
+  readonly freeUnits: number
+  /** Сколько из этого списания покрыто купленными кадрами (kind='spend'). */
+  readonly creditUnits: number
 }
 
 /**
@@ -36,7 +48,7 @@ export async function readCreditTransactions(userId: string): Promise<readonly C
   const sb = getSupabaseService()
   const { data, error } = await sb
     .from('ai_credit_transactions')
-    .select('id, kind, amount, balance_after, feature, created_at')
+    .select('id, kind, amount, balance_after, feature, created_at, free_units, credit_units')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(TRANSACTIONS_LIMIT)
@@ -48,5 +60,7 @@ export async function readCreditTransactions(userId: string): Promise<readonly C
     balanceAfter: Number(row.balance_after),
     feature: row.feature === null || row.feature === undefined ? null : String(row.feature),
     createdAt: String(row.created_at),
+    freeUnits: Number(row.free_units ?? 0),
+    creditUnits: Number(row.credit_units ?? 0),
   }))
 }

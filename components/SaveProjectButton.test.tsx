@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, fireEvent, render, waitFor } from '@testing-library/react'
 import { makeCheckerboard } from '@/lib/designs/samples'
+import { useProjectsStore } from '@/lib/store/projects'
 import { selectDesign, useStudio } from '@/lib/store/studio'
 import { SaveProjectButton } from './SaveProjectButton'
 
@@ -19,6 +20,7 @@ describe('SaveProjectButton', () => {
     upsertProjectAction.mockReset()
     act(() => {
       useStudio.getState().resetStudio(makeCheckerboard({ cols: 2, rows: 2 }))
+      useProjectsStore.setState({ items: [], loaded: false })
     })
   })
 
@@ -96,5 +98,35 @@ describe('SaveProjectButton', () => {
       expect(alert).not.toBe(null)
       expect(alert?.textContent).toBe('Облако не ответило. Попробуйте ещё раз')
     })
+  })
+
+  // Мелочь 1 (приёмка 15.08.2026): реджект самого server action (перекос деплоя,
+  // UnrecognizedActionError) раньше не ловился ничем и кнопка молчала.
+  it('реджект самого экшена (например, UnrecognizedActionError при перекосе деплоя) показывает общую ошибку, а не тишину', async () => {
+    upsertProjectAction.mockRejectedValue(new Error('UnrecognizedActionError'))
+    const { container } = render(<SaveProjectButton />)
+
+    fireEvent.click(container.querySelector('[data-testid="project-save"]') as Element)
+
+    await waitFor(() => {
+      const alert = container.querySelector('[role="alert"]')
+      expect(alert).not.toBe(null)
+      expect(alert?.textContent).toBe('Облако не ответило. Попробуйте ещё раз')
+    })
+  })
+
+  // Мелочь 2 (приёмка 15.08.2026): список «Мои проекты» не обновлялся после
+  // сохранения из редактора - теперь оба места пишут в общий стор.
+  it('успешное сохранение попадает в общий стор списка проектов', async () => {
+    upsertProjectAction.mockResolvedValue({
+      ok: true,
+      data: { id: '44444444-4444-4444-4444-444444444444', name: 'Шахматка', updatedAt: new Date().toISOString() },
+    })
+    const { container } = render(<SaveProjectButton />)
+
+    fireEvent.click(container.querySelector('[data-testid="project-save"]') as Element)
+
+    await waitFor(() => expect(useProjectsStore.getState().items).toHaveLength(1))
+    expect(useProjectsStore.getState().items[0]?.id).toBe('44444444-4444-4444-4444-444444444444')
   })
 })

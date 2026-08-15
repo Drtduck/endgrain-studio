@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProProvider } from '@/components/ProProvider'
 import { SessionProvider } from '@/components/SessionProvider'
 import { AI_MONTHLY_LIMIT, FREE_TRIAL_LIMIT, aiAccess, type AiAccessState } from '@/lib/ai/quota'
@@ -15,11 +15,11 @@ const FREE_STATUS: ProStatus = { pro: false, reason: 'free', plan: null, current
  * Состояния кроме 'mock'/'anonymous' подразумевают вошедшего человека - сессия
  * приезжает тем же пропсом, что и в проде (SessionProvider из корневого layout).
  */
-function renderWithAccess(state: AiAccessState, used = 0, limit: number = AI_MONTHLY_LIMIT) {
+function renderWithAccess(state: AiAccessState, used = 0, limit: number = AI_MONTHLY_LIMIT, credits = 0) {
   const user = state === 'anonymous' || state === 'mock' ? null : { id: 'user-1', email: 'a@b.co' }
   return render(
     <SessionProvider value={{ user, enabled: true }}>
-      <ProProvider value={{ status: FREE_STATUS, billingEnabled: true, ai: aiAccess(state, used, limit) }}>
+      <ProProvider value={{ status: FREE_STATUS, billingEnabled: true, ai: aiAccess(state, used, limit, credits) }}>
         <PromoPanel />
       </ProProvider>
     </SessionProvider>,
@@ -29,6 +29,19 @@ function renderWithAccess(state: AiAccessState, used = 0, limit: number = AI_MON
 const merchResult = { current: { printful: false } as MerchResult }
 const merchInput = vi.fn<(input: unknown) => void>()
 const createSeriesInput = vi.fn<(input: unknown) => void>()
+
+/**
+ * Гидратация уже существующих на сервере серий/кадров при монтировании
+ * панели (P0-блокер приёмки 15.08.2026): по умолчанию пусто, тесты про
+ * «кадры пропадают после F5» переопределяют .current перед рендером.
+ */
+const listActiveSeriesResult: { current: { ok: true; data: { series: unknown[]; shots: unknown[] } } } = {
+  current: { ok: true, data: { series: [], shots: [] } },
+}
+const listPromoSeriesResult: { current: { ok: true; data: { series: unknown[]; shots: unknown[] } } } = {
+  current: { ok: true, data: { series: [], shots: [] } },
+}
+const listPromoSeriesInput = vi.fn<(projectId: string) => void>()
 
 interface CreateSeriesInput {
   readonly shots?: readonly { kind: string }[]
@@ -86,10 +99,14 @@ vi.mock('@/app/actions/promo', () => ({
     return Promise.resolve(merchResult.current)
   },
   analyzeReferenceAction: () => Promise.resolve({ ok: true, mock: true, style: DEMO_STYLE }),
-  // Гидратация серий при монтировании панели: в этом тесте она не проверяется,
-  // но без заглушек эффект падает на отсутствующем экспорте мока.
-  listActiveSeriesAction: () => Promise.resolve({ ok: true, data: { series: [], shots: [] } }),
-  listPromoSeriesAction: () => Promise.resolve({ ok: true, data: { series: [], shots: [] } }),
+  // Гидратация серий при монтировании панели: по умолчанию пусто (большинство тестов
+  // её не проверяет), но некоторые тесты (P0-блокер приёмки 15.08.2026, «кадры пропадают
+  // после F5») переопределяют .current, чтобы проверить подъём уже готовой серии.
+  listActiveSeriesAction: () => Promise.resolve(listActiveSeriesResult.current),
+  listPromoSeriesAction: (projectId: string) => {
+    listPromoSeriesInput(projectId)
+    return Promise.resolve(listPromoSeriesResult.current)
+  },
   editPromoShotAction: () => Promise.resolve({ ok: false, error: 'invalid' }),
 }))
 
@@ -258,6 +275,31 @@ describe('PromoPanel: гейт AI', () => {
     fireEvent.click(screen.getByTestId('promo-generate'))
     await waitFor(() => expect(screen.getByTestId('promo-error')).toBeTruthy())
     expect(screen.getByTestId('promo-error').textContent ?? '').not.toBe('')
+  })
+
+  /**
+   * P0-блокер приёмки 15.08.2026: Free с купленными кадрами видел «Осталось 13
+   * из 3 пробных генераций» и «Спишется 1 из месячной квоты», хотя ни пробного
+   * лимита 3, ни месячной квоты у аккаунта нет вовсе.
+   */
+  it('trial с купленными кадрами: счётчик честный, а не "N из 3 пробных"', () => {
+    renderWithAccess('trial', 0, FREE_TRIAL_LIMIT, 10)
+    const note = screen.getByTestId('promo-trial-note').textContent ?? ''
+    expect(note).not.toContain('из 3 пробных')
+    expect(note).toContain('10')
+  })
+
+  it('trial с купленными кадрами: строка списания говорит про купленные кадры, не про месячную квоту', () => {
+    renderWithAccess('trial', 0, FREE_TRIAL_LIMIT, 10)
+    const cost = screen.getByTestId('promo-cost').textContent ?? ''
+    expect(cost).not.toContain('месячной квоты')
+    expect(cost).toContain('купленных')
+  })
+
+  it('чистый Pro без купленных кадров: строка списания по-прежнему про месячную квоту', () => {
+    renderWithAccess('pro', 4)
+    const cost = screen.getByTestId('promo-cost').textContent ?? ''
+    expect(cost).toContain('месячной квоты')
   })
 })
 
@@ -523,5 +565,70 @@ describe('PromoPanel: мокапы Printful', () => {
     expect(screen.getByTestId('merch-gate').textContent ?? '').not.toBe('')
     // Соседняя панель кадров, наоборот, остаётся открытой: promoShots в trial входит.
     expect(screen.getByTestId('promo-generate').hasAttribute('disabled')).toBe(false)
+  })
+})
+
+/**
+ * P0-блокер приёмки 15.08.2026 («кадры пропадают из виду после F5»): у чистого
+ * localStorage документ endgrain.current.v1 не пишется, пока не тронешь редактор,
+ * но проект и честно нарисованные кадры уже есть в облаке. currentProjectId в
+ * сторе гидрируется независимо от локального документа (lib/store/persist.ts),
+ * а PhotoSeries обязан подхватить уже существующую серию по этому projectId,
+ * даже если ни один локальный документ не восстанавливался в этом тесте вообще.
+ */
+describe('PromoPanel: подъём существующей серии без локального документа (P0-блокер приёмки 15.08.2026)', () => {
+  const DONE_SHOT = {
+    id: 'shot-hero-1',
+    seriesId: 'series-existing',
+    kindSlug: 'hero',
+    ordinal: 0,
+    status: 'done' as const,
+    parentShotId: null,
+    variantNo: 1,
+    editPrompt: null,
+    url: 'https://storage.example/hero.png',
+    width: 1024,
+    height: 1024,
+    provider: 'fal',
+    prompt: 'a board',
+    error: null,
+    retries: 0,
+  }
+  const EXISTING_SERIES = {
+    id: 'series-existing',
+    projectId: 'project-restored',
+    source: 'presets' as const,
+    status: 'done' as const,
+    requested: 1,
+    succeeded: 1,
+    failed: 0,
+    createdAt: '2026-08-01T00:00:00.000Z',
+    finishedAt: '2026-08-01T00:01:00.000Z',
+  }
+
+  beforeEach(() => {
+    listActiveSeriesResult.current = { ok: true, data: { series: [], shots: [] } }
+    listPromoSeriesResult.current = { ok: true, data: { series: [EXISTING_SERIES], shots: [DONE_SHOT] } }
+    listPromoSeriesInput.mockClear()
+    act(() => {
+      useStudio.getState().resetStudio()
+      // Симулирует то, что делает lib/store/persist.ts при монтировании StudioShell
+      // с чистым localStorage: currentProjectId гидрируется из eg-current-project
+      // НЕЗАВИСИМО от локального документа доски - его в этом тесте нет вовсе.
+      useStudio.getState().restoreCurrentProjectId('project-restored')
+    })
+  })
+
+  afterEach(() => {
+    listActiveSeriesResult.current = { ok: true, data: { series: [], shots: [] } }
+    listPromoSeriesResult.current = { ok: true, data: { series: [], shots: [] } }
+  })
+
+  it('уже готовый кадр подхватывается по восстановленному projectId, без клика «Собрать серию»', async () => {
+    renderWithAccess('pro', 4)
+    await waitFor(() => expect(listPromoSeriesInput).toHaveBeenCalledWith('project-restored'))
+    await waitFor(() => expect(screen.getByTestId('promo-shot-done')).toBeTruthy())
+    // Плашка проекта разрешилась в успех, а не висит вечно на "Saving...".
+    expect(screen.getByTestId('promo-project-plaque').textContent ?? '').not.toBe('')
   })
 })

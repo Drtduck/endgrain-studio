@@ -68,6 +68,14 @@ export interface StoredProjectRef {
   readonly id: string
   readonly name: string
   readonly savedAt: number
+  /**
+   * Кому принадлежит эта привязка. null - гостевая сессия. Без этого поля
+   * (P0-блокер приёмки 15.08.2026) выход из аккаунта и вход под другим не
+   * чистили eg-current-project: чужой projectId переживал смену пользователя,
+   * панель показывала чужой проект, а генерация молча уходила в отказ на
+   * сервере (чужой project_id), без единой ошибки в UI.
+   */
+  readonly userId: string | null
 }
 
 export function saveProjectRef(ref: StoredProjectRef): void {
@@ -82,7 +90,10 @@ export function loadProjectRef(): StoredProjectRef | null {
   try {
     const parsed = JSON.parse(raw) as Partial<StoredProjectRef>
     if (typeof parsed.id !== 'string' || typeof parsed.name !== 'string' || typeof parsed.savedAt !== 'number') return null
-    return { id: parsed.id, name: parsed.name, savedAt: parsed.savedAt }
+    // Записи, сохранённые до этого фикса, ещё не знают про userId - трактуем
+    // их как гостевые (null), а не как «принадлежащие кому угодно».
+    const userId = typeof parsed.userId === 'string' ? parsed.userId : null
+    return { id: parsed.id, name: parsed.name, savedAt: parsed.savedAt, userId }
   } catch {
     return null
   }
@@ -129,21 +140,37 @@ function clearHashFromAddressBar(): void {
 /**
  * Единственное место, где стор встречается с браузером: подъём документа при монтировании
  * (после гидратации, поэтому серверная и клиентская разметка совпадают) и автосохранение.
+ *
+ * currentUserId - id вошедшего пользователя (null для гостя), приезжает из
+ * SessionProvider. Привязывает eg-current-project к конкретному аккаунту:
+ * ref, сохранённый другим пользователем на этом же браузере, не восстанавливается,
+ * а стирается - без этого выход из аккаунта и вход под другим оставлял чужой
+ * projectId живым (P0-блокер приёмки 15.08.2026).
  */
-export function useStudioPersistence(): void {
+export function useStudioPersistence(currentUserId: string | null = null): void {
   useEffect(() => {
     const { design: restored, fromHash } = readInitialDesignDetailed(window.location.hash)
     if (restored) useStudio.getState().loadDesign(restored)
     if (restored && fromHash) clearHashFromAddressBar()
 
-    // projectId восстанавливается ТОЛЬКО если документ пришёл из localStorage, не из хэша:
-    // пришедший по ссылке чужой узор не имеет права перезаписать мою привязку к проекту
-    // (docs/specs/promo-studio.md, раздел 3.2). loadDesign выше уже сбросил currentProjectId
-    // в null для любого источника - здесь мы либо оставляем его null (хэш/пусто), либо
-    // восстанавливаем поверх.
-    if (restored && !fromHash) {
+    // projectId восстанавливается, пока документ НЕ пришёл из хэш-ссылки (docs/specs/promo-studio.md,
+    // раздел 3.2): пришедший по ссылке чужой узор не имеет права перезаписать мою привязку к проекту.
+    // От наличия ЛОКАЛЬНОГО документа это больше не зависит (P0-блокер приёмки 15.08.2026): у чистого
+    // localStorage (новый человек, сразу пошёл в Промо, ни разу не тронул редактор) документ
+    // endgrain.current.v1 не пишется, пока не тронешь редактор, но проект и честно нарисованные кадры
+    // в облаке уже есть - без этой привязки currentProjectId никогда не гидрируется, и плашка
+    // промо-студии виснет на «Saving...» навсегда. loadDesign выше уже сбросил currentProjectId
+    // в null, если документ был восстановлен - здесь мы либо оставляем его null (хэш), либо
+    // восстанавливаем поверх, независимо от того, был ли восстановлен сам документ.
+    if (!fromHash) {
       const ref = loadProjectRef()
-      if (ref) useStudio.getState().restoreCurrentProjectId(ref.id)
+      if (ref !== null && ref.userId !== currentUserId) {
+        // Чужая (или уже неактуальная гостевая) привязка: не восстанавливаем и
+        // сразу чистим, чтобы она не всплыла молча ещё раз при следующей перезагрузке.
+        clearProjectRef()
+      } else if (ref !== null) {
+        useStudio.getState().restoreCurrentProjectId(ref.id)
+      }
     }
 
     const saver = makeDebouncedSaver(saveToLocalStorage)
@@ -169,7 +196,7 @@ export function useStudioPersistence(): void {
         if (state.currentProjectId === null) {
           clearProjectRef()
         } else {
-          saveProjectRef({ id: state.currentProjectId, name: design.name, savedAt: Date.now() })
+          saveProjectRef({ id: state.currentProjectId, name: design.name, savedAt: Date.now(), userId: currentUserId })
         }
       }
     })
@@ -181,5 +208,6 @@ export function useStudioPersistence(): void {
       window.removeEventListener('pagehide', onHide)
       saver.flush()
     }
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId])
 }

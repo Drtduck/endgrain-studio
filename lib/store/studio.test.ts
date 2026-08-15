@@ -264,6 +264,15 @@ describe('currentProjectId / markProjectSaved: статус привязки к 
     expect(store.getState().currentProjectId).toBeNull()
     expect(selectProjectSaveStatus(store.getState())).toBe('none')
   })
+
+  it('clearCurrentProjectId снимает битую привязку, не трогая документ (P0-блокер приёмки 15.08.2026)', () => {
+    const store = createStudioStore(baseDesign())
+    const design = selectDesign(store.getState())
+    store.getState().markProjectSaved('чужой-project', design)
+    store.getState().clearCurrentProjectId()
+    expect(store.getState().currentProjectId).toBeNull()
+    expect(selectDesign(store.getState())).toBe(design)
+  })
 })
 
 describe('вкладки студии', () => {
