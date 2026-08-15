@@ -260,6 +260,7 @@ kind=gallery_purchase), идемпотентная запись project_purchase
 дизайн частичного возврата (какая часть резерва свободна, кадры или деньги)
 до того, как это станет кодом.
 
+<<<<<<< Updated upstream
 ## 20. Мерч-флоу: спроектирован, реализован, отложен целиком
 
 Решение Стаса 15 августа 2026: мерч в техдолг, секция «Мерч с этим узором»
@@ -292,3 +293,56 @@ Printful» вела в кабинет Printful, которого у покупа
 ревью, применить миграцию bump_attempts, вернуть секцию в PromoPanel, снять
 skip с e2e/merch.spec.ts, прогнать живую покупку тестовой картой Stripe
 (заказ уйдёт драфтом, Printful не бильнёт) и только потом MERCH_ENABLED.
+=======
+## 20. Security-хардеринг денежного слоя (defense-in-depth, нужна миграция прод-БД)
+
+Аудит безопасности 15 августа 2026 (пять Opus-агентов, отчёт на рабочем столе:
+`~/Desktop/Endgrain/todo/security-audit-2026-08-15.html`). Реально
+эксплуатируемые дыры закрыты в PR #49 чистым серверным кодом: ключ
+идемпотентности списания больше не приходит с клиента (`generateListingAction`,
+`generateVideoAction` теперь генерируют ref на сервере), плюс open redirect в
+auth-callback через `/\evil.com` и timing-safe сравнение `CRON_SECRET`.
+
+Ниже три пункта, которые осознанно НЕ вошли в PR #49: каждый требует DDL по
+живой денежной прод-базе, а такое хочется катить отдельным заходом с обкаткой
+на Supabase-ветке, а не мешать с обратимым app-кодом. После серверного ref
+межаккаунтный вектор (первые два пункта) через эти actions уже недостижим, так
+что это hardening поверх уже закрытой дыры, а не открытая рана.
+
+**20.1. Скоуп replay-выборки по `user_id`.** В `consume_ai_units`
+(`supabase/migrations/20260815160000_promo_fixes.sql`) и `wallet_spend`
+(`supabase/migrations/20260813110000_wallet.sql`) ветка идемпотентности ищет
+строку списания только по `(kind, ref)`, без `user_id`. Уникальные индексы
+`ai_credit_tx_kind_ref_idx` и `wallet_tx_kind_ref_idx` тоже глобальные по
+`(kind, ref)`. Сделать: добавить `and user_id = p_user_id` в replay-SELECT
+(`consume_ai_units`), пересоздать оба индекса как `(user_id, kind, ref)`, и не
+считать replay строку с `released = true`. Тогда чужой/утёкший ref в принципе
+не может открыть списание другому аккаунту, независимо от того, как
+формируется ref в приложении.
+
+**20.2. `bump_save_count` доступна напрямую (накрутка счётчиков галереи).**
+`supabase/migrations/20260813100000_gallery.sql:219-237`: функция
+`security definer`, `grant execute ... to authenticated`, инкрементит
+`saves_count` у любой строки без проверки владения и видимости. Та же миграция
+специально забирает у `authenticated` право писать в счётчики, а эта RPC его
+возвращает через чёрный ход, вызываемый прямым PostgREST-запросом. Сделать:
+либо перенести инкремент на сервер под service-role (путь копирования уже идёт
+через server action `copyPublishedAction`, `app/actions/gallery.ts:250`), либо
+`revoke execute ... from authenticated`, либо оставить функцию, но проверить
+внутри, что `auth.uid()` реально скопировал `p_id` и публикация видима (как в
+`published_project_design`). Импакт низкий (vanity-счётчик, не деньги), поэтому
+и отложено, но закрывать надо на стороне БД - app-код один эту дыру не закроет.
+
+**20.3. Гонка в `retryPromoShotAction` даёт бесплатный кадр.**
+`app/actions/promo.ts:242-258`: статус меняется на `queued` одним update, а
+`retries = retries + 1` - отдельным update строкой ниже. В окне между ними
+`POST /api/promo/shot` захватывает кадр со старым `retries`, то есть с ref
+предыдущей попытки (за которую деньги уже вернулись через `release_ai_units`),
+и `consume_ai_units` отвечает replay: кадр рисуется провайдером бесплатно.
+Правильный фикс - единый атомарный `update ... set status='queued',
+retries = retries + 1 where status='failed' and retries < 3 returning *`, а это
+выразимо только SQL-RPC (PostgREST не умеет `retries + 1` вместе со сменой
+статуса без потери гварда от двойного клика). Поэтому нужен новый RPC
+`retry_promo_shot(p_shot_id, p_user_id)` и правка `promo.ts` под него.
+Ограничено `retries < 3` и требует точного попадания в окно, отсюда Medium.
+>>>>>>> Stashed changes
