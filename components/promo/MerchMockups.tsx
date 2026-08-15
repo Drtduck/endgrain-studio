@@ -23,7 +23,9 @@ import {
 import { useDerived } from '@/lib/store/derived'
 import { useStudio } from '@/lib/store/studio'
 
-const PRINTFUL_GENERATOR_URL = 'https://www.printful.com/dashboard/generator'
+// Прямого url у генератора мокапов внутри кабинета нет: /dashboard/generator отдаёт 404,
+// поэтому ведём на корень кабинета (гостя Printful сам отправит на логин).
+const PRINTFUL_GENERATOR_URL = 'https://www.printful.com/dashboard'
 
 /** Локальный мокап: силуэт товара, узор доски в области печати, обрезка по clipPath. */
 function LocalMockup({ silhouette, model, label }: { silhouette: MerchSilhouette; model: BoardModel; label: string }) {
