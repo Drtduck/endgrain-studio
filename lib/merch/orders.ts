@@ -16,8 +16,15 @@ export interface MerchOrderView {
   readonly retailCents: number
   readonly status: MerchOrderStatus
   readonly createdAt: string
-  /** Публичная ссылка на print-файл для миниатюры. null, если Storage не отдал url. */
+  /** Публичная ссылка на полноразмерный print-файл (открывается по клику, не для миниатюры). */
   readonly printUrl: string | null
+  /**
+   * Публичная ссылка на превью 256px (ревью 15.08.2026, п.6): панель тянула
+   * сам print-файл (до 4000px) под миниатюру 64x64 - лишние мегабайты ради
+   * картинки размером с иконку. У заказов, оформленных до этой правки,
+   * превью может не быть - тогда null, и панель показывает серый плейсхолдер.
+   */
+  readonly thumbUrl: string | null
   /** Email получателя из адреса Stripe: подставляется в текст статуса draft_created. */
   readonly shipEmail: string | null
 }

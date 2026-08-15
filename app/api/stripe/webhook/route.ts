@@ -1,7 +1,7 @@
 import { aiPack, isAiPackId } from '@/lib/ai/packs'
 import { PRINTFUL_CONFIRM_ORDERS } from '@/lib/merch/config'
 import { MERCH_PRINTS_BUCKET } from '@/lib/merch/print'
-import { createPrintfulOrder, type PrintfulOrderOutcome } from '@/lib/merch/printfulOrder'
+import { createPrintfulOrder, fetchPrintfulOrderId, type PrintfulOrderOutcome } from '@/lib/merch/printfulOrder'
 import { recipientFrom } from '@/lib/merch/recipient'
 import { PRINTFUL_API_KEY, PRINTFUL_STORE_ID } from '@/lib/promo/config'
 import type { PrintfulAuth } from '@/lib/promo/printful'
@@ -98,7 +98,12 @@ async function handleMerchOrder(payment: OneTimePayment): Promise<Response> {
 
   if (order.status === 'pending_payment') {
     const shipping = payment.shipping
-    const { error: paidError } = await sb
+    // Захват гонки (ревью 15.08.2026, п.1): .select('id') на условном update
+    // возвращает реально изменённые строки. Параллельная доставка того же
+    // события (Stripe ретраит) могла уже перевести заказ в paid между нашим
+    // чтением выше и этим update - тогда здесь 0 строк, и в Printful идти не
+    // нужно: тот запрос, что выиграл гонку, доведёт заказ сам.
+    const { data: updatedRows, error: paidError } = await sb
       .from('merch_orders')
       .update({
         status: 'paid',
@@ -117,9 +122,14 @@ async function handleMerchOrder(payment: OneTimePayment): Promise<Response> {
       // статус и не сдвинет paid_at (§6.4, п.2).
       .eq('id', merchOrderId)
       .eq('status', 'pending_payment')
+      .select('id')
     if (paidError) {
       console.error('stripe webhook: merch запись paid упала', paidError)
       return text('write failed', 500)
+    }
+    if (!updatedRows || updatedRows.length === 0) {
+      console.warn('stripe webhook: merch гонку на переводе в paid забрала другая доставка', { merchOrderId })
+      return text('ok', 200)
     }
   } else if (order.status === 'failed' && order.printful_attempts >= MAX_PRINTFUL_ATTEMPTS) {
     // Потолок попыток исчерпан прошлыми доставками: дальше разбирается человек руками.
@@ -129,7 +139,13 @@ async function handleMerchOrder(payment: OneTimePayment): Promise<Response> {
   const recipient = recipientFrom(payment.shipping)
   if (recipient === null) {
     // Без адреса печатать физически некуда, а ретраить нечего: адрес больше не появится.
-    const { error } = await sb.from('merch_orders').update({ status: 'failed', last_error: 'no shipping address' }).eq('id', merchOrderId)
+    // .eq('status','paid') (ревью 15.08.2026, п.10): не перетираем draft_created/cancelled,
+    // до которых заказ мог дойти между чтением выше и этим update.
+    const { error } = await sb
+      .from('merch_orders')
+      .update({ status: 'failed', last_error: 'no shipping address' })
+      .eq('id', merchOrderId)
+      .eq('status', 'paid')
     if (error) console.error('stripe webhook: merch запись failed(no address) упала', error)
     return text('ok', 200)
   }
@@ -163,10 +179,22 @@ async function handleMerchOrder(payment: OneTimePayment): Promise<Response> {
   }
 
   if (outcome.kind === 'created' || outcome.kind === 'exists') {
-    const printfulOrderId = outcome.kind === 'created' ? outcome.printfulOrderId : (order.printful_order_id ?? 'exists')
+    // 'exists' не пишет литерал 'exists' в printful_order_id (ревью 15.08.2026,
+    // п.3): реальный id забирается GET /orders/@{orderId} (адресация по
+    // external_id). Неудача похода не блокирует перевод в draft_created -
+    // Printful уже подтвердил, что заказ у него есть, просто id ещё не узнали -
+    // но пишет null и внятный last_error вместо выдумки.
+    let printfulOrderId: string | null
+    let lookupError: string | null = null
+    if (outcome.kind === 'created') {
+      printfulOrderId = outcome.printfulOrderId
+    } else {
+      printfulOrderId = await fetchPrintfulOrderId(order.id, auth, fetch)
+      if (printfulOrderId === null) lookupError = 'printful: заказ уже существует (exists), но GET /orders/@id не вернул id'
+    }
     const { error } = await sb
       .from('merch_orders')
-      .update({ status: 'draft_created', printful_order_id: printfulOrderId })
+      .update({ status: 'draft_created', printful_order_id: printfulOrderId, ...(lookupError !== null ? { last_error: lookupError } : {}) })
       .eq('id', merchOrderId)
     if (error) {
       console.error('stripe webhook: merch запись draft_created упала', error)
@@ -175,28 +203,33 @@ async function handleMerchOrder(payment: OneTimePayment): Promise<Response> {
     return text('ok', 200)
   }
 
-  const nextAttempts = order.printful_attempts + 1
-
   if (outcome.kind === 'rejected') {
-    // 4xx (кривые данные): мы прислали ерунду, ретрай её не исправит.
-    const { error } = await sb
-      .from('merch_orders')
-      .update({ status: 'failed', printful_attempts: nextAttempts, last_error: outcome.message })
-      .eq('id', merchOrderId)
+    // 4xx (кривые данные): мы прислали ерунду, ретрай её не исправит. Инкремент
+    // атомарный (ревью 15.08.2026, п.9, merch_orders_bump_attempts,
+    // миграция 20260817100000): без него параллельная доставка события читает
+    // тот же printful_attempts и одна из двух записей теряется.
+    const { error } = await sb.rpc('merch_orders_bump_attempts', {
+      p_order_id: merchOrderId,
+      p_last_error: outcome.message,
+      p_force_failed: true,
+    })
     if (error) console.error('stripe webhook: merch запись failed(4xx) упала', error)
     return text('ok', 200)
   }
 
   // 5xx / таймаут / сеть: у них не работает, статус остаётся как есть (не failed),
   // пока не исчерпан потолок попыток. 500 просит Stripe переотправить событие.
-  const hitCeiling = nextAttempts >= MAX_PRINTFUL_ATTEMPTS
-  const { error: attemptError } = await sb
-    .from('merch_orders')
-    .update({ printful_attempts: nextAttempts, last_error: outcome.message, ...(hitCeiling ? { status: 'failed' } : {}) })
-    .eq('id', merchOrderId)
-  if (attemptError) console.error('stripe webhook: merch запись attempts упала', attemptError)
-
-  if (hitCeiling) return text('ok', 200)
+  const { data: bumped, error: attemptError } = await sb.rpc('merch_orders_bump_attempts', {
+    p_order_id: merchOrderId,
+    p_last_error: outcome.message,
+    p_max_attempts: MAX_PRINTFUL_ATTEMPTS,
+  })
+  if (attemptError) {
+    console.error('stripe webhook: merch запись attempts упала', attemptError)
+    return text('write failed', 500)
+  }
+  const bumpedRow = (Array.isArray(bumped) ? bumped[0] : bumped) as { readonly status?: string } | null
+  if (bumpedRow?.status === 'failed') return text('ok', 200)
   return text('write failed', 500)
 }
 

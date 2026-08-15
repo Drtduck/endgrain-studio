@@ -84,3 +84,36 @@ export function merchPrintPath(userId: string, orderId: string): string {
   const safeOrderId = orderId.replace(/[^a-zA-Z0-9-]/g, '')
   return `${safeUser}/${safeOrderId}.png`
 }
+
+/**
+ * Сторона миниатюры «Моих заказов» (ревью 15.08.2026, п.6): панель заказа
+ * тянула сам print-файл (до 4000 px) под миниатюру 64x64 - лишние мегабайты
+ * ради картинки размером с иконку. Второй файл рядом с полноразмерным решает
+ * это без ветвления в схеме: путь выводится из print_path заменой суффикса
+ * (merchThumbPath), колонка в базе не нужна.
+ */
+export const MERCH_THUMB_PX = 256
+
+/** Путь превью: `{...}/{orderId}.png` -> `{...}/{orderId}.thumb.png`. */
+export function merchThumbPath(printPath: string): string {
+  return printPath.replace(/\.png$/i, '.thumb.png')
+}
+
+/**
+ * Уменьшенная копия уже отрендеренного print-файла. Пересчёт из исходного
+ * буфера, а не повторный renderBoardSvg: превью нужно то же самое изображение,
+ * что уйдёт в печать, просто меньше - лишний проход через SVG не добавляет
+ * точности, только время.
+ */
+export async function renderMerchThumb(source: Buffer): Promise<Buffer> {
+  return sharp(source)
+    .resize({
+      width: MERCH_THUMB_PX,
+      height: MERCH_THUMB_PX,
+      fit: 'contain',
+      background: '#ffffff',
+      position: 'centre',
+    })
+    .png()
+    .toBuffer()
+}

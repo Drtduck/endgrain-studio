@@ -78,8 +78,15 @@ export function orderBody(input: MerchOrderInput): PrintfulOrderBody {
 
 interface PrintfulOrderResponse {
   readonly code?: number
-  readonly result?: { readonly id?: number | string }
+  // result бывает и объектом (обычный ответ), и голой строкой (некоторые ошибки
+  // Printful кладут текст прямо в result, см. §6.4 спеки и ревью 15.08.2026, п.2).
+  readonly result?: { readonly id?: number | string } | string
   readonly error?: { readonly reason?: string; readonly message?: string }
+}
+
+/** Текст ошибки из ответа Printful: message, потом reason, потом голая строка result. */
+function printfulErrorText(body: PrintfulOrderResponse | null): string {
+  return body?.error?.message ?? body?.error?.reason ?? (typeof body?.result === 'string' ? body.result : '') ?? ''
 }
 
 /**
@@ -127,7 +134,8 @@ export async function createPrintfulOrder(
     })
     const body = await readJson<PrintfulOrderResponse>(res)
     if (res.ok) {
-      const id = body?.result?.id
+      const result = body?.result
+      const id = typeof result === 'object' && result !== null ? result.id : undefined
       if (id === undefined) {
         console.error('printful order: 2xx без result.id', { orderId: input.orderId })
         return { kind: 'retry', message: 'ответ без id заказа' }
@@ -135,10 +143,13 @@ export async function createPrintfulOrder(
       return { kind: 'created', printfulOrderId: String(id) }
     }
 
-    const message = body?.error?.message ?? ''
+    const message = printfulErrorText(body)
     console.error(`printful order ${input.orderId}: HTTP ${res.status} ${message}`)
 
-    if (message.toLowerCase().includes('external_id')) return { kind: 'exists' }
+    // 409 - явный конфликт (дубликат по external_id). Некоторые ответы Printful
+    // на этот же случай приходят другим статусом с текстом ошибки, поэтому
+    // подстрока 'external_id' остаётся вторым, не единственным признаком (§6.4).
+    if (res.status === 409 || message.toLowerCase().includes('external_id')) return { kind: 'exists' }
     if (res.status >= 500) return { kind: 'retry', message: `HTTP ${res.status} ${message}` }
     if (res.status === 429) return { kind: 'retry', message: `HTTP 429 ${message}` }
     return { kind: 'rejected', message: `HTTP ${res.status} ${message}` }
@@ -146,5 +157,34 @@ export async function createPrintfulOrder(
     const message = err instanceof Error ? err.name : 'unknown error'
     console.error(`printful order ${input.orderId}: ${message}`)
     return { kind: 'retry', message }
+  }
+}
+
+/**
+ * GET /orders/@{external_id}: находит реальный id заказа Printful у уже
+ * существующего заказа (ветка 'exists' из createPrintfulOrder). Префикс `@`
+ * это адресация Printful по external_id, а не по их внутреннему id (§6.4,
+ * ревью 15.08.2026 п.3). null означает «не нашли» - вызывающий код пишет
+ * printful_order_id = null с внятным last_error, а не выдумывает id.
+ */
+export async function fetchPrintfulOrderId(orderId: string, auth: PrintfulAuth, fetchImpl: PrintfulFetch): Promise<string | null> {
+  try {
+    const res = await fetchImpl(`${PRINTFUL_API}/orders/@${encodeURIComponent(orderId)}`, {
+      method: 'GET',
+      headers: printfulHeaders(auth),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(PRINTFUL_TIMEOUT_MS),
+    })
+    const body = await readJson<PrintfulOrderResponse>(res)
+    if (!res.ok) {
+      console.error(`printful order lookup ${orderId}: HTTP ${res.status} ${printfulErrorText(body)}`)
+      return null
+    }
+    const result = body?.result
+    const id = typeof result === 'object' && result !== null ? result.id : undefined
+    return id === undefined ? null : String(id)
+  } catch (err) {
+    console.error(`printful order lookup ${orderId}: ${err instanceof Error ? err.name : 'unknown error'}`)
+    return null
   }
 }

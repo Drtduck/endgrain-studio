@@ -1,14 +1,14 @@
 'use server'
 
-import { headers } from 'next/headers'
 import { compile } from '@/lib/engine'
 import { findMerchVariant, type MerchSize } from '@/lib/merch/catalog'
 import { isMerchConfigured } from '@/lib/merch/config'
 import type { MerchOrderStatus, MerchOrderView } from '@/lib/merch/orders'
 import { MERCH_MARGIN, retailCents } from '@/lib/merch/pricing'
-import { MERCH_PRINTS_BUCKET, merchPrintPath, renderMerchPrint } from '@/lib/merch/print'
+import { MERCH_PRINTS_BUCKET, merchPrintPath, merchThumbPath, renderMerchPrint, renderMerchThumb } from '@/lib/merch/print'
 import { merchOrderSchema } from '@/lib/merch/schema'
 import { isPrintfulConfigured } from '@/lib/promo/config'
+import { createRateLimiter } from '@/lib/promo/rateLimit'
 import type { MerchProductId } from '@/lib/promo/types'
 import { APP_ORIGIN } from '@/lib/routing/host'
 import { STRIPE_SECRET_KEY, isStripeConfigured } from '@/lib/stripe/config'
@@ -57,6 +57,19 @@ const MERCH_ALLOWED_COUNTRIES: readonly string[] = [
 /** Защита от дурака, не от карты: не больше 10 незавершённых заказов на пользователя в час (§4.1). */
 const MERCH_PENDING_LIMIT = 10
 const MERCH_PENDING_WINDOW_MS = 60 * 60 * 1000
+
+/**
+ * Счётчик попыток покупки, отдельный от tooManyPendingOrders (ревью 15.08.2026,
+ * п.4): тот считает только строки merch_orders, а строка появляется в базе
+ * лишь ПОСЛЕ тяжёлой работы (рендер print-файла в sharp + заливка в Storage).
+ * Неудачный рендер, упавшая заливка или битый design никогда не долетают до
+ * insert - и без отдельного счётчика такие попытки не стоят человеку ничего,
+ * то есть можно бесплатно жечь CPU сервера рендером 4000px раз за разом.
+ * По образцу promoLimiter (lib/promo/rateLimit.ts): инкремент ДО рендера,
+ * по успеху или провалу без разницы, ключ - user.id (покупка требует входа).
+ */
+const MERCH_ATTEMPTS_PER_HOUR = 10
+const merchAttemptLimiter = createRateLimiter()
 
 /** Название товара на английском для строки Stripe Checkout: странице оплаты нужен латинский текст. */
 const PRODUCT_TITLE_EN: Readonly<Record<MerchProductId, string>> = {
@@ -109,9 +122,35 @@ export async function createMerchCheckoutAction(input: unknown): Promise<MerchCh
   const variant = findMerchVariant(parsed.data.product, parsed.data.size)
   if (variant === undefined) return { ok: false, error: 'invalid' }
 
+  // Инкремент ДО тяжёлой работы (ревью 15.08.2026, п.4): считает и провалы
+  // (render/storage), не только успешные заказы - см. комментарий у лимитера.
+  if (merchAttemptLimiter.take(user.id, MERCH_ATTEMPTS_PER_HOUR, Date.now()) !== 'ok') {
+    console.error('merch checkout: превышен лимит попыток покупки', { userId: user.id })
+    return { ok: false, error: 'failed' }
+  }
+
   if (await tooManyPendingOrders(user.id)) {
     console.error('merch checkout: превышен лимит незавершённых заказов', { userId: user.id })
     return { ok: false, error: 'failed' }
+  }
+
+  const sb = getSupabaseService()
+
+  // Проект может принадлежать другому пользователю (чужой id с клиента) или
+  // быть удалён между открытием студии и кликом «Купить». Заказ в этом случае
+  // не отбивается целиком - привязка к проекту необязательна (§5.1: project_id
+  // set null on delete), поэтому просто не пишем чужой/несуществующий id, по
+  // тому же приёму, что и saveListingAction (app/actions/listing.ts).
+  let projectId: string | null = null
+  if (parsed.data.projectId !== null) {
+    const { data: projectRow, error: projectError } = await sb
+      .from('projects')
+      .select('id')
+      .eq('id', parsed.data.projectId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (projectError) console.error('merch checkout: проверка владения проектом упала', projectError)
+    projectId = projectRow ? parsed.data.projectId : null
   }
 
   // Рендер print-файла синхронно, до кассы (§3.4): если он падает, деньги ещё
@@ -129,7 +168,6 @@ export async function createMerchCheckoutAction(input: unknown): Promise<MerchCh
   // заказа обязаны совпасть (§3.3), а вставить строку раньше нечем - print_path
   // обязателен (not null) в схеме merch_orders.
   const orderId = crypto.randomUUID()
-  const sb = getSupabaseService()
   const printPath = merchPrintPath(user.id, orderId)
   const { error: uploadError } = await sb.storage.from(MERCH_PRINTS_BUCKET).upload(printPath, printFile.buffer, {
     contentType: 'image/png',
@@ -143,12 +181,27 @@ export async function createMerchCheckoutAction(input: unknown): Promise<MerchCh
   const printFileUrl = publicUrlData.publicUrl
   if (!printFileUrl) return { ok: false, error: 'storage' }
 
+  // Превью для «Моих заказов» (ревью 15.08.2026, п.6): второй файл рядом с
+  // полноразмерным, путь выводится из print_path заменой суффикса (без
+  // отдельной колонки в базе). Best-effort - панель показывает серый
+  // плейсхолдер, если превью нет или не залилось, это дешевле, чем городить
+  // отдельную ветку ошибки на некритичной картинке.
+  try {
+    const thumbBuffer = await renderMerchThumb(printFile.buffer)
+    const { error: thumbUploadError } = await sb.storage
+      .from(MERCH_PRINTS_BUCKET)
+      .upload(merchThumbPath(printPath), thumbBuffer, { contentType: 'image/png', upsert: false })
+    if (thumbUploadError) console.error('merch checkout: заливка превью упала', thumbUploadError.message)
+  } catch (err) {
+    console.error('merch checkout: рендер превью упал', err)
+  }
+
   const price = retailCents(variant)
 
   const { error: insertError } = await sb.from('merch_orders').insert({
     id: orderId,
     user_id: user.id,
-    project_id: parsed.data.projectId,
+    project_id: projectId,
     product: parsed.data.product,
     size: parsed.data.size,
     variant_id: variant.variantId,
@@ -164,8 +217,10 @@ export async function createMerchCheckoutAction(input: unknown): Promise<MerchCh
     return { ok: false, error: 'failed' }
   }
 
-  const headerList = await headers()
-  const origin = headerList.get('origin') ?? APP_ORIGIN
+  // APP_ORIGIN, не заголовок origin (ревью 15.08.2026, п.8): заголовок приходит
+  // от клиента и не заслуживает доверия для success/cancel адресов кассы -
+  // тем же приёмом уже пользуется остальная касса проекта (app/actions/credits.ts).
+  const origin = APP_ORIGIN
 
   const body = new URLSearchParams({
     mode: 'payment',
@@ -274,6 +329,7 @@ export async function readMerchOrdersAction(): Promise<MerchOrdersResult> {
     ok: true,
     data: rows.map((row) => {
       const { data: publicUrlData } = sb.storage.from(MERCH_PRINTS_BUCKET).getPublicUrl(row.print_path)
+      const { data: thumbUrlData } = sb.storage.from(MERCH_PRINTS_BUCKET).getPublicUrl(merchThumbPath(row.print_path))
       return {
         id: row.id,
         product: row.product,
@@ -282,6 +338,7 @@ export async function readMerchOrdersAction(): Promise<MerchOrdersResult> {
         status: row.status as MerchOrderStatus,
         createdAt: row.created_at,
         printUrl: publicUrlData.publicUrl || null,
+        thumbUrl: thumbUrlData.publicUrl || null,
         shipEmail: row.ship_email,
       }
     }),

@@ -37,7 +37,9 @@ vi.mock('@/lib/engine', () => ({
 vi.mock('@/lib/merch/print', () => ({
   MERCH_PRINTS_BUCKET: 'merch-prints',
   merchPrintPath: (userId: string, orderId: string) => `${userId}/${orderId}.png`,
+  merchThumbPath: (printPath: string) => printPath.replace(/\.png$/i, '.thumb.png'),
   renderMerchPrint: () => Promise.resolve({ buffer: Buffer.from('fake-png'), sidePx: 1800 }),
+  renderMerchThumb: () => Promise.resolve(Buffer.from('fake-thumb-png')),
 }))
 
 vi.mock('next/headers', () => ({
@@ -51,6 +53,9 @@ interface DbState {
   updateError: unknown
   uploadError: unknown
   publicUrl: string | null
+  /** null - проект не найден/не принадлежит пользователю (ownership-запрос вернёт пусто). */
+  projectRow: { id: string } | null
+  projectError: unknown
 }
 
 const dbState: DbState = {
@@ -60,6 +65,8 @@ const dbState: DbState = {
   updateError: null,
   uploadError: null,
   publicUrl: 'https://cdn.example/merch-prints/user-1/order-1.png',
+  projectRow: null,
+  projectError: null,
 }
 
 const insertedRows: Record<string, unknown>[] = []
@@ -67,6 +74,17 @@ const insertedRows: Record<string, unknown>[] = []
 function makeSupabaseService() {
   return {
     from: vi.fn((table: string) => {
+      if (table === 'projects') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(() => Promise.resolve({ data: dbState.projectRow, error: dbState.projectError })),
+              })),
+            })),
+          })),
+        }
+      }
       if (table !== 'merch_orders') throw new Error(`unexpected table ${table}`)
       return {
         select: vi.fn(() => ({
@@ -122,6 +140,8 @@ describe('createMerchCheckoutAction', () => {
     dbState.updateError = null
     dbState.uploadError = null
     dbState.publicUrl = 'https://cdn.example/merch-prints/user-1/order-1.png'
+    dbState.projectRow = null
+    dbState.projectError = null
     insertedRows.length = 0
   })
 
@@ -208,5 +228,41 @@ describe('createMerchCheckoutAction', () => {
     expect(body.get('mode')).toBe('payment')
     expect(body.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]')).toBe('0')
     expect(body.get('shipping_address_collection[allowed_countries][0]')).toBe('US')
+  })
+
+  it('projectId чужого пользователя (или удалённого проекта) пишется как null, заказ не отбивается (ревью 15.08.2026, п.7)', async () => {
+    dbState.projectRow = null // ownership-запрос вернул пусто: чужой проект или его больше нет
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ id: 'cs_1', url: 'https://checkout.stripe.com/pay/cs_1' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const { createMerchCheckoutAction } = await import('./merch')
+
+    const res = await createMerchCheckoutAction(validInput({ projectId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' }))
+
+    expect(res.ok).toBe(true)
+    expect(insertedRows).toHaveLength(1)
+    expect(insertedRows[0]?.['project_id']).toBeNull()
+  })
+
+  it('failed при превышении лимита попыток покупки в час, включая неудачные попытки (ревью 15.08.2026, п.4)', async () => {
+    // Отдельный user.id: счётчик не должен нести хвост от предыдущих тестов файла.
+    getCurrentUser.mockResolvedValue({ id: 'user-rate-test', email: 'rate@example.com' })
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ id: 'cs_1', url: 'https://checkout.stripe.com/pay/cs_1' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const { createMerchCheckoutAction } = await import('./merch')
+
+    const results: Awaited<ReturnType<typeof createMerchCheckoutAction>>[] = []
+    for (let i = 0; i < 11; i += 1) {
+      results.push(await createMerchCheckoutAction(validInput()))
+    }
+
+    // Ровно 10 попыток в час (MERCH_ATTEMPTS_PER_HOUR) успевают до кассы, 11-я упирается в лимит.
+    expect(results.slice(0, 10).every((r) => r.ok)).toBe(true)
+    expect(results[10]).toEqual({ ok: false, error: 'failed' })
   })
 })

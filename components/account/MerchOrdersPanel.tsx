@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import type { MerchOrderView } from '@/lib/merch/orders'
 import { t, type Locale } from '@/lib/i18n'
 import { MERCH_PRODUCTS } from '@/lib/promo/types'
@@ -10,6 +13,58 @@ function formatDate(iso: string, locale: Locale): string {
 
 function formatUsd(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`
+}
+
+/**
+ * Миниатюра заказа (ревью 15.08.2026, п.6 и п.11). Фон через div вместо
+ * <img>: та же причина, что была раньше (декоративная картинка, next/image
+ * потребовал бы завести домен Storage в remotePatterns ради одной иконки).
+ * Загрузку проверяем скрытым Image() в эффекте, а не через onError на самом
+ * div (у background-image такого события нет): у заказов без превью (нет
+ * url) и у заказов, где заливка превью когда-то не удалась (404 по ссылке),
+ * показываем один и тот же серый плейсхолдер - дешевле, чем разбираться,
+ * какая из причин случилась.
+ */
+function MerchOrderThumb({ url, label, testId }: { url: string | null; label: string; testId: string }) {
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    if (url === null) return
+    setFailed(false)
+    let cancelled = false
+    const probe = new window.Image()
+    probe.onload = () => {
+      if (!cancelled) setFailed(false)
+    }
+    probe.onerror = () => {
+      if (!cancelled) setFailed(true)
+    }
+    probe.src = url
+    return () => {
+      cancelled = true
+    }
+  }, [url])
+
+  if (url === null || failed) {
+    return (
+      <div
+        role="img"
+        aria-label={label}
+        data-testid={testId}
+        className="size-16 shrink-0 rounded-md border border-line-subtle bg-surface"
+      />
+    )
+  }
+
+  return (
+    <div
+      role="img"
+      aria-label={label}
+      data-testid={testId}
+      style={{ backgroundImage: `url(${url})` }}
+      className="size-16 shrink-0 rounded-md border border-line-subtle bg-cover bg-center"
+    />
+  )
 }
 
 /**
