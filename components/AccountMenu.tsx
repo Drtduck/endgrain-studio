@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useTransition, type ReactElement } from 'react'
 import { CreditCard, LogIn, LogOut, Plug, Sparkles, User } from 'lucide-react'
 import { signOutAction } from '@/app/actions/auth'
 import { Avatar } from '@/components/account/Avatar'
@@ -10,7 +10,7 @@ import { UpgradeButton } from '@/components/UpgradeButton'
 import { usePro } from '@/components/ProProvider'
 import { Button } from '@/components/ui/button'
 import { Menu, MenuContent, MenuItem, MenuLinkItem, MenuSeparator, MenuTrigger } from '@/components/ui/menu'
-import { t } from '@/lib/i18n'
+import { t, type Locale } from '@/lib/i18n'
 import { useStudio } from '@/lib/store/studio'
 
 /**
@@ -20,19 +20,34 @@ import { useStudio } from '@/lib/store/studio'
  * Гостю меню не нужно: показываем прямую кнопку входа, а «Улучшить» остаётся
  * отдельной кнопкой, потому что прятать монетизацию под аватар, которого у
  * гостя нет, некуда.
+ *
+ * hrefBase и locale - для шапки лендинга/блога (домен endgrain.app, не
+ * app.endgrain.app). Там ссылки на «Аккаунт», «Ключи API» и «Тарифы» ведут на
+ * страницы студии на СОСЕДНЕМ домене: next/link (NavLink) для них не годится -
+ * проверил бы маршрут на текущем домене и упёрся в 307 из proxy.ts (см. блог-
+ * ссылку в AppHeader.tsx, та же причина зеркально). При заданном hrefBase все
+ * такие ссылки становятся обычными <a href="{hrefBase}/путь">. Локаль тоже
+ * приходит пропсом: useStudio - состояние студии, на лендинге/блоге его никто
+ * не инициализирует из cookie eg-locale, значение было бы просто дефолтным.
+ * Без пропсов поведение то же, что и раньше (студия, useStudio, NavLink).
  */
-export function AccountMenu() {
-  const locale = useStudio((s) => s.locale)
+export function AccountMenu({ locale: localeProp, hrefBase }: { locale?: Locale; hrefBase?: string } = {}) {
+  const studioLocale = useStudio((s) => s.locale)
+  const locale = localeProp ?? studioLocale
   const { user, enabled, avatarUrl = null } = useSession()
   const { status, billingEnabled, ai } = usePro()
   const [signingOut, startSignOut] = useTransition()
+
+  function accountLink(path: string): ReactElement {
+    return hrefBase ? <a href={`${hrefBase}${path}`} /> : <NavLink href={path} />
+  }
 
   if (!user) {
     return (
       <>
         <UpgradeButton />
         {enabled ? (
-          <Button variant="outline" size="sm" data-testid="account-login" render={<NavLink href="/login" />}>
+          <Button variant="outline" size="sm" data-testid="account-login" render={accountLink('/login')}>
             <LogIn data-icon="inline-start" />
             {t(locale, 'account.signIn')}
           </Button>
@@ -70,48 +85,50 @@ export function AccountMenu() {
                 {t(locale, status.pro ? 'account.planPro' : 'account.planFree')}
               </span>
             ) : null}
-            {ai.state === 'pro' ? (
+            {ai.state === 'mock' ? null : (
               <span data-testid="account-menu-quota" className="text-[11px] text-ink-muted">
-                {t(locale, 'account.quota', { remaining: ai.remaining, limit: ai.limit })}
+                {t(locale, 'ai.quota', { remaining: ai.remaining, free: ai.freeRemaining, credits: ai.credits })}
               </span>
-            ) : null}
+            )}
           </div>
         </div>
 
         <MenuSeparator />
 
-        <MenuLinkItem data-testid="account-menu-profile" render={<NavLink href="/account" />}>
+        <MenuLinkItem data-testid="account-menu-profile" render={accountLink('/account')}>
           <User />
           {t(locale, 'account.profile')}
         </MenuLinkItem>
 
         {/* Ключи API нужны, только когда человек подключает студию к своему агенту,
             поэтому в шапке им места нет: раздел живёт под аватаром рядом с профилем. */}
-        <MenuLinkItem data-testid="account-menu-mcp" render={<NavLink href="/account/api" />}>
+        <MenuLinkItem data-testid="account-menu-mcp" render={accountLink('/account/api')}>
           <Plug />
           {t(locale, 'account.mcp')}
         </MenuLinkItem>
 
         <MenuSeparator />
 
+        {billingEnabled && !status.pro ? (
+          // Апгрейд первым пунктом и акцентом: кнопка ушла из шапки, но осталась
+          // первым, что видно в открытом меню.
+          <MenuLinkItem
+            data-testid="account-menu-upgrade"
+            className="font-semibold text-accent data-highlighted:bg-accent-soft"
+            render={accountLink('/pricing')}
+          >
+            <Sparkles />
+            {t(locale, 'account.upgrade')}
+          </MenuLinkItem>
+        ) : null}
+
+        {/* Показывается всем вошедшим при работающей кассе, не только Pro:
+            баланс кадров и кошелёк для видео есть и у бесплатного тарифа. */}
         {billingEnabled ? (
-          status.pro ? (
-            <MenuLinkItem data-testid="account-menu-billing" render={<NavLink href="/pricing" />}>
-              <CreditCard />
-              {t(locale, 'account.billing')}
-            </MenuLinkItem>
-          ) : (
-            // Апгрейд первым пунктом и акцентом: кнопка ушла из шапки, но осталась
-            // первым, что видно в открытом меню.
-            <MenuLinkItem
-              data-testid="account-menu-upgrade"
-              className="font-semibold text-accent data-highlighted:bg-accent-soft"
-              render={<NavLink href="/pricing" />}
-            >
-              <Sparkles />
-              {t(locale, 'account.upgrade')}
-            </MenuLinkItem>
-          )
+          <MenuLinkItem data-testid="account-menu-billing" render={accountLink('/account/billing')}>
+            <CreditCard />
+            {t(locale, 'account.billing')}
+          </MenuLinkItem>
         ) : null}
 
         {billingEnabled ? <MenuSeparator /> : null}

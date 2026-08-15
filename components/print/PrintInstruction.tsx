@@ -190,10 +190,10 @@ function PrintDocument({ design, locale, pro }: { design: Design; locale: Locale
 
       <Section title={t(locale, 'cut.title')} testId="print-cutmap" breakBefore>
         {plan.panels.map((panel) => (
-          <div key={panel.panelId} className="print-keep mb-6">
+          <div key={panel.panelId} className="print-panel mb-6">
             <h3 className="mb-2 text-base font-semibold">{t(locale, 'cut.panel', { panel: panel.panelId })}</h3>
 
-            <div className="mb-2 flex h-10 w-full overflow-hidden border border-neutral-700">
+            <div className="print-strip-row mb-2 flex h-10 w-full overflow-hidden border border-neutral-700">
               {panel.pieces.map((piece) => {
                 const extent = piece.kind === 'strip' ? piece.widthMm : piece.thicknessMm
                 const share = panel.widthMm > 0 ? (extent / panel.widthMm) * 100 : 0

@@ -8,7 +8,7 @@ import { presetConsent } from './helpers/consent'
  * тексты: только так регресс вёрстки ловится автоматически.
  */
 
-const CARDS = ['pricing-free', 'pricing-pass', 'pricing-pro', 'pricing-developer'] as const
+const CARDS = ['pricing-free', 'pricing-pro', 'pricing-developer'] as const
 
 const DESKTOP = { width: 1440, height: 900 }
 const MOBILE = { width: 390, height: 844 }
@@ -120,8 +120,8 @@ async function expectEqualCardHeights(page: Page): Promise<void> {
     heights.push(cardBox.height)
     tops.push(cardBox.y)
   }
-  // Карточка Пропуска скрыта, пока в кассе нет её цены (в CI ключей нет вовсе),
-  // поэтому проверяем все отрисованные карточки, а не жёстко четыре.
+  // Три карточки всегда на месте (Free, Pro, Developer): продукт «Пропуск»
+  // снят с продажи и больше не рендерится вовсе.
   expect(heights.length, 'на странице должны быть карточки тарифов').toBeGreaterThanOrEqual(3)
 
   const first = tops[0] as number

@@ -5,6 +5,8 @@
  * Обе переменные серверные: ни Gemini, ни Printful в клиентский бандл
  * попасть не должны, поэтому никакого NEXT_PUBLIC_ у них нет и быть не может.
  */
+import 'server-only'
+
 export const GEMINI_API_KEY: string = process.env['GEMINI_API_KEY'] ?? ''
 export const PRINTFUL_API_KEY: string = process.env['PRINTFUL_API_KEY'] ?? ''
 

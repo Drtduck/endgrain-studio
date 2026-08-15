@@ -14,7 +14,8 @@ import type { PlanId, Product } from './plans'
  * Отсутствие кассы теперь значит ровно одно: витрину цен не показываем
  * (за это отвечает отдельный флаг billingEnabled), а прав это никому не даёт.
  * 'pass' - разовый Пропуск (mode=payment, $19, все возможности Pro на 90 дней):
- * действует, только пока нет живой подписки (см. resolveProStatus).
+ * снят с продажи 08.2026, но у купивших действует до конца оплаченного срока,
+ * только пока нет живой подписки (см. resolveProStatus).
  */
 export type ProReason = 'flag' | 'allowlist' | 'subscription' | 'pass' | 'free'
 

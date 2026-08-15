@@ -112,6 +112,19 @@ export interface StudioState {
    * чтобы поймать «у пользователя уже есть реальная работа» - отсюда отдельный флаг.
    */
   readonly documentTouched: boolean
+  /**
+   * Id облачного проекта, к которому привязан текущий документ, если он уже сохранён или
+   * загружен из «Мои проекты» в этой сессии. Повторное сохранение бьёт по нему через
+   * updateProjectAction вместо того, чтобы плодить дубли через saveProjectAction.
+   */
+  readonly currentProjectId: string | null
+  /**
+   * Снимок документа на момент последнего успешного сохранения/загрузки этого проекта.
+   * Сравнение по ссылке: history.commit всегда создаёт новый объект Design, поэтому
+   * `lastSavedDesign === history.present` дёшево и точно отвечает на вопрос «есть ли
+   * несохранённые правки» - без глубокого сравнения и без отдельного дебаунса.
+   */
+  readonly lastSavedDesign: Design | null
 
   setLocale(locale: Locale): void
   setUnit(unit: UnitSystem): void
@@ -167,6 +180,17 @@ export interface StudioState {
   setDesignName(name: string): void
 
   loadDesign(design: Design): void
+  /** Привязывает документ к облачному проекту после успешного save/update/load. */
+  markProjectSaved(id: string, design: Design): void
+  /**
+   * Восстанавливает id облачного проекта при старте из localStorage (lib/store/persist.ts),
+   * БЕЗ утверждения «документ совпадает с последним сохранённым в облаке»: design после
+   * перезагрузки страницы это новый объект, ссылочное сравнение с lastSavedDesign в принципе
+   * невозможно провести честно. Поэтому lastSavedDesign не трогаем - selectProjectSaveStatus
+   * покажет 'dirty', пока не пройдёт следующее настоящее сохранение. Это безопасный дефолт:
+   * лучше лишний раз напомнить «есть несохранённые изменения», чем соврать про 'saved'.
+   */
+  restoreCurrentProjectId(id: string): void
   resetStudio(design?: Design): void
   undo(): void
   redo(): void
@@ -188,6 +212,13 @@ export function selectIsDirty(s: StudioState): boolean {
   return s.documentTouched || histCanUndo(s.history) || histCanRedo(s.history)
 }
 
+export type ProjectSaveStatus = 'none' | 'saved' | 'dirty'
+/** 'none' - документ ещё ни разу не сохранялся/не загружался как облачный проект. */
+export function selectProjectSaveStatus(s: StudioState): ProjectSaveStatus {
+  if (s.currentProjectId === null) return 'none'
+  return s.lastSavedDesign === s.history.present ? 'saved' : 'dirty'
+}
+
 const UI_DEFAULTS = {
   locale: 'ru' as Locale,
   unit: 'mm' as UnitSystem,
@@ -205,6 +236,8 @@ const UI_DEFAULTS = {
   photo: null,
   documentTouched: false,
   touchedCellIds: new Set<string>(),
+  currentProjectId: null,
+  lastSavedDesign: null,
 }
 
 const DEFAULT_STRIP_WIDTH_MM = 25
@@ -553,7 +586,14 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
           selectedCellId: null,
           documentTouched: true,
           touchedCellIds: new Set(),
+          // Загрузка образца/шаблона/генератора не привязана к облачному проекту. Загрузка
+          // именно СВОЕГО проекта (components/ProjectsPanel.tsx onLoad) вызывает markProjectSaved
+          // сразу следом, поэтому здесь безопасно сбрасывать оба поля безусловно.
+          currentProjectId: null,
+          lastSavedDesign: null,
         })),
+      markProjectSaved: (id, design) => set({ currentProjectId: id, lastSavedDesign: design }),
+      restoreCurrentProjectId: (id) => set({ currentProjectId: id }),
       // Сброс возвращает документ и выбор инструментов, но не язык и не единицы:
       // это настройки человека, а не состояние проекта.
       resetStudio: (design) =>

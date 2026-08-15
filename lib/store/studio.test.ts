@@ -3,7 +3,14 @@ import { baseDesign, isSliceRef, validate, type Design } from '@/lib/engine'
 import { makeCheckerboard } from '@/lib/designs/samples'
 import { seedPopulation } from '@/lib/generators'
 import { FAMILY_IDS } from '@/lib/generators/genome'
-import { createStudioStore, selectCanRedo, selectCanUndo, selectDesign, selectIsDirty } from './studio'
+import {
+  createStudioStore,
+  selectCanRedo,
+  selectCanUndo,
+  selectDesign,
+  selectIsDirty,
+  selectProjectSaveStatus,
+} from './studio'
 
 describe('studio store: settings, selection, history', () => {
   it('starts on the given design with Russian locale and millimetres', () => {
@@ -208,6 +215,54 @@ describe('studio store: settings, selection, history', () => {
     expect(selectIsDirty(store.getState())).toBe(true)
     store.getState().resetStudio(baseDesign())
     expect(selectIsDirty(store.getState())).toBe(false)
+  })
+})
+
+describe('currentProjectId / markProjectSaved: статус привязки к облачному проекту', () => {
+  it('до первого сохранения статус none, id пуст', () => {
+    const store = createStudioStore(baseDesign())
+    expect(store.getState().currentProjectId).toBeNull()
+    expect(selectProjectSaveStatus(store.getState())).toBe('none')
+  })
+
+  it('markProjectSaved привязывает id и переводит статус в saved', () => {
+    const store = createStudioStore(baseDesign())
+    const design = selectDesign(store.getState())
+    store.getState().markProjectSaved('project-1', design)
+    expect(store.getState().currentProjectId).toBe('project-1')
+    expect(selectProjectSaveStatus(store.getState())).toBe('saved')
+  })
+
+  it('правка документа после сохранения переводит статус в dirty без потери id', () => {
+    const store = createStudioStore(baseDesign())
+    store.getState().markProjectSaved('project-1', selectDesign(store.getState()))
+    store.getState().setKerfMm(4)
+    expect(store.getState().currentProjectId).toBe('project-1')
+    expect(selectProjectSaveStatus(store.getState())).toBe('dirty')
+  })
+
+  it('повторный markProjectSaved после правки возвращает статус в saved', () => {
+    const store = createStudioStore(baseDesign())
+    store.getState().markProjectSaved('project-1', selectDesign(store.getState()))
+    store.getState().setKerfMm(4)
+    store.getState().markProjectSaved('project-1', selectDesign(store.getState()))
+    expect(selectProjectSaveStatus(store.getState())).toBe('saved')
+  })
+
+  it('loadDesign (generic-загрузка) сбрасывает привязку к проекту', () => {
+    const store = createStudioStore(baseDesign())
+    store.getState().markProjectSaved('project-1', selectDesign(store.getState()))
+    store.getState().loadDesign(baseDesign({ id: 'другой', name: 'другой' }))
+    expect(store.getState().currentProjectId).toBeNull()
+    expect(selectProjectSaveStatus(store.getState())).toBe('none')
+  })
+
+  it('resetStudio ("Начать заново") сбрасывает привязку к проекту', () => {
+    const store = createStudioStore(baseDesign())
+    store.getState().markProjectSaved('project-1', selectDesign(store.getState()))
+    store.getState().resetStudio(baseDesign())
+    expect(store.getState().currentProjectId).toBeNull()
+    expect(selectProjectSaveStatus(store.getState())).toBe('none')
   })
 })
 

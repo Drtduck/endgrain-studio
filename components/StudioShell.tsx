@@ -20,6 +20,7 @@ import { ProjectsPanel } from '@/components/ProjectsPanel'
 import { PromoPanel } from '@/components/promo/PromoPanel'
 import { ResetButton } from '@/components/ResetButton'
 import { RowInspector } from '@/components/RowInspector'
+import { SaveProjectButton } from '@/components/SaveProjectButton'
 import { SpeciesPalette } from '@/components/SpeciesPalette'
 import { TemplateGallery } from '@/components/TemplateGallery'
 import { HelpHint } from '@/components/ui/help-hint'
@@ -70,8 +71,8 @@ export function StudioShell() {
             <ProjectsPanel />
           )
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,236px)_minmax(0,1fr)_minmax(0,268px)]">
-            <div className="flex min-w-0 flex-col gap-4 overflow-auto lg:order-2">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,236px)_minmax(0,1fr)_minmax(0,268px)] lg:items-start">
+            <div className="flex min-w-0 flex-col gap-4 lg:order-2">
               {view === 'view3d' ? (
                 <Board3DPanel />
               ) : (
@@ -94,12 +95,12 @@ export function StudioShell() {
               )}
             </div>
 
-            <div className="flex flex-col gap-4 [&>*]:shrink-0 lg:order-1 lg:sticky lg:top-4 lg:max-h-screen lg:self-start lg:overflow-y-auto">
+            <div className="flex flex-col gap-4 [&>*]:shrink-0 lg:order-1 lg:sticky lg:top-4 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto">
               <SpeciesPalette />
               <ToolRecommendations />
             </div>
 
-            <aside className="flex flex-col gap-4 [&>*]:shrink-0 lg:order-3 lg:sticky lg:top-4 lg:max-h-screen lg:self-start lg:overflow-y-auto">
+            <aside className="flex flex-col gap-4 [&>*]:shrink-0 lg:order-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto">
               {/* Диагностика первая: RAGGED_BOARD и другие ошибки изготовимости раньше стояли
                   последними в прокручиваемом сайдбаре и терялись из виду (владелец не заметил
                   предупреждение о рваной сетке). Наверху панель видна сразу, без скролла. */}
@@ -107,6 +108,7 @@ export function StudioShell() {
               <BoardSettings />
               <ComplexityMeter locale={locale} calc={calc} unit={unit} model={model} />
               <ExportPanel />
+              <SaveProjectButton />
             </aside>
           </div>
         )}

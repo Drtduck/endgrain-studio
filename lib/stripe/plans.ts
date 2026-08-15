@@ -1,14 +1,12 @@
-import {
-  STRIPE_PRICE_API_MONTHLY,
-  STRIPE_PRICE_API_YEARLY,
-  STRIPE_PRICE_MONTHLY,
-  STRIPE_PRICE_YEARLY,
-  STRIPE_PRO_DEFAULT_PRICE,
-} from './config'
+import { STRIPE_PRICE_API_MONTHLY, STRIPE_PRICE_API_YEARLY, STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY } from './config'
 
 export type PlanId = 'monthly' | 'yearly'
 
-/** Что оплачивает подписка. 'pass' в этот тип не входит: пропуск разовый, у него нет плана. */
+/**
+ * Что оплачивает подписка. Продукт «Пропуск» снят с продажи 08.2026 (см.
+ * lib/stripe/pro.ts): выданные права остаются, но новых покупок больше нет,
+ * поэтому 'pass' сюда не входит.
+ */
 export type Product = 'pro' | 'api'
 
 // Числовые лимиты живут в ./limits: их читают клиентские компоненты, а этот
@@ -19,17 +17,12 @@ export function priceIdFor(plan: PlanId): string {
 }
 
 /**
- * Цена, с которой стартует Checkout Session продукта. Для Pro решает
- * STRIPE_PRO_DEFAULT_PRICE (переключатель ветки A/B тумблера upsell из плана
- * тарифной витрины): вторая цена доступна на той же сессии через Upsell,
- * настроенный в Dashboard. Для API - всегда месячная, и это не вкусовщина:
- * upsell в Dashboard настроен веткой B «месячная -> годовая», а тумблер
- * месяц/год Stripe рисует только когда сессия стартует с месячной цены.
- * С годовой в line_items переключателя на Checkout не было вовсе.
+ * Цена, с которой стартует Checkout Session. Всегда месячная и для Pro, и для API:
+ * тумблер месяц/год рисует Subscription upsell, настроенный в Dashboard, а он
+ * работает только когда сессия стартует с более дешёвой (месячной) цены.
  */
 export function checkoutPriceFor(product: Product): string {
-  if (product === 'api') return STRIPE_PRICE_API_MONTHLY
-  return STRIPE_PRO_DEFAULT_PRICE === 'monthly' ? STRIPE_PRICE_MONTHLY : STRIPE_PRICE_YEARLY
+  return product === 'api' ? STRIPE_PRICE_API_MONTHLY : STRIPE_PRICE_MONTHLY
 }
 
 /**

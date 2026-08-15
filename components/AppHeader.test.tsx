@@ -10,6 +10,9 @@ import { AppHeader } from './AppHeader'
 
 vi.mock('@/app/actions/auth', () => ({ signOutAction: vi.fn() }))
 
+const refresh = vi.fn()
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }))
+
 const FREE: ProStatus = { pro: false, reason: 'free', plan: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }
 
 function renderHeader(props: Parameters<typeof AppHeader>[0] = {}) {
@@ -24,6 +27,7 @@ function renderHeader(props: Parameters<typeof AppHeader>[0] = {}) {
 
 describe('AppHeader', () => {
   beforeEach(() => {
+    refresh.mockClear()
     window.localStorage.clear()
     useStudio.getState().resetStudio(makeCheckerboard({ cols: 2, rows: 2 }))
     useStudio.getState().setLocale('ru')
@@ -55,6 +59,12 @@ describe('AppHeader', () => {
     renderHeader()
     fireEvent.click(screen.getByTestId('locale-en'))
     expect(useStudio.getState().locale).toBe('en')
+  })
+
+  it('переключение языка перечитывает серверные компоненты через router.refresh()', () => {
+    renderHeader()
+    fireEvent.click(screen.getByTestId('locale-en'))
+    expect(refresh).toHaveBeenCalledTimes(1)
   })
 
   it('инструменты студии рендерятся только когда переданы', () => {

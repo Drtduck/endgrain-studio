@@ -109,6 +109,36 @@ export async function deleteProjectAction(id: string): Promise<ActionResult<null
 }
 
 /**
+ * Единая точка для «Сохранить»: создать проект или перезаписать существующий,
+ * атомарно на сервере (лечение D12 - saveProjectAction всегда INSERT, и двойное
+ * сохранение или гонка двух вкладок плодили дубль). Тонкая обёртка над
+ * upsertProject (lib/api/service.ts), которая делает UPDATE+ownership-check
+ * одним запросом, а не select-then-branch на клиенте.
+ *
+ * projectId приходит с клиента, но не является доверенным: сервис проверяет
+ * владение и при несовпадении/отсутствии создаёт новую строку вместо отказа.
+ */
+export async function upsertProjectAction(input: {
+  readonly projectId: string | null
+  readonly name: string
+  readonly design: unknown
+}): Promise<ActionResult<ProjectSummary>> {
+  const user = await requireUser()
+  if (!user) return { ok: false, error: 'unauthenticated' }
+
+  const { upsertProject } = await import('@/lib/api/service')
+  const result = await upsertProject(user.id, input.projectId, input.name, input.design)
+  if (result.ok) return result
+  // ServiceError шире ProjectsError на forbidden/rateLimited/unavailable - в них
+  // server action без скоупов и без квоты API попасть не может, failed - честный дефолт.
+  const error: ProjectsError =
+    result.error === 'invalid' || result.error === 'notFound' || result.error === 'failed' || result.error === 'limit'
+      ? result.error
+      : 'failed'
+  return { ok: false, error }
+}
+
+/**
  * «Сохранить поверх» вместо всегда новой строки. Тонкая обёртка над
  * сервисным слоем (lib/api/service.ts:updateProject), которым пользуется и
  * REST API: одна реализация вместо двух копий одной и той же логики.

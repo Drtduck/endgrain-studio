@@ -8,6 +8,8 @@ vi.mock('@/components/Board3D', () => ({
   Board3D: ({ label }: { label: string }) => <div data-testid="board3d-stub">{label}</div>,
 }))
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => '/' }))
+
 describe('StudioShell', () => {
   beforeEach(() => {
     window.localStorage.clear()

@@ -9,7 +9,7 @@ export interface AnalyticsEventParams {
   readonly project_saved: undefined
   readonly pdf_exported: { readonly pro: boolean }
   readonly pricing_viewed: undefined
-  readonly checkout_started: { readonly plan: 'pro' | 'api' | 'pass' }
+  readonly checkout_started: { readonly plan: 'pro' | 'api' }
   readonly subscription_paid: undefined
 }
 

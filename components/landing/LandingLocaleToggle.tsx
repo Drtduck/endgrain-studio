@@ -1,17 +1,23 @@
 'use client'
 
 import { useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { setLandingLocaleAction } from '@/app/actions/locale'
 import { t, type Locale } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 export function LandingLocaleToggle({ locale }: { locale: Locale }) {
   const [, startTransition] = useTransition()
+  const router = useRouter()
 
   function handleChange(next: Locale): void {
     if (next === locale) return
-    startTransition(() => {
-      void setLandingLocaleAction(next)
+    startTransition(async () => {
+      // revalidatePath(LANDING_PATH) внутри экшена чинит только /landing;
+      // компонент рендерится и на /blog, поэтому текущий маршрут догоняем
+      // явным refresh() уже после того, как cookie дописана на сервере.
+      await setLandingLocaleAction(next)
+      router.refresh()
     })
   }
 

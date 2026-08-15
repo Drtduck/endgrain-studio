@@ -1,3 +1,4 @@
+import { aiPack, isAiPackId } from '@/lib/ai/packs'
 import { parseSubscriptionEvent } from '@/lib/stripe/events'
 import { parseOneTimeEvent } from '@/lib/stripe/oneTime'
 import { STRIPE_WEBHOOK_SECRET, isStripeConfigured } from '@/lib/stripe/config'
@@ -78,6 +79,7 @@ async function handleOneTime(payment: import('@/lib/stripe/oneTime').OneTimePaym
     return text('ok', 200)
   }
 
+  // Пропуск снят с продажи 08.2026, ветка живёт ради поздних событий. Удалить после 01.11.2026.
   if (payment.kind === 'pro_pass') {
     try {
       const sb = getSupabaseAdmin()
@@ -95,6 +97,33 @@ async function handleOneTime(payment: import('@/lib/stripe/oneTime').OneTimePaym
       }
     } catch (err) {
       console.error('stripe webhook: grant_pro_pass threw', err)
+      return text('write failed', 500)
+    }
+    return text('ok', 200)
+  }
+
+  if (payment.kind === 'ai_pack') {
+    const pack = isAiPackId(payment.packId) ? aiPack(payment.packId) : null
+    if (pack === null) {
+      console.error('stripe webhook: ai_pack с неизвестным pack_id', { sessionId: payment.sessionId })
+      return text('ok', 200) // ретрай не поможет, чинить нечего
+    }
+    try {
+      const sb = getSupabaseAdmin()
+      const { error } = await sb.rpc('ai_credits_grant', {
+        p_user_id: payment.userId,
+        p_frames: pack.frames,
+        p_ref: payment.sessionId,
+        p_kind: 'purchase',
+        p_revenue_cents: payment.amountCents,
+        p_meta: { pack_id: pack.id },
+      })
+      if (error) {
+        console.error('stripe webhook: ai_credits_grant failed', error)
+        return text('write failed', 500)
+      }
+    } catch (err) {
+      console.error('stripe webhook: ai_credits_grant threw', err)
       return text('write failed', 500)
     }
     return text('ok', 200)

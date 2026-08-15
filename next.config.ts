@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 import createMDX from "@next/mdx";
 
 const nextConfig: NextConfig = {
+  // sharp - нативный биндинг: собирать его в серверный бандл нельзя (он тянет
+  // .node-файлы), и в клиентский бандл он попасть не должен вовсе - это гарантирует,
+  // что unit `lib/promo/crop.ts` (import 'server-only') используется только маршрутом
+  // `app/api/promo/pack/[seriesId]/route.ts` с `runtime = 'nodejs'`.
+  serverExternalPackages: ["sharp"],
   experimental: {
     serverActions: {
       // Фидбек умеет прикладывать файл (до 2 МБ) и автоскриншот экрана, оба

@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 import { AccountMenu } from '@/components/AccountMenu'
 import { LocaleToggle } from '@/components/LocaleToggle'
 import { NavLink } from '@/components/NavLink'
@@ -57,6 +58,7 @@ export function AppHeader({
   const unit = useStudio((s) => s.unit)
   const setUnit = useStudio((s) => s.setUnit)
   const setLocale = useStudio((s) => s.setLocale)
+  const router = useRouter()
 
   return (
     <header
@@ -124,7 +126,12 @@ export function AppHeader({
         locale={locale}
         onChange={(next) => {
           setLocale(next)
+          // Cookie должна дойти до сервера раньше, чем refresh() перечитает
+          // серверные компоненты (/pricing, /account/**, галерея, блог,
+          // лендинг): document.cookie синхронна, поэтому порядок вызовов
+          // ниже гарантирует, что новый запрос уже видит новую локаль.
           rememberLocale(next)
+          router.refresh()
         }}
       />
 

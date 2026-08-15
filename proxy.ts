@@ -39,43 +39,57 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   // рендер, ровно как уже делает updateSession() в lib/supabase/proxy.ts.
   const forwardedHeaders = { headers: requestWithCountry.headers }
 
+  // API-запросы агентов не несут cookie-сессию Supabase и не могут её нести:
+  // поход в updateSession на каждый вызов это лишние 50-150 мс и лишний запрос
+  // к базе без единой пользы. Проверка ключа (lib/api/auth.ts) не имеет с
+  // сессией ничего общего. На site-домене та же самая API-семья живёт под тем
+  // же /api/ (см. комментарий ниже про рероут), поэтому исключаем её здесь же.
+  if (role === 'site' && path.startsWith('/api/')) {
+    // MCP-клиент, вбивший endgrain.app/api/mcp, не обязан следовать 307-редиректу
+    // на POST (не все клиенты это делают), а человек, который набрал этот адрес
+    // руками, не должен получить невнятную ошибку. Роуты те же самые, приложение
+    // одно - разводить их незачем.
+    return NextResponse.rewrite(new URL(path + requestWithCountry.nextUrl.search, requestWithCountry.url), { request: forwardedHeaders })
+  }
+  if (role === 'app' && (path.startsWith('/api/v1/') || path === '/api/mcp')) {
+    return NextResponse.next({ request: forwardedHeaders })
+  }
+
+  // Один поход в Supabase на переход: он же продлевает сессию, он же отвечает,
+  // авторизован ли гость. Раньше на site-домене (лендинг, весь /blog) сюда не
+  // заходили вовсе, считая его анонимным - но getCurrentUser() в
+  // app/layout.tsx дёргает getUser() для ВСЕХ маршрутов, включая блог. Когда
+  // access-токен протухал прямо на этом домене, ротацию refresh-токена делал
+  // Server Component, где cookie молча терялись (см. lib/supabase/server.ts),
+  // а следующий заход на app-домен уже нёс отозванный refresh и разлогинивал.
+  // Теперь и здесь сессию продлевает proxy - единственное место, которому
+  // разрешено писать auth-cookie.
+  const { response, authenticated } = await updateSession(requestWithCountry)
+
   if (role === 'site') {
-    // Лендинг статичен и анонимен: за сессией Supabase не ходим вовсе.
-    if (path === '/') return NextResponse.rewrite(new URL(LANDING_PATH, requestWithCountry.url), { request: forwardedHeaders })
+    // Лендинг сам по себе анонимен, но сессия должна продлеваться и здесь
+    // (см. комментарий выше) - поэтому cookie из updateSession несём дальше
+    // на rewrite и next() точно так же, как ниже несём их на редирект.
+    if (path === '/') {
+      return carryCookies(response, NextResponse.rewrite(new URL(LANDING_PATH, requestWithCountry.url), { request: forwardedHeaders }))
+    }
     // Блог живёт на этом же домене вместе с лендингом (см. isSitePath).
-    if (isSitePath(path)) return NextResponse.next({ request: forwardedHeaders })
-    // API отдаём прямо на корневом домене: MCP-клиент, вбивший endgrain.app/api/mcp,
-    // не обязан следовать 307-редиректу на POST (не все клиенты это делают), а
-    // человек, который набрал этот адрес руками, не должен получить невнятную
-    // ошибку. Роуты те же самые, приложение одно - разводить их незачем.
-    if (path.startsWith('/api/')) {
-      return NextResponse.rewrite(new URL(path + requestWithCountry.nextUrl.search, requestWithCountry.url), { request: forwardedHeaders })
+    if (isSitePath(path)) {
+      return carryCookies(response, NextResponse.next({ request: forwardedHeaders }))
     }
     // Всё остальное на корневом домене это студия: отправляем на поддомен,
     // сохраняя путь и query (например ссылку восстановления пароля из письма).
     // Редирект не несёт наш собственный заголовок дальше: страна там определится
     // заново, уже на app-домене, тем же кодом.
-    return NextResponse.redirect(new URL(path + requestWithCountry.nextUrl.search, APP_ORIGIN), 307)
+    return carryCookies(response, NextResponse.redirect(new URL(path + requestWithCountry.nextUrl.search, APP_ORIGIN), 307))
   }
 
   // Одна страница по двум адресам это две записи в индексе: канон у корневого домена.
   // То же самое для блога: app.endgrain.app/blog/что-угодно не должен плодить
   // вторую копию статьи по второму домену.
   if (role === 'app' && (path === LANDING_PATH || isBlogPath(path))) {
-    return NextResponse.redirect(new URL(path, SITE_ORIGIN), 308)
+    return carryCookies(response, NextResponse.redirect(new URL(path, SITE_ORIGIN), 308))
   }
-
-  // API-запросы агентов не несут cookie-сессию Supabase и не могут её нести:
-  // поход в updateSession на каждый вызов это лишние 50-150 мс и лишний запрос
-  // к базе без единой пользы. Проверка ключа (lib/api/auth.ts) не имеет с
-  // сессией ничего общего.
-  if (role === 'app' && (path.startsWith('/api/v1/') || path === '/api/mcp')) {
-    return NextResponse.next({ request: forwardedHeaders })
-  }
-
-  // Один поход в Supabase на переход: он же продлевает сессию, он же отвечает,
-  // авторизован ли гость.
-  const { response, authenticated } = await updateSession(requestWithCountry)
 
   const decision = decideAccess({
     role,

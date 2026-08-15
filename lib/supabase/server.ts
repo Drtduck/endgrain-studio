@@ -16,11 +16,21 @@ export async function getSupabaseServer(): Promise<SupabaseClient> {
         return store.getAll()
       },
       setAll(cookiesToSet) {
+        // Контракт: RSC никогда не пишет auth-cookie, это делает proxy.ts до
+        // рендера (updateSession). Next.js запрещает store.set() вне Server
+        // Action/Route Handler и здесь бросает - это ожидаемо, а не сбой.
+        // Если getUser() всё же решит ротировать токен прямо в RSC (например
+        // потому что proxy для этого маршрута не вызывался), новые cookie
+        // будут потеряны молча - и следующий заход придёт с уже отозванным
+        // refresh-токеном. console.warn чтобы такой пробел в маршрутах proxy
+        // был виден в логах, а не превращался в тихий разлогин.
         try {
           for (const { name, value, options } of cookiesToSet) store.set(name, value, options)
         } catch {
-          // В серверном компоненте запись cookie запрещена и бросает.
-          // Это не ошибка: сессию продлевает proxy.ts до рендера.
+          console.warn(
+            '[supabase] setAll() из RSC не смог записать cookie ротации сессии - ' +
+              'проверь, что proxy.ts вызывает updateSession() для этого маршрута',
+          )
         }
       },
     },

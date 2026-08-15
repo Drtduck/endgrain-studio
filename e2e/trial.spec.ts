@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 // Демо-режим (ни одного ключа AI): такой прогон работает в любом окружении, в том числе
-// в CI без единого секрета, тот же приём, что в e2e/promo.spec.ts.
+// в CI без единого секрета, тот же приём, что в e2e/promo-studio.spec.ts.
 const noAiKeys = (process.env['GEMINI_API_KEY'] ?? '') === '' && (process.env['FAL_KEY'] ?? '') === ''
 
 // Живой прогон бесплатного тира требует настоящих FAL_KEY, FREE_TRIAL_SECRET и живого
@@ -88,6 +88,42 @@ test.describe('бесплатный тир: живой гейт', () => {
       await expect(page.getByTestId('promo-photo')).not.toContainText('Рисуем серию', { timeout: 30_000 })
     }
     await expect(page.getByTestId('promo-paywall')).toBeVisible()
+    await expect(page.getByTestId('promo-gallery')).toBeVisible()
+  })
+})
+
+// Обещание «кадры переживают перезагрузку» (P0-6, ревью 14.08.2026): без входа
+// generatePromoSeriesAction сам никуда не пишет (ensureSaved требует user),
+// поэтому персистентность честно проверяется только под вошедшим пользователем -
+// ровно тем путём, для которого написана хидратация listPromoSeriesAction/
+// listActiveSeriesAction в PhotoSeries.tsx.
+// Запуск: E2E_AUTH=1 E2E_TRIAL=1 E2E_AUTH_EMAIL=... E2E_AUTH_PASSWORD=... FAL_KEY=... FREE_TRIAL_SECRET=... NEXT_PUBLIC_SUPABASE_URL=... ... pnpm test:e2e -- trial.spec.ts
+const authEnabled = process.env['E2E_AUTH'] === '1'
+
+test.describe('бесплатный тир: кадры переживают перезагрузку (живой Supabase, вошедший пользователь)', () => {
+  test.skip(!trialEnabled || !authEnabled, 'Требует E2E_AUTH=1 и E2E_TRIAL=1: вход и реальное списание пробного тира')
+
+  test('сгенерировал кадр, перезагрузил страницу - кадр на месте', async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.clear())
+    await page.goto('/login')
+    await page.getByTestId('auth-email').fill(process.env['E2E_AUTH_EMAIL'] ?? '')
+    await page.getByTestId('auth-password').fill(process.env['E2E_AUTH_PASSWORD'] ?? '')
+    await page.getByTestId('auth-submit').click()
+    await expect(page.getByTestId('tab-projects')).toBeVisible({ timeout: 15_000 })
+
+    await page.goto('/?tab=editor')
+    await expect(page.getByTestId('board-canvas')).toBeVisible()
+    await page.getByTestId('tab-promo').click()
+
+    await page.getByTestId('promo-generate').click()
+    await expect(page.getByTestId('promo-photo')).not.toContainText('Рисуем серию', { timeout: 30_000 })
+    await expect(page.getByTestId('promo-shot-done').first()).toBeVisible({ timeout: 30_000 })
+
+    await page.reload()
+    await page.getByTestId('tab-promo').click()
+    // Кадр подхватился заново из базы (hydrate в PhotoSeries.tsx), а не пропал
+    // с глаз только потому, что клиентское состояние runner'а после F5 пустое.
+    await expect(page.getByTestId('promo-shot-done').first()).toBeVisible({ timeout: 15_000 })
     await expect(page.getByTestId('promo-gallery')).toBeVisible()
   })
 })

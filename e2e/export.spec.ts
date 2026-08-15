@@ -96,6 +96,28 @@ test('печатная страница без проекта показывае
   await expect(page.getByTestId('print-empty')).toBeVisible()
 })
 
+test('печатный режим: ключевые секции видимы и фон рядов не прозрачный', async ({ page }) => {
+  await openStudio(page)
+  const printed = await openPrintTab(page)
+  await printed.emulateMedia({ media: 'print' })
+
+  for (const id of ['print-brand', 'print-title', 'print-preview', 'print-specs', 'print-species', 'print-cutmap', 'print-steps', 'print-rows']) {
+    await expect(printed.getByTestId(id)).toBeVisible()
+  }
+
+  // Полоса ряда красится через bg-neutral-100: без print-color-adjust браузер
+  // печатает фон как полностью прозрачный, и полоса превращается в пустой прямоугольник.
+  const rowBar = printed.getByTestId('print-rows').locator('li').first().locator('span').nth(1)
+  const background = await rowBar.evaluate((el) => window.getComputedStyle(el).backgroundColor)
+  expect(background).not.toBe('rgba(0, 0, 0, 0)')
+  expect(background).not.toBe('transparent')
+
+  // Сам документ обязан просить браузер печатать фон точно: иначе печать зависит
+  // от галочки «Background graphics», выключенной в большинстве браузеров по умолчанию.
+  const colorAdjust = await printed.locator('.print-doc').evaluate((el) => window.getComputedStyle(el).getPropertyValue('print-color-adjust') || window.getComputedStyle(el).getPropertyValue('-webkit-print-color-adjust'))
+  expect(colorAdjust).toBe('exact')
+})
+
 test('экспорт следует локали интерфейса', async ({ page }) => {
   await openStudio(page)
   await page.getByTestId('locale-en').click()

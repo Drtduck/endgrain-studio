@@ -4,20 +4,22 @@ import { headers } from 'next/headers'
 import { z } from 'zod'
 import { APP_ORIGIN } from '@/lib/routing/host'
 import type { CheckoutResult } from '@/lib/stripe/billing'
-import { STRIPE_SECRET_KEY, hasApiPrices, hasPassPrice, isStripeConfigured, STRIPE_PRICE_PASS } from '@/lib/stripe/config'
+import { STRIPE_SECRET_KEY, hasApiPrices, isStripeConfigured } from '@/lib/stripe/config'
 import { checkoutPriceFor } from '@/lib/stripe/plans'
 import { getSubscriptionStatus } from '@/lib/stripe/pro'
 import { getCurrentUser } from '@/lib/supabase/session'
 
-const planSchema = z.enum(['pro', 'api', 'pass'])
+const planSchema = z.enum(['pro', 'api'])
 
 /**
  * Checkout Session через REST Stripe, без SDK: один POST с form-encoded телом
  * не стоит трёх мегабайт зависимости (тот же довод, что и в app/actions/subscribe.ts).
  * Карточные данные мы не видим никогда, оплата целиком на hosted-странице Stripe.
- * Три ветки по одному вызову: pro (подписка, тумблер месяц/год живёт в Dashboard
- * как Upsell), api (подписка Developer), pass (разовый платёж, mode=payment
- * нельзя смешивать с mode=subscription - отдельная сессия).
+ * Две ветки, обе mode=subscription: pro и api (Developer). Тумблер месяц/год
+ * живёт в Dashboard как Subscription upsell, поэтому сессия всегда стартует
+ * с месячной цены (checkoutPriceFor). Продукт «Пропуск» снят с продажи
+ * 08.2026: путь покупки удалён, но у купленных пропусков права сохраняются
+ * (lib/stripe/pro.ts, таблица pro_passes, ветка вебхука pro_pass).
  */
 export async function createCheckoutAction(plan: unknown): Promise<CheckoutResult> {
   const parsed = planSchema.safeParse(plan)
@@ -26,13 +28,12 @@ export async function createCheckoutAction(plan: unknown): Promise<CheckoutResul
   const product = parsed.data
   if (!isStripeConfigured()) return { ok: false, error: 'disabled' }
   if (product === 'api' && !hasApiPrices()) return { ok: false, error: 'disabled' }
-  if (product === 'pass' && !hasPassPrice()) return { ok: false, error: 'disabled' }
 
   const user = await getCurrentUser()
   if (!user) return { ok: false, error: 'unauthenticated' }
 
-  // Второй чек-аут поверх активной подписки/пропуска создал бы вторую подписку
-  // и двойное списание. Спрашиваем живую строку, а не getProStatus(): при
+  // Второй чек-аут поверх активной подписки создал бы вторую подписку и
+  // двойное списание. Спрашиваем живую строку, а не getProStatus(): при
   // аварийном флаге NEXT_PUBLIC_PRO_UNLOCK=1 причина была бы 'flag', и защита
   // бы не сработала.
   if (product === 'pro') {
@@ -41,13 +42,8 @@ export async function createCheckoutAction(plan: unknown): Promise<CheckoutResul
     // упереться в «already» до истечения 90 дней.
     const subscription = await getSubscriptionStatus('pro')
     if (subscription.reason === 'subscription') return { ok: false, error: 'already' }
-  } else if (product === 'api') {
-    const subscription = await getSubscriptionStatus('api')
-    if (subscription.reason === 'subscription') return { ok: false, error: 'already' }
   } else {
-    // Живая Pro-подписка уже даёт всё, что даёт пропуск, и больше: продавать
-    // его поверх подписки значит взять деньги за то, что и так есть.
-    const subscription = await getSubscriptionStatus('pro')
+    const subscription = await getSubscriptionStatus('api')
     if (subscription.reason === 'subscription') return { ok: false, error: 'already' }
   }
 
@@ -56,35 +52,22 @@ export async function createCheckoutAction(plan: unknown): Promise<CheckoutResul
   const headerList = await headers()
   const origin = headerList.get('origin') ?? APP_ORIGIN
 
-  const body =
-    product === 'pass'
-      ? new URLSearchParams({
-          mode: 'payment',
-          'line_items[0][price]': STRIPE_PRICE_PASS,
-          'line_items[0][quantity]': '1',
-          success_url: `${origin}/?checkout=success`,
-          cancel_url: `${origin}/pricing?checkout=cancel`,
-          client_reference_id: user.id,
-          customer_email: user.email,
-          'metadata[supabase_user_id]': user.id,
-          'metadata[kind]': 'pro_pass',
-        })
-      : new URLSearchParams({
-          mode: 'subscription',
-          'line_items[0][price]': checkoutPriceFor(product),
-          'line_items[0][quantity]': '1',
-          success_url: `${origin}/?checkout=success`,
-          cancel_url: `${origin}/pricing?checkout=cancel`,
-          client_reference_id: user.id,
-          customer_email: user.email,
-          'metadata[supabase_user_id]': user.id,
-          // Самая важная строка файла: благодаря ей идентификатор пользователя приезжает
-          // в каждом событии подписки, включая продления и отмену через полгода.
-          // Поэтому вебхук одноветочный, а checkout.session.completed не нужен вовсе.
-          'subscription_data[metadata][supabase_user_id]': user.id,
-          'subscription_data[metadata][product]': product,
-          allow_promotion_codes: 'true',
-        })
+  const body = new URLSearchParams({
+    mode: 'subscription',
+    'line_items[0][price]': checkoutPriceFor(product),
+    'line_items[0][quantity]': '1',
+    success_url: `${origin}/?checkout=success`,
+    cancel_url: `${origin}/pricing?checkout=cancel`,
+    client_reference_id: user.id,
+    customer_email: user.email,
+    'metadata[supabase_user_id]': user.id,
+    // Самая важная строка файла: благодаря ей идентификатор пользователя приезжает
+    // в каждом событии подписки, включая продления и отмену через полгода.
+    // Поэтому вебхук одноветочный, а checkout.session.completed не нужен вовсе.
+    'subscription_data[metadata][supabase_user_id]': user.id,
+    'subscription_data[metadata][product]': product,
+    allow_promotion_codes: 'true',
+  })
 
   try {
     const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {

@@ -141,6 +141,38 @@ export function referencePrompt(style: StyleAnalysis, description: string, varia
   ].join('\n')
 }
 
+/**
+ * Тот же рецепт, что и в referencePrompt, но без подстановки предмета и без
+ * общих правил: job-путь (createPromoSeriesAction) склеивает его через ту же
+ * composePrompt(scene, description), что и пресетные сцены, чтобы «Subject:»
+ * и правила приклеивались ровно один раз и ровно в одном месте.
+ */
+export function referenceRecipe(style: StyleAnalysis, variant = 0): string {
+  const recipe = [
+    `Lighting: ${style.lighting}`,
+    `Camera angle: ${style.angle}`,
+    `Background: ${style.background}`,
+    `Colour palette: ${style.palette}`,
+    `Composition: ${style.composition}`,
+    `Mood: ${style.mood}`,
+    `Lens: ${style.lens}`,
+    `Post-processing: ${style.postProcessing}`,
+  ]
+    .filter((line) => !line.endsWith(': '))
+    .join('\n')
+
+  const nudge = VARIANTS[variant % VARIANTS.length]
+
+  return [
+    'Recreate the photographic style described below with a completely different subject.',
+    'Follow the recipe for light, camera, background and grade. Do not reproduce any object from it.',
+    '',
+    recipe,
+    '',
+    `Variation: ${nudge}`,
+  ].join('\n')
+}
+
 /** Сдвиги ракурса для кадров одной серии: один рецепт, разные точки съёмки. */
 const VARIANTS: readonly string[] = [
   'straight-on hero framing, subject centred',

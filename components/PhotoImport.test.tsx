@@ -75,6 +75,17 @@ describe('PhotoImport', () => {
     expect(screen.queryByTestId('photo-preview')).toBe(null)
   })
 
+  it('до загрузки файла уже видна подсказка о пригодных картинках, на обеих локалях', () => {
+    render(<PhotoImport />)
+    const advice = screen.getByTestId('photo-advice')
+    expect(advice.textContent).toContain('Подходит не любая картинка')
+
+    act(() => {
+      useStudio.getState().setLocale('en')
+    })
+    expect(screen.getByTestId('photo-advice').textContent).toContain('Not every picture works')
+  })
+
   it('после загрузки рисует превью доски', async () => {
     const { container } = render(<PhotoImport />)
     await upload()

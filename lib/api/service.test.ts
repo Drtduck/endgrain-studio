@@ -150,6 +150,61 @@ describe('lib/api/service', () => {
     expect(from).not.toHaveBeenCalled()
   })
 
+  it('upsertProject с projectId существующей строки бьёт UPDATE и не создаёт вторую (лечение D12)', async () => {
+    const svc = await import('./service')
+    currentBuilder = makeBuilder({
+      data: { id: PROJECT_ID, name: 'обновлено', updated_at: '2026-01-01T00:00:00.000Z' },
+      error: null,
+    })
+    const res = await svc.upsertProject(USER_ID, PROJECT_ID, 'обновлено', baseDesign())
+    expect(res).toEqual({ ok: true, data: { id: PROJECT_ID, name: 'обновлено', updatedAt: '2026-01-01T00:00:00.000Z' } })
+    expect(currentBuilder.calls.some((c) => c.method === 'update')).toBe(true)
+    expect(currentBuilder.calls.some((c) => c.method === 'insert')).toBe(false)
+    const eqCalls = currentBuilder.calls.filter((c) => c.method === 'eq')
+    expect(eqCalls.some((c) => c.args[0] === 'id' && c.args[1] === PROJECT_ID)).toBe(true)
+    expect(eqCalls.some((c) => c.args[0] === 'user_id' && c.args[1] === USER_ID)).toBe(true)
+  })
+
+  it('upsertProject с projectId: null создаёт новую строку через INSERT', async () => {
+    const svc = await import('./service')
+    currentBuilder = makeBuilder({
+      data: { id: PROJECT_ID, name: 'новый', updated_at: '2026-01-01T00:00:00.000Z' },
+      error: null,
+    })
+    const res = await svc.upsertProject(USER_ID, null, 'новый', baseDesign())
+    expect(res.ok).toBe(true)
+    expect(currentBuilder.calls.some((c) => c.method === 'update')).toBe(false)
+    expect(currentBuilder.calls.some((c) => c.method === 'insert')).toBe(true)
+  })
+
+  it('upsertProject с projectId, которого не нашли (чужой/удалённый), падает в INSERT, а не в отказ', async () => {
+    const svc = await import('./service')
+    // Первый builder - под UPDATE, не находит строку (maybeSingle -> null).
+    currentBuilder = makeBuilder({ data: null, error: null })
+    const updateBuilder = currentBuilder
+    const insertBuilder = makeBuilder({
+      data: { id: 'нов-ид', name: 'документ', updated_at: '2026-01-01T00:00:00.000Z' },
+      error: null,
+    })
+    from.mockImplementationOnce(() => updateBuilder).mockImplementationOnce(() => {
+      currentBuilder = insertBuilder
+      return insertBuilder
+    })
+    const res = await svc.upsertProject(USER_ID, PROJECT_ID, 'документ', baseDesign())
+    expect(res.ok).toBe(true)
+    expect(updateBuilder.calls.some((c) => c.method === 'update')).toBe(true)
+    expect(insertBuilder.calls.some((c) => c.method === 'insert')).toBe(true)
+  })
+
+  it('upsertProject без Pro и с исчерпанным лимитом на создании новой строки даёт limit', async () => {
+    const svc = await import('./service')
+    pro = false
+    currentBuilder = makeBuilder({ count: 3, error: null })
+    const res = await svc.upsertProject(USER_ID, null, 'документ', baseDesign())
+    expect(res).toEqual({ ok: false, error: 'limit' })
+    expect(currentBuilder.calls.some((c) => c.method === 'insert')).toBe(false)
+  })
+
   it('курсор пагинации кодируется и декодируется в себя, битый курсор даёт invalid', async () => {
     const svc = await import('./service')
 

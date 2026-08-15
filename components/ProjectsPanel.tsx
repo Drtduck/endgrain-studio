@@ -8,11 +8,11 @@ import {
   saveProjectAction,
   type ProjectsError,
 } from '@/app/actions/projects'
+import { CreditCard } from 'lucide-react'
 import { usePro } from '@/components/ProProvider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PublishForm } from '@/components/gallery/PublishForm'
-import { WalletPanel } from '@/components/wallet/WalletPanel'
 import { track } from '@/lib/analytics/events'
 import { designDisplayName } from '@/lib/designs/name'
 import { t, type MessageKey } from '@/lib/i18n'
@@ -32,6 +32,7 @@ export function ProjectsPanel() {
   const locale = useStudio((s) => s.locale)
   const design = useStudio(selectDesign)
   const loadDesign = useStudio((s) => s.loadDesign)
+  const markProjectSaved = useStudio((s) => s.markProjectSaved)
   const setView = useStudio((s) => s.setView)
   const { status, billingEnabled } = usePro()
 
@@ -75,6 +76,9 @@ export function ProjectsPanel() {
       const res = await saveProjectAction(currentName, currentDesign)
       if (res.ok) {
         setItems((prev) => [res.data, ...prev])
+        // Синхронизируем со стором: повторное сохранение (в том числе кнопкой в редакторе)
+        // обновит именно этот проект, а не заведёт рядом ещё одну копию.
+        markProjectSaved(res.data.id, currentDesign)
         track('project_saved')
       } else {
         setError(res.error)
@@ -88,6 +92,9 @@ export function ProjectsPanel() {
       const res = await loadProjectAction(id)
       if (res.ok) {
         loadDesign(res.data)
+        // loadDesign выше сбрасывает привязку к проекту (она для generic-загрузок), здесь же
+        // грузится именно ЭТОТ облачный проект - привязку ставим следом тем же документом.
+        markProjectSaved(id, res.data)
         setView('editor')
       } else {
         setError(res.error)
@@ -125,7 +132,16 @@ export function ProjectsPanel() {
         <p className="text-base text-ink-secondary">{t(locale, 'projects.subtitle')}</p>
       </div>
 
-      <WalletPanel locale={locale} />
+      {/* Кошелёк и счётчик кадров переехали в аккаунт (раздел 6 спеки pricing-wallet.md):
+          он там оказался случайно, человек ищет деньги в аккаунте, а не в списке досок. */}
+      <a
+        href="/account/billing"
+        data-testid="projects-billing-link"
+        className="flex items-center gap-2 rounded-lg border border-line-subtle bg-surface-raised px-4 py-3 text-sm font-medium text-accent hover:underline"
+      >
+        <CreditCard aria-hidden className="size-4 shrink-0" />
+        {t(locale, 'account.billing')}
+      </a>
 
       <div className="flex flex-col gap-2 rounded-lg border border-line-subtle bg-surface-raised p-4">
         <h3 className="text-sm font-semibold">{t(locale, 'projects.saveTitle')}</h3>
