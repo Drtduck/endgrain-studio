@@ -6,6 +6,7 @@ import { runSeries, type RunnerHandle } from '@/lib/promo/runner'
 import type { PromoSeriesInput } from '@/lib/promo/schema'
 import type { PromoSeriesView, PromoShotView } from '@/lib/promo/types'
 import { usePromoStore } from '@/lib/store/promo'
+import { useStudio } from '@/lib/store/studio'
 
 /**
  * Общее ядро job-пути (P0-3, P0-6) для PhotoSeries и ReferenceShots: заводит
@@ -122,6 +123,11 @@ export function useSeriesRunner(): SeriesRunner {
       const res = await createPromoSeriesAction(input)
       if (!res.ok) {
         setError(res.error)
+        // notFound значит, что projectId в сторе (и в eg-current-project) битый -
+        // чужой проект после смены аккаунта или удалённый проект (P0-блокер
+        // приёмки 15.08.2026). Молча биться в ту же стену на следующем клике
+        // нельзя: отвязываем документ, чтобы ensureSaved пересохранил его заново.
+        if (res.error === 'notFound') useStudio.getState().clearCurrentProjectId()
         return
       }
       setSeries({

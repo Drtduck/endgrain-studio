@@ -10,6 +10,21 @@ const KIND_KEYS: Readonly<Record<CreditTransactionRow['kind'], MessageKey>> = {
   refund: 'credits.tx.refund',
 }
 
+/**
+ * Мелочь 3 (приёмка 15.08.2026): списание, целиком покрытое бесплатной
+ * месячной квотой Pro, хранится в БД нулём по дизайну (см. комментарий у
+ * lib/ai/credits.ts) - строка нужна для идемпотентности, даже если из
+ * платного баланса ничего не ушло. amount честен только про купленные
+ * кадры; сколько кадров нарисовано ФАКТИЧЕСКИ - это free_units+credit_units,
+ * и «Generation» в истории обязана показывать это число со знаком минус, а
+ * не «+0».
+ */
+function displayAmount(tx: CreditTransactionRow): number {
+  if (tx.kind !== 'spend') return tx.amount
+  const spent = tx.freeUnits + tx.creditUnits
+  return spent > 0 ? -spent : tx.amount
+}
+
 /** История движений кадров. По образцу components/wallet/TransactionList.tsx. */
 export function CreditsHistory({ locale, items }: { readonly locale: Locale; readonly items: readonly CreditTransactionRow[] }) {
   if (items.length === 0) {
@@ -33,9 +48,9 @@ export function CreditsHistory({ locale, items }: { readonly locale: Locale; rea
           <span className="text-ink-secondary">
             {t(locale, KIND_KEYS[tx.kind])} · {dateFormatter.format(new Date(tx.createdAt))}
           </span>
-          <span className={tx.amount >= 0 ? 'font-mono font-semibold text-success-text' : 'font-mono font-semibold text-ink'}>
-            {tx.amount >= 0 ? '+' : ''}
-            {tx.amount}
+          <span className={displayAmount(tx) >= 0 ? 'font-mono font-semibold text-success-text' : 'font-mono font-semibold text-ink'}>
+            {displayAmount(tx) >= 0 ? '+' : ''}
+            {displayAmount(tx)}
           </span>
         </li>
       ))}

@@ -191,6 +191,15 @@ export interface StudioState {
    * лучше лишний раз напомнить «есть несохранённые изменения», чем соврать про 'saved'.
    */
   restoreCurrentProjectId(id: string): void
+  /**
+   * Отвязывает документ от битой ссылки на облачный проект (P0-блокер
+   * приёмки 15.08.2026): сервер ответил notFound/чужой проект (например,
+   * eg-current-project пережил вход под другим аккаунтом) - привязку надо
+   * снять, чтобы следующее платное действие пересохранило документ заново, а
+   * не билось в ту же стену молча. Документ и историю НЕ трогает, в отличие
+   * от resetStudio.
+   */
+  clearCurrentProjectId(): void
   resetStudio(design?: Design): void
   undo(): void
   redo(): void
@@ -594,6 +603,7 @@ export function createStudioStore(initialDesign: Design = makeCheckerboard()): S
         })),
       markProjectSaved: (id, design) => set({ currentProjectId: id, lastSavedDesign: design }),
       restoreCurrentProjectId: (id) => set({ currentProjectId: id }),
+      clearCurrentProjectId: () => set({ currentProjectId: null }),
       // Сброс возвращает документ и выбор инструментов, но не язык и не единицы:
       // это настройки человека, а не состояние проекта.
       resetStudio: (design) =>

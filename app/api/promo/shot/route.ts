@@ -4,6 +4,7 @@ import { resolveImageProvider } from '@/lib/ai/providers'
 import { downloadPromoAsset, shotAssetPath, uploadPromoAsset } from '@/lib/promo/assets'
 import { composePrompt, editPrompt } from '@/lib/promo/prompts'
 import { fetchSeries, fetchShot, settleSeries, shotsToViews, toSeriesView, type ShotRow } from '@/lib/promo/db'
+import { resolveShotTier } from '@/lib/promo/imageTier'
 import { idSchema } from '@/lib/promo/schema'
 import { shotSpendRef } from '@/lib/promo/spendRef'
 import { getSupabaseService, isSupabaseServiceConfigured } from '@/lib/supabase/service'
@@ -132,7 +133,7 @@ export async function POST(req: Request): Promise<Response> {
   }
   if (referenceBytes === null && !demo) return fail('failed', 'noReference')
 
-  const tier = grant !== null && grant.ok && grant.tier === 'trial' ? 'cheap' : 'good'
+  const tier = resolveShotTier(series.source, grant !== null && grant.ok ? grant.tier : null)
   const provider = resolveImageProvider(tier)
   if (provider === null) return fail('failed', 'unavailable')
 

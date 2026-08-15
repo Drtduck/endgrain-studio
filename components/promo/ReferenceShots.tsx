@@ -121,6 +121,10 @@ export function ReferenceShots() {
 
   const cost = aiCost('referenceShots', count)
   const kinds: readonly PromoShotKind[] = ['hero', 'serving', 'macroOil', 'package'].slice(0, count) as PromoShotKind[]
+  // См. ту же правку и тот же P0-блокер приёмки 15.08.2026 в PhotoSeries.tsx:
+  // формулировка списания обязана называть фактический источник, а не тир.
+  const refCostKey: MessageKey =
+    gate.access.credits > 0 ? 'ref.cost.credits' : gate.access.tier === 'trial' ? 'ref.cost.trial' : 'ref.cost'
 
   const pick = async (file: File | undefined): Promise<void> => {
     if (file === undefined) return
@@ -313,7 +317,7 @@ export function ReferenceShots() {
               })}
             </div>
             <span data-testid="ref-cost" className="text-[13px] text-ink-secondary">
-              {t(locale, 'ref.cost', { count, cost })}
+              {t(locale, refCostKey, { count, cost })}
             </span>
             <div className="flex-1" />
             <Button

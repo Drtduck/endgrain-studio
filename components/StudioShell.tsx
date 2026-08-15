@@ -25,6 +25,7 @@ import { SpeciesPalette } from '@/components/SpeciesPalette'
 import { TemplateGallery } from '@/components/TemplateGallery'
 import { HelpHint } from '@/components/ui/help-hint'
 import { Separator } from '@/components/ui/separator'
+import { useSession } from '@/components/SessionProvider'
 import { t } from '@/lib/i18n'
 import { useDerived } from '@/lib/store/derived'
 import { useStudioPersistence } from '@/lib/store/persist'
@@ -37,7 +38,8 @@ export function StudioShell() {
   const unit = useStudio((s) => s.unit)
   const view = useStudio((s) => s.view)
   const { model, calc } = useDerived()
-  useStudioPersistence()
+  const { user } = useSession()
+  useStudioPersistence(user?.id ?? null)
 
   return (
     <div className="min-h-screen bg-app">

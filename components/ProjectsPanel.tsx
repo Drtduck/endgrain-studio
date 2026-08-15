@@ -17,8 +17,8 @@ import { track } from '@/lib/analytics/events'
 import { designDisplayName } from '@/lib/designs/name'
 import { t, type MessageKey } from '@/lib/i18n'
 import { FREE_PROJECT_LIMIT } from '@/lib/stripe/limits'
+import { useProjectsStore } from '@/lib/store/projects'
 import { selectDesign, useStudio } from '@/lib/store/studio'
-import type { ProjectSummary } from '@/lib/supabase/types'
 
 const ERROR_KEYS: Readonly<Record<ProjectsError, MessageKey>> = {
   unauthenticated: 'projects.errorAuth',
@@ -36,8 +36,15 @@ export function ProjectsPanel() {
   const setView = useStudio((s) => s.setView)
   const { status, billingEnabled } = usePro()
 
-  const [items, setItems] = useState<readonly ProjectSummary[]>([])
-  const [loaded, setLoaded] = useState(false)
+  // Список - общий стор (мелочь 2, приёмка 15.08.2026), не локальный useState:
+  // SaveProjectButton в редакторе пишет успешное сохранение сюда же, и список
+  // не отстаёт от реальности, когда человек переключается на вкладку «Проекты».
+  const items = useProjectsStore((s) => s.items)
+  const loaded = useProjectsStore((s) => s.loaded)
+  const setItems = useProjectsStore((s) => s.setItems)
+  const upsertItem = useProjectsStore((s) => s.upsertItem)
+  const removeItem = useProjectsStore((s) => s.removeItem)
+  const markLoaded = useProjectsStore((s) => s.markLoaded)
   // Имя из документа пересчитывается на каждый рендер и подставляется заново, когда оно
   // изменилось: иначе в облако уезжало имя на языке момента открытия вкладки, а после
   // загрузки другого проекта - имя предыдущего. Правка состояния прямо в рендере, а не в
@@ -57,9 +64,11 @@ export function ProjectsPanel() {
     setError(null)
     startTransition(async () => {
       const res = await listProjectsAction()
-      setLoaded(true)
       if (res.ok) setItems(res.data)
-      else setError(res.error)
+      else {
+        markLoaded()
+        setError(res.error)
+      }
     })
   }
 
@@ -68,6 +77,11 @@ export function ProjectsPanel() {
   // на build. Это допустимая деградация UX (см. задачу 4 брифа фазы 7): список грузится
   // по явному клику на "Обновить список", подсказка ниже написана нейтрально и не
   // подразумевает, что загрузка уже случилась сама.
+  //
+  // Список - общий стор lib/store/projects.ts (мелочь 2, приёмка 15.08.2026): и
+  // здесь, и в SaveProjectButton (кнопка в редакторе) успешное сохранение пишет
+  // upsertItem в тот же стор, поэтому список не отстаёт от реальности, когда
+  // человек переключается на вкладку «Проекты» - без единого лишнего эффекта.
   const onSave = (): void => {
     setError(null)
     const currentName = name
@@ -75,7 +89,7 @@ export function ProjectsPanel() {
     startTransition(async () => {
       const res = await saveProjectAction(currentName, currentDesign)
       if (res.ok) {
-        setItems((prev) => [res.data, ...prev])
+        upsertItem(res.data)
         // Синхронизируем со стором: повторное сохранение (в том числе кнопкой в редакторе)
         // обновит именно этот проект, а не заведёт рядом ещё одну копию.
         markProjectSaved(res.data.id, currentDesign)
@@ -112,7 +126,7 @@ export function ProjectsPanel() {
     startTransition(async () => {
       const res = await deleteProjectAction(id)
       if (res.ok) {
-        setItems((prev) => prev.filter((item) => item.id !== id))
+        removeItem(id)
       } else {
         setError(res.error)
       }

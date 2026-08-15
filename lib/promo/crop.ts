@@ -50,6 +50,15 @@ export function pickFitMode(
  * Поэтому для pad-режима, когда исходник меньше цели, канва считается вручную:
  * наименьший прямоугольник с аспектом площадки, который вмещает исходник БЕЗ
  * увеличения контента (спека 7.0, п.2 - никакого апскейла никогда).
+ *
+ * Исключение (мелочь 6, приёмка 15.08.2026): у площадок с padColor: null
+ * (Etsy) добивать белым нечем - padColor там не «можно, но не обязательно»,
+ * а «эта площадка не хочет полей». Без белого поля и без апскейла кадр
+ * остаётся МЕНЬШЕ заявленного размера (пример из прод-приёмки: 1365x1024
+ * вместо целевых 2000x1500 у Etsy) и не проходит минимальные требования
+ * площадки - врать про размер меньше, чем не показать честный апскейл. У
+ * площадок с padColor заданным (Amazon, eBay) этой проблемы нет вообще:
+ * канва и так выходит в полный target за счёт белых полей, апскейл не нужен.
  */
 function effectiveCanvas(
   source: { readonly width: number; readonly height: number },
@@ -59,10 +68,21 @@ function effectiveCanvas(
   if (mode === 'cover') return spec.target
   const contentScale = Math.min(spec.target.width / source.width, spec.target.height / source.height)
   if (contentScale <= 1) return spec.target
+  if (spec.padColor === null) return spec.target
   const destRatio = spec.target.width / spec.target.height
   const canvasWidth = Math.max(source.width, Math.round(source.height * destRatio))
   const canvasHeight = Math.max(1, Math.round(canvasWidth / destRatio))
   return { width: canvasWidth, height: canvasHeight }
+}
+
+/** Апскейл нужен ровно в исключении из effectiveCanvas выше: pad, нет цвета полей, исходник мельче цели. */
+function needsUpscale(
+  source: { readonly width: number; readonly height: number },
+  spec: MarketplaceImageSpec,
+  mode: FitMode,
+): boolean {
+  if (mode !== 'pad' || spec.padColor !== null) return false
+  return source.width < spec.target.width || source.height < spec.target.height
 }
 
 export interface CropResult {
@@ -98,7 +118,11 @@ export async function cropForMarketplace(input: Buffer, spec: MarketplaceImageSp
     fit: mode === 'pad' ? 'contain' : 'cover',
     background: spec.padColor ?? '#FFFFFF',
     position: 'centre',
-    withoutEnlargement: true,
+    // Апскейл выключен всегда, кроме одного исключения (мелочь 6, приёмка
+    // 15.08.2026): площадка без цвета полей (padColor: null, например Etsy),
+    // которой без апскейла нечем добить кадр до заявленного размера - см.
+    // needsUpscale/effectiveCanvas выше.
+    withoutEnlargement: !needsUpscale(source, spec, mode),
   })
 
   const encoded =

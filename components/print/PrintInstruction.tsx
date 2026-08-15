@@ -283,6 +283,10 @@ function PrintDocument({ design, locale, pro }: { design: Design; locale: Locale
           {plan.rows.map((row) => (
             <li key={row.rowId} className="print-keep flex items-center gap-3">
               <span className="w-6 shrink-0 tabular-nums text-neutral-600">{row.number}</span>
+              {/* Буква щита на полоске (мелочь 5, приёмка 15.08.2026): без неё
+                  восемь одинаковых серых полосок несут ноль информации - непонятно,
+                  в какую панель идёт ряд при сборке нескольких щитов. */}
+              <span className="w-6 shrink-0 text-center text-xs font-semibold text-neutral-700">{row.panelId}</span>
               <span className="flex-1 border border-neutral-700 bg-neutral-100" style={{ height: `${Math.max(4, row.thicknessMm / 2)}px` }} />
               <span className="w-10 shrink-0 text-xs text-neutral-600">
                 {`${row.flip ? 'F' : ''}${row.mirror ? 'M' : ''}`}
