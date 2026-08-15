@@ -3,8 +3,15 @@ on:
   push:
     branches: [main]
   pull_request:
+
+# Новый пуш в ту же ветку отменяет предыдущий прогон: очередь не забивается
+# устаревшими проверками, а PR всё равно оценивается по последнему коммиту.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  check:
+  typecheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,8 +22,47 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - run: pnpm lint
-      - run: pnpm test
+
+  # Юниты в jsdom упираются в число ядер раннера, а их больше двух тысяч.
+  # Три шарда идут параллельно на разных машинах: время падает втрое.
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm vitest run --shard=${{ matrix.shard }}/3
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
   e2e:
@@ -29,7 +75,24 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      # Браузер весит сотни мегабайт и меняется только вместе с версией
+      # @playwright/test, поэтому ключ кэша берём из lock-файла.
+      - name: Кэш браузеров Playwright
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Playwright chromium
+        run: pnpm exec playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+      # Системные библиотеки не лежат в кэше браузеров, их ставим всегда:
+      # без них chromium не стартует даже при попадании в кэш.
+      - name: Системные зависимости для chromium
+        run: pnpm exec playwright install-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+      # Число воркеров задано в playwright.config.ts, чтобы настройка жила
+      # в одном месте, а не разъезжалась между конфигом и workflow.
       - run: pnpm test:e2e
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
