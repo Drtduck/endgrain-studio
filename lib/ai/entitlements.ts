@@ -18,7 +18,10 @@ import {
   verifyGuestCookie,
   type FreeSubject,
 } from './freeSubjects'
+import { providerCostCents } from './cost'
+import { readCredits } from './credits'
 import {
+  AI_CREDIT_FEATURES,
   AI_MONTHLY_LIMIT,
   AI_TRIAL_FEATURES,
   FREE_TRIAL_LIMIT,
@@ -51,8 +54,31 @@ import {
  * общий тип с необязательными полями.
  */
 export type AiGrant =
-  | { readonly ok: true; readonly tier: 'pro'; readonly userId: string; readonly period: string; readonly cost: number; readonly used: number; readonly remaining: number }
+  | {
+      readonly ok: true
+      readonly tier: 'pro'
+      readonly userId: string
+      readonly period: string
+      readonly cost: number
+      readonly used: number
+      readonly remaining: number
+      /** Ключ идемпотентности этого резерва: нужен release_ai_units при возврате. */
+      readonly ref: string
+      readonly free: number
+      readonly credits: number
+    }
   | { readonly ok: true; readonly tier: 'trial'; readonly subjects: readonly FreeSubject[]; readonly cost: number; readonly remaining: number }
+  | {
+      readonly ok: true
+      readonly tier: 'credits'
+      readonly userId: string
+      readonly period: string
+      readonly ref: string
+      readonly cost: number
+      readonly free: number
+      readonly credits: number
+      readonly remaining: number
+    }
 
 export interface AiDenial {
   readonly ok: false
@@ -103,31 +129,95 @@ async function readTrialUsed(subject: FreeSubject): Promise<number> {
   return Number(data.used ?? 0)
 }
 
+// Старую consume() через consume_ai_quota убрали: Pro теперь списывает через
+// consume_ai_units (см. consumeUnits ниже), она же считает и бесплатную квоту,
+// и купленные кадры одной транзакцией. SQL-функция consume_ai_quota в базе
+// остаётся нетронутой, просто больше не вызывается отсюда.
+
+interface UnitsConsumeOk {
+  readonly ok: true
+  readonly replay: boolean
+  readonly free: number
+  readonly credits: number
+  readonly creditsBalance: number
+  /** Суммарно потрачено бесплатной квоты периода после этой операции (только для Pro). */
+  readonly quotaUsed: number
+}
+interface UnitsConsumeDenied {
+  readonly ok: false
+  readonly freeAvailable: number
+  readonly creditsBalance: number
+}
+type UnitsConsumeOutcome = UnitsConsumeOk | UnitsConsumeDenied | 'error'
+
 /**
- * Атомарное списание в базе. Логику потолка держит SQL-функция, а не JS: два
- * параллельных запроса обязаны разойтись на блокировке строки.
- *
- * Выбранная квота и упавшая база это разные ответы: сказать человеку «лимит
- * исчерпан», когда на самом деле не ответил Postgres, значит соврать.
+ * Списание через новый consume_ai_units: сперва бесплатная месячная квота
+ * (только если allowFree), остаток - купленными кадрами. Одна SQL-транзакция,
+ * см. комментарий к самой функции в миграции 20260815100000_ai_credits.sql.
  */
-async function consume(userId: string, period: string, cost: number): Promise<number | 'exceeded' | 'error'> {
+async function consumeUnits(
+  userId: string,
+  period: string,
+  limit: number,
+  cost: number,
+  ref: string,
+  feature: AiFeature,
+  allowFree: boolean,
+  providerCost: number,
+): Promise<UnitsConsumeOutcome> {
   try {
     const sb = getSupabaseService()
-    const { data, error } = await sb.rpc('consume_ai_quota', {
+    const { data, error } = await sb.rpc('consume_ai_units', {
       p_user_id: userId,
       p_period: period,
-      p_limit: AI_MONTHLY_LIMIT,
+      p_limit: limit,
       p_cost: cost,
+      p_ref: ref,
+      p_feature: feature,
+      p_allow_free: allowFree,
+      p_provider_cost_cents: providerCost,
     })
     if (error) {
-      console.error('consume_ai_quota failed', error.message)
+      console.error('consume_ai_units failed', error.message)
       return 'error'
     }
-    // null из функции значит, что do update отсеян условием потолка.
-    return data === null || data === undefined ? 'exceeded' : Number(data)
+    const body = data as
+      | {
+          ok?: boolean
+          replay?: unknown
+          free?: unknown
+          credits?: unknown
+          credits_balance?: unknown
+          free_available?: unknown
+          quota_used?: unknown
+        }
+      | null
+    if (body === null || typeof body.ok !== 'boolean') return 'error'
+    if (body.ok) {
+      return {
+        ok: true,
+        replay: body.replay === true,
+        free: Number(body.free ?? 0),
+        credits: Number(body.credits ?? 0),
+        creditsBalance: Number(body.credits_balance ?? 0),
+        quotaUsed: Number(body.quota_used ?? 0),
+      }
+    }
+    return { ok: false, freeAvailable: Number(body.free_available ?? 0), creditsBalance: Number(body.credits_balance ?? 0) }
   } catch (err) {
-    console.error('consume_ai_quota failed', err)
+    console.error('consume_ai_units failed', err)
     return 'error'
+  }
+}
+
+/** Возврат резерва через release_ai_units: используется тирами 'pro' и 'credits'. */
+async function releaseUnits(userId: string, period: string, ref: string): Promise<void> {
+  try {
+    const sb = getSupabaseService()
+    const { error } = await sb.rpc('release_ai_units', { p_user_id: userId, p_period: period, p_ref: ref })
+    if (error) console.error('release_ai_units failed', error.message)
+  } catch (err) {
+    console.error('release_ai_units failed', err)
   }
 }
 
@@ -200,7 +290,7 @@ async function ensureGuestCookie(guestId: string): Promise<void> {
  * не заглядывает никогда. Всё остальное (аноним и вошедший без подписки)
  * пробует пробный тир, если он настроен и фича в него входит.
  */
-export async function assertAiAllowed(feature: AiFeature, units = 1): Promise<AiVerdict> {
+export async function assertAiAllowed(feature: AiFeature, units = 1, ref: string = crypto.randomUUID()): Promise<AiVerdict> {
   // Без аккаунтов гейт не построить вовсе, а пускать всех подряд в платную
   // модель нельзя: это ровно тот дефект, из-за которого правка и затевалась.
   if (!isSupabaseConfigured()) return deny('unavailable')
@@ -215,23 +305,62 @@ export async function assertAiAllowed(feature: AiFeature, units = 1): Promise<Ai
       const cost = aiCost(feature, units)
 
       // Бесплатная фича: Pro нужен, счётчик не трогаем и в базу за ним не идём.
-      if (cost === 0) return { ok: true, tier: 'pro', userId: user.id, period, cost: 0, used: 0, remaining: AI_MONTHLY_LIMIT }
+      if (cost === 0) {
+        return { ok: true, tier: 'pro', userId: user.id, period, cost: 0, used: 0, remaining: AI_MONTHLY_LIMIT, ref, free: 0, credits: 0 }
+      }
 
       // Считать квоту нечем: без service-ключа функция списания недоступна, а
       // пускать без счётчика значит остаться без потолка расходов.
       if (!isSupabaseServiceConfigured()) return deny('unavailable')
 
-      const used = await consume(user.id, period, cost)
-      if (used === 'exceeded') return deny('quota')
-      if (used === 'error') return deny('unavailable')
+      const outcome = await consumeUnits(user.id, period, AI_MONTHLY_LIMIT, cost, ref, feature, true, providerCostCents(cost))
+      if (outcome === 'error') return deny('unavailable')
+      if (!outcome.ok) return deny('quota', outcome.freeAvailable + outcome.creditsBalance)
 
-      return { ok: true, tier: 'pro', userId: user.id, period, cost, used, remaining: aiRemaining(used) }
+      return {
+        ok: true,
+        tier: 'pro',
+        userId: user.id,
+        period,
+        cost,
+        used: outcome.quotaUsed,
+        remaining: aiRemaining(outcome.quotaUsed, AI_MONTHLY_LIMIT) + outcome.creditsBalance,
+        ref,
+        free: outcome.free,
+        credits: outcome.credits,
+      }
     }
   }
 
-  // Не Pro (или аноним). Пробный тир не настроен или фича в него не входит:
-  // сегодняшнее поведение, замок с причиной.
+  /**
+   * Купленные кадры доступны только вошедшему, значит гостю их предложить нечем:
+   * дальше он пробует ровно то же пробное, что и раньше.
+   */
+  async function tryCredits(insufficientReason: AiDenyReason): Promise<AiVerdict | null> {
+    if (user === null || !AI_CREDIT_FEATURES.includes(feature) || !isSupabaseServiceConfigured()) return null
+    const period = aiPeriod(Date.now())
+    const cost = aiCost(feature, units)
+    const outcome = await consumeUnits(user.id, period, 0, cost, ref, feature, false, providerCostCents(cost))
+    if (outcome === 'error') return deny('unavailable')
+    if (!outcome.ok) return deny(insufficientReason, outcome.creditsBalance)
+    return {
+      ok: true,
+      tier: 'credits',
+      userId: user.id,
+      period,
+      ref,
+      cost,
+      free: outcome.free,
+      credits: outcome.credits,
+      remaining: outcome.creditsBalance,
+    }
+  }
+
+  // Пробный тир не настроен или фича в него не входит: сразу пробуем купленные
+  // кадры (пробное тратится первым только когда оно вообще есть), иначе замок с причиной.
   if (!isFreeTrialConfigured() || !AI_TRIAL_FEATURES.includes(feature)) {
+    const credits = await tryCredits('noCredits')
+    if (credits !== null) return credits
     return deny(user === null ? 'anonymous' : 'notPro')
   }
 
@@ -247,33 +376,27 @@ export async function assertAiAllowed(feature: AiFeature, units = 1): Promise<Ai
   const subjects = freeSubjects({ secret: FREE_TRIAL_SECRET, userId: user?.id ?? null, guestId, ip })
 
   const cost = Math.max(0, Math.trunc(units))
-  const outcome = await consumeTrial(subjects, cost)
-  if (outcome === 'error') return deny('unavailable')
-  if (!outcome.ok) return deny('trialSpent')
+  const trialOutcome = await consumeTrial(subjects, cost)
+  if (trialOutcome === 'error') return deny('unavailable')
+  if (!trialOutcome.ok) {
+    // Пробное кончилось: последний шанс до отказа - купленные кадры.
+    const credits = await tryCredits('noCredits')
+    if (credits !== null) return credits
+    return deny('trialSpent')
+  }
 
   // Cookie ставится лениво, ровно тут: посетителю лендинга она не нужна, а
   // после первого успешного списания субъект guest обязан быть постоянным.
   if (user === null && guestId !== null && existingGuestId === null) await ensureGuestCookie(guestId)
 
-  return { ok: true, tier: 'trial', subjects, cost, remaining: outcome.remaining }
+  return { ok: true, tier: 'trial', subjects, cost, remaining: trialOutcome.remaining }
 }
 
 /** Возврат резерва: зовётся, только когда наружу не вышло ничего полезного. */
 export async function releaseAiQuota(grant: AiGrant): Promise<void> {
   if (grant.cost <= 0) return
-  if (grant.tier === 'pro') {
-    try {
-      const sb = getSupabaseService()
-      const { error } = await sb.rpc('release_ai_quota', {
-        p_user_id: grant.userId,
-        p_period: grant.period,
-        p_cost: grant.cost,
-      })
-      if (error) console.error('release_ai_quota failed', error.message)
-    } catch (err) {
-      // Невозвращённый резерв это одна лишняя единица из тридцати, а не сбой ответа.
-      console.error('release_ai_quota failed', err)
-    }
+  if (grant.tier === 'pro' || grant.tier === 'credits') {
+    await releaseUnits(grant.userId, grant.period, grant.ref)
     return
   }
 
@@ -296,7 +419,7 @@ export async function releaseAiQuota(grant: AiGrant): Promise<void> {
  * случае честно показываем полный остаток - расхождение возможно ровно один
  * раз и только в большую сторону, для человека, который ещё ничего не потратил.
  */
-async function trialAccess(userId: string | null): Promise<AiAccess> {
+async function trialAccess(userId: string | null, credits: number): Promise<AiAccess> {
   if (userId === null) {
     const guestId = await verifiedGuestIdFromCookie()
     if (guestId === null) return aiAccess('trial', 0, FREE_TRIAL_LIMIT)
@@ -304,7 +427,12 @@ async function trialAccess(userId: string | null): Promise<AiAccess> {
     return aiAccess(used >= FREE_TRIAL_LIMIT ? 'trialSpent' : 'trial', used, FREE_TRIAL_LIMIT)
   }
   const used = await readTrialUsed({ kind: 'user', id: userId, limit: FREE_TRIAL_LIMIT })
-  return aiAccess(used >= FREE_TRIAL_LIMIT ? 'trialSpent' : 'trial', used, FREE_TRIAL_LIMIT)
+  if (used >= FREE_TRIAL_LIMIT) {
+    // Пробное кончилось: если на балансе есть купленные кадры, генерация
+    // не заперта, состояние показывает это отдельным значением.
+    return aiAccess(credits > 0 ? 'credits' : 'trialSpent', used, FREE_TRIAL_LIMIT, credits)
+  }
+  return aiAccess('trial', used, FREE_TRIAL_LIMIT, credits)
 }
 
 /**
@@ -318,14 +446,23 @@ export async function getAiAccess(): Promise<AiAccess> {
 
   try {
     const user = await getCurrentUser()
+    // Купленные кадры доступны только вошедшему: у гостя нет аккаунта, к
+    // которому их можно было бы привязать.
+    const credits = user === null ? 0 : (await readCredits(user.id)).balance
+
     if (user !== null) {
       const { pro } = await getProStatus()
-      if (pro) return aiAccess('pro', await readUsed(user.id, aiPeriod(Date.now())))
+      if (pro) return aiAccess('pro', await readUsed(user.id, aiPeriod(Date.now())), AI_MONTHLY_LIMIT, credits)
     }
 
-    if (!isFreeTrialConfigured()) return aiAccess(user === null ? 'anonymous' : 'free')
+    if (!isFreeTrialConfigured()) {
+      // Пробного тира нет вовсе: лимит 0, а не FREE_TRIAL_LIMIT - "бесплатной"
+      // квоты тут не существует даже как факт, есть только купленные кадры.
+      if (user !== null && credits > 0) return aiAccess('credits', 0, 0, credits)
+      return aiAccess(user === null ? 'anonymous' : 'free')
+    }
 
-    return await trialAccess(user?.id ?? null)
+    return await trialAccess(user?.id ?? null, credits)
   } catch (err) {
     // Лежащая база не должна ронять рендер студии, ровно как в getProStatus.
     console.error('getAiAccess failed', err)

@@ -1,6 +1,7 @@
 // Вынесено из app/actions/promo.ts: файл с директивой 'use server' может
 // экспортировать только асинхронные функции, ни схему, ни константу оттуда Next не соберёт.
 import { z } from 'zod'
+import { SCENE_MAX_CHARS } from './promptGuard'
 import { STYLE_FIELDS, STYLE_FIELD_MAX } from './reference'
 import { MERCH_PRODUCT_IDS, PROMO_MAX_SHOTS, PROMO_SHOTS, type MerchProductId, type PromoShotKind } from './types'
 
@@ -18,19 +19,8 @@ export const PNG_DATA_URL_RE = /^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/=
  */
 export const MAX_PNG_CHARS = 3_500_000
 
-/** Набор пресетов кадра. Пустой набор бессмыслен, повторы схлопываем на сервере. */
-const shotKinds = z
-  .array(z.enum(PROMO_SHOTS as readonly [PromoShotKind, ...PromoShotKind[]]))
-  .min(1)
-  .max(PROMO_MAX_SHOTS)
-
-export const promoShotsSchema = z.object({
-  boardPng: z.string().max(MAX_PNG_CHARS).regex(PNG_DATA_URL_RE),
-  description: z.string().trim().min(1).max(2000),
-  kinds: shotKinds,
-})
-
-export type PromoShotsInput = z.infer<typeof promoShotsSchema>
+/** uuid проекта и кадра/серии - общий тип для действий job-пути. */
+export const idSchema = z.uuid()
 
 /**
  * Референс приходит от человека, а не из нашего же рендера, поэтому проверок
@@ -100,4 +90,52 @@ export const merchSchema = z.object({
     .array(z.enum(MERCH_PRODUCT_IDS as readonly [MerchProductId, ...MerchProductId[]]))
     .min(1)
     .max(MERCH_PRODUCT_IDS.length),
+})
+
+/**
+ * Job-путь (P0-3): тело createPromoSeriesAction. Дискриминант source разводит
+ * два сценария на одну и ту же серию/строки кадров:
+ *  - 'presets' - набор пресетов из SCENES, каждый со своей необязательной
+ *    правкой сцены (проходит checkScene на сервере);
+ *  - 'reference' - разбор чужого кадра (style), количество кадров, сцена
+ *    правке не подлежит (собирается из style через referenceRecipe).
+ *
+ * description с клиента НЕ доверяем (спека 6.3): сервер пересчитывает его сам
+ * из design проекта. Поле оставлено опциональным только для обратной
+ * совместимости мок-пути (isAiDemoMode, без Supabase и без проекта).
+ */
+const presetShotSchema = z.object({
+  kind: z.enum(PROMO_SHOTS as readonly [PromoShotKind, ...PromoShotKind[]]),
+  /** Правленая сцена. Отсутствует - берём пресетную из SCENES. */
+  scene: z.string().trim().max(SCENE_MAX_CHARS).optional(),
+})
+
+const presetsSeriesSchema = z.object({
+  source: z.literal('presets'),
+  projectId: idSchema,
+  walletRef: idSchema,
+  boardPng: z.string().max(MAX_PNG_CHARS).regex(PNG_DATA_URL_RE),
+  description: z.string().trim().max(2000).optional(),
+  shots: z.array(presetShotSchema).min(1).max(PROMO_MAX_SHOTS),
+})
+
+const referenceSeriesSchema = z.object({
+  source: z.literal('reference'),
+  projectId: idSchema,
+  walletRef: idSchema,
+  boardPng: z.string().max(MAX_PNG_CHARS).regex(PNG_DATA_URL_RE),
+  description: z.string().trim().max(2000).optional(),
+  style: styleSchema,
+  count: z.number().int().min(1).max(REFERENCE_MAX_COUNT),
+})
+
+export const promoSeriesSchema = z.discriminatedUnion('source', [presetsSeriesSchema, referenceSeriesSchema])
+
+export type PromoSeriesInput = z.infer<typeof promoSeriesSchema>
+
+/** Правка готового кадра (спека 6.4): новый кадр рядом, оригинал не трогаем. */
+export const editPromoShotSchema = z.object({
+  shotId: idSchema,
+  walletRef: idSchema,
+  instruction: z.string().trim().min(1).max(1000),
 })

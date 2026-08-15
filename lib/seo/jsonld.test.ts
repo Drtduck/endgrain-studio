@@ -53,12 +53,12 @@ describe('landingJsonLd', () => {
 })
 
 describe('pricingJsonLd', () => {
-  it('это SoftwareApplication с офферами Free, Pro, Пропуска и Developer', () => {
+  it('это SoftwareApplication с офферами Free, Pro и Developer (Пропуск снят с продажи)', () => {
     const json = pricingJsonLd()
     expect(json['@type']).toBe('SoftwareApplication')
     const offers = json['offers'] as Record<string, unknown>[]
-    expect(offers).toHaveLength(6)
-    expect(offers.map((o) => o['price'])).toEqual(['0', '9', '90', '19', '20', '200'])
+    expect(offers).toHaveLength(5)
+    expect(offers.map((o) => o['price'])).toEqual(['0', '9', '90', '20', '200'])
   })
 })
 

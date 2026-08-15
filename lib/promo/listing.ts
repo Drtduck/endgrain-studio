@@ -63,27 +63,6 @@ export function boardSizeInches(widthMm: number, lengthMm: number, thicknessMm: 
   return `${w} x ${l} x ${th} in`
 }
 
-export function listingPrompt(description: BoardDescription, sizeIn: string): string {
-  const woods = description.species.length > 0 ? description.species.join(', ') : 'hardwood'
-  return [
-    'You are an e-commerce copywriter for a woodworking shop selling handmade end-grain cutting boards.',
-    'Write a marketplace listing for the board described below, ready for Amazon and Etsy at once.',
-    '',
-    `Board: ${description.text}`,
-    `Size (metric): ${description.sizeMm}`,
-    `Size (imperial): ${sizeIn}`,
-    `Woods used, by share of the surface: ${woods}`,
-    '',
-    'Answer with JSON only, using exactly these keys:',
-    `- title: a single product title, up to ${TITLE_MAX} characters, keyword-rich, no ALL CAPS, no emoji`,
-    `- bullets: exactly ${AMAZON_BULLET_COUNT} Amazon-style feature bullets, each up to ${BULLET_MAX} characters, each starting with a short bold-style benefit phrase`,
-    `- keywords: exactly ${ETSY_TAG_COUNT} Etsy tags, each up to ${ETSY_TAG_MAX} characters, lowercase, no duplicates, no hashtags`,
-    `- description: full marketplace description, up to ${DESCRIPTION_MAX} characters, selling the craft and the size, mentioning both metric and imperial size`,
-    `- materials: up to ${MATERIALS_MAX_LINES} short material lines (e.g. "Black walnut", "Food-safe mineral oil finish")`,
-    `- care: a care and maintenance paragraph for an end-grain board, up to ${CARE_MAX} characters`,
-  ].join('\n')
-}
-
 /**
  * Разбор ответа модели. Модель отвечает текстом, даже когда её просили про JSON,
  * поэтому: пробуем разобрать целиком, а если не вышло - вырезаем первый объект

@@ -102,22 +102,23 @@ describe('AccountMenu', () => {
     expect(mcp.textContent).toContain('MCP')
   })
 
-  it('бесплатному аккаунту первым пунктом даёт апгрейд на тарифы', async () => {
+  it('бесплатному аккаунту первым пунктом даёт апгрейд, но и оплату с кадрами тоже показывает', async () => {
     renderWith(USER, { status: FREE, billingEnabled: true })
     fireEvent.click(screen.getByTestId('account-menu-trigger'))
 
     const upgrade = await screen.findByTestId('account-menu-upgrade')
     expect(upgrade.getAttribute('href')).toBe('/pricing')
     expect(screen.getByTestId('account-menu-plan').textContent).toBe('Бесплатный тариф')
-    expect(screen.queryByTestId('account-menu-billing')).toBe(null)
+    const billing = screen.getByTestId('account-menu-billing')
+    expect(billing.getAttribute('href')).toBe('/account/billing')
   })
 
-  it('подписчику вместо апгрейда даёт тарифы и показывает остаток квоты', async () => {
+  it('подписчику вместо апгрейда даёт оплату с кадрами и показывает остаток квоты', async () => {
     renderWith(USER, { status: PRO, billingEnabled: true, ai: aiAccess('pro', 12, 30) })
     fireEvent.click(screen.getByTestId('account-menu-trigger'))
 
     const billing = await screen.findByTestId('account-menu-billing')
-    expect(billing.getAttribute('href')).toBe('/pricing')
+    expect(billing.getAttribute('href')).toBe('/account/billing')
     expect(screen.queryByTestId('account-menu-upgrade')).toBe(null)
     expect(screen.getByTestId('account-menu-plan').textContent).toBe('Тариф Pro')
     expect(screen.getByTestId('account-menu-quota').textContent).toContain('18')

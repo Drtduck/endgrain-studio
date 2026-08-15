@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AI_CREDIT_FEATURES,
   AI_FEATURE_COST,
   AI_MONTHLY_LIMIT,
   AI_TRIAL_FEATURES,
@@ -65,11 +66,27 @@ describe('aiRemaining', () => {
 
 describe('aiAccess', () => {
   it('собирает состояние для интерфейса с остатком и тиром pro', () => {
-    expect(aiAccess('pro', 4)).toEqual({ state: 'pro', limit: 30, used: 4, remaining: 26, tier: 'pro' })
+    expect(aiAccess('pro', 4)).toEqual({
+      state: 'pro',
+      limit: 30,
+      used: 4,
+      freeRemaining: 26,
+      credits: 0,
+      remaining: 26,
+      tier: 'pro',
+    })
   })
 
   it('состояния без счётчика показывают полный лимит и тир null', () => {
-    expect(aiAccess('anonymous')).toEqual({ state: 'anonymous', limit: 30, used: 0, remaining: 30, tier: null })
+    expect(aiAccess('anonymous')).toEqual({
+      state: 'anonymous',
+      limit: 30,
+      used: 0,
+      freeRemaining: 30,
+      credits: 0,
+      remaining: 30,
+      tier: null,
+    })
   })
 
   it('mock, unavailable и free тоже дают тир null: платить не за что или замок', () => {
@@ -78,9 +95,10 @@ describe('aiAccess', () => {
     expect(aiAccess('free').tier).toBeNull()
   })
 
-  it('trial и trialSpent дают тир trial', () => {
+  it('trial и trialSpent дают тир trial, credits - тир credits', () => {
     expect(aiAccess('trial', 1, FREE_TRIAL_LIMIT).tier).toBe('trial')
     expect(aiAccess('trialSpent', FREE_TRIAL_LIMIT, FREE_TRIAL_LIMIT).tier).toBe('trial')
+    expect(aiAccess('credits', FREE_TRIAL_LIMIT, FREE_TRIAL_LIMIT, 5).tier).toBe('credits')
   })
 
   it('пробный остаток считается от FREE_TRIAL_LIMIT, а не от месячного лимита Pro', () => {
@@ -88,9 +106,29 @@ describe('aiAccess', () => {
       state: 'trial',
       limit: FREE_TRIAL_LIMIT,
       used: 1,
+      freeRemaining: 2,
+      credits: 0,
       remaining: 2,
       tier: 'trial',
     })
+  })
+
+  it('remaining это единый счётчик: свободная квота плюс купленные кадры', () => {
+    const access = aiAccess('credits', FREE_TRIAL_LIMIT, FREE_TRIAL_LIMIT, 7)
+    expect(access.freeRemaining).toBe(0)
+    expect(access.credits).toBe(7)
+    expect(access.remaining).toBe(7)
+  })
+
+  it('Pro с купленными кадрами суммирует свободную месячную квоту и кадры', () => {
+    const access = aiAccess('pro', 4, AI_MONTHLY_LIMIT, 10)
+    expect(access.freeRemaining).toBe(26)
+    expect(access.credits).toBe(10)
+    expect(access.remaining).toBe(36)
+  })
+
+  it('отрицательные кадры не рисуют минус в счётчике', () => {
+    expect(aiAccess('pro', 0, AI_MONTHLY_LIMIT, -3).credits).toBe(0)
   })
 })
 
@@ -122,5 +160,13 @@ describe('AI_TRIAL_FEATURES', () => {
   it('разбор референса и мокапы мерча остаются Pro-фичами', () => {
     expect(AI_TRIAL_FEATURES).not.toContain('referenceAnalysis')
     expect(AI_TRIAL_FEATURES).not.toContain('merchMockups')
+  })
+})
+
+describe('AI_CREDIT_FEATURES', () => {
+  it('совпадает с пробным тиром: разбор референса и мокапы мерча кадрами не покупаются', () => {
+    expect(AI_CREDIT_FEATURES).toEqual(AI_TRIAL_FEATURES)
+    expect(AI_CREDIT_FEATURES).not.toContain('referenceAnalysis')
+    expect(AI_CREDIT_FEATURES).not.toContain('merchMockups')
   })
 })

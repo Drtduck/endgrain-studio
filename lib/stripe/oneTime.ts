@@ -12,7 +12,7 @@ import { z } from 'zod'
  * (kind, ref) в public.wallet_transactions / stripe_session_id в project_purchases.
  */
 
-export type OneTimeKind = 'wallet_topup' | 'gallery_purchase' | 'pro_pass'
+export type OneTimeKind = 'wallet_topup' | 'gallery_purchase' | 'pro_pass' | 'ai_pack'
 
 export interface OneTimePayment {
   readonly kind: OneTimeKind
@@ -24,9 +24,11 @@ export interface OneTimePayment {
   readonly eventAt: string
   /** Только для gallery_purchase: какая публикация куплена. */
   readonly publishedId: string | null
+  /** Только для ai_pack: какой пакет кадров куплен. */
+  readonly packId: string | null
 }
 
-const kindSchema = z.enum(['wallet_topup', 'gallery_purchase', 'pro_pass'])
+const kindSchema = z.enum(['wallet_topup', 'gallery_purchase', 'pro_pass', 'ai_pack'])
 
 const sessionSchema = z.object({
   id: z.string(),
@@ -39,6 +41,7 @@ const sessionSchema = z.object({
       supabase_user_id: z.string().optional(),
       kind: z.string().optional(),
       published_id: z.string().optional(),
+      pack_id: z.string().optional(),
     })
     .nullish(),
 })
@@ -85,5 +88,6 @@ export function parseOneTimeEvent(raw: unknown): OneTimePayment | null {
     currency,
     eventAt: new Date(event.created === undefined ? Date.now() : event.created * 1000).toISOString(),
     publishedId: session.metadata?.published_id ?? null,
+    packId: session.metadata?.pack_id ?? null,
   }
 }

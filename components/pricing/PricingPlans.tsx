@@ -24,15 +24,15 @@ export interface PricingPlansProps {
   readonly portalUrl: string
   /** Цены API Developer заведены в кассе: без них карточка остаётся блоком «Скоро» с почтой. */
   readonly apiEnabled: boolean
-  /** Цена разового Пропуска заведена в кассе: без неё карточка Пропуска скрывается. */
-  readonly passEnabled: boolean
   /** Живая подписка API Developer у текущего пользователя. */
   readonly apiSubscribed: boolean
-  /** Дата окончания активного Пропуска, если он есть. null - пропуска нет или он не куплен. */
-  readonly passExpiresAt: string | null
+  /** Дата окончания периода подписки API Developer или null. */
+  readonly apiPeriodEnd: string | null
+  /** true, когда подписка API доработает оплаченный период и не продлится. */
+  readonly apiCancelAtPeriodEnd: boolean
+  /** Дата окончания активного унаследованного Пропуска, если он есть. null - пропуска нет. */
+  readonly legacyPassUntil: string | null
 }
-
-type CheckoutPlan = Product | 'pass'
 
 const ERROR_KEYS: Readonly<Record<CheckoutError, MessageKey>> = {
   disabled: 'pricing.errDisabled',
@@ -65,13 +65,6 @@ const PRO_FEATURES: readonly MessageKey[] = [
   'pricing.f.projectsPro',
 ]
 
-const PASS_FEATURES: readonly MessageKey[] = [
-  'pricing.pass.f.days',
-  'pricing.pass.f.ai',
-  'pricing.pass.f.noRenew',
-  'pricing.pass.f.why',
-]
-
 const DEVELOPER_FEATURES: readonly MessageKey[] = [
   'developer.f.requests',
   'developer.f.keys',
@@ -86,6 +79,9 @@ function formatDate(iso: string, locale: Locale): string {
 
 /** Общие классы карточки: равная высота в ряду и защита от распирания сетки длинным словом. */
 const CARD_BASE = 'flex h-full min-w-0 flex-col gap-3 rounded-lg p-5'
+
+/** Усиленная рамка карточки текущего тарифа, поверх базовых классов CARD_BASE. */
+const CARD_CURRENT = 'ring-2 ring-accent-border'
 
 /**
  * Кнопка в карточке не имеет права вылезать за её border: текст CTA длинный
@@ -114,6 +110,18 @@ function FeatureList({ locale, keys }: { locale: Locale; keys: readonly MessageK
         </li>
       ))}
     </ul>
+  )
+}
+
+/** Бейдж «Ваш план» / «Доступ открыт» над CTA-блоком карточки текущего тарифа. */
+function CurrentBadge({ locale, testId, label }: { locale: Locale; testId: string; label: MessageKey }) {
+  return (
+    <span
+      data-testid={testId}
+      className="w-fit rounded-full border border-accent-border bg-accent-soft px-2 py-0.5 text-[11px] font-semibold tracking-wide text-accent uppercase"
+    >
+      {t(locale, label)}
+    </span>
   )
 }
 
@@ -159,17 +167,18 @@ function PlanCta(props: {
   )
 }
 
+type CurrentPlan = 'free' | 'pro' | 'developer' | 'granted'
+
 /**
  * Единственное место, где описаны все карточки. Используется дважды: на странице
  * тарифов с настоящими кнопками (mode="checkout") и в секции лендинга со ссылкой
  * в приложение (mode="link"). Лендинг анонимен и в Supabase не ходит, поэтому pro,
- * signedIn, apiSubscribed и passExpiresAt там заведомо false/null.
+ * signedIn, apiSubscribed и legacyPassUntil там заведомо false/null.
  */
 export function PricingPlans(props: PricingPlansProps) {
   const {
     locale,
     mode,
-    pro,
     reason,
     billingEnabled,
     signedIn,
@@ -177,14 +186,15 @@ export function PricingPlans(props: PricingPlansProps) {
     cancelAtPeriodEnd,
     portalUrl,
     apiEnabled,
-    passEnabled,
     apiSubscribed,
-    passExpiresAt,
+    apiPeriodEnd,
+    apiCancelAtPeriodEnd,
+    legacyPassUntil,
   } = props
   const [error, setError] = useState<CheckoutError | null>(null)
   const [busy, startTransition] = useTransition()
 
-  const buy = (plan: CheckoutPlan): void => {
+  const buy = (plan: Product): void => {
     setError(null)
     track('checkout_started', { plan })
     startTransition(async () => {
@@ -194,70 +204,37 @@ export function PricingPlans(props: PricingPlansProps) {
     })
   }
 
-  // Только живая подписка снимает кнопку покупки Pro и показывает «текущий план»:
-  // Пропуск даёт Pro, но не блокирует апгрейд до подписки (см. createCheckoutAction) -
-  // купивший пропуск должен по-прежнему видеть кнопку «Оформить Pro».
-  const proSubscribed = pro && reason === 'subscription'
-  // Пропуск можно докупать поверх уже активного пропуска (grant_pro_pass продлевает
-  // окно), заблокирована повторная покупка только поверх настоящей подписки.
-  const passBuyBlocked = reason === 'subscription'
+  // Приоритет: Pro-подписка -> служебный доступ (flag/allowlist) -> Developer-
+  // подписка -> Free. Developer помечается независимо (devBadge), потому что
+  // человек может держать оба продукта сразу.
+  const currentPlan: CurrentPlan =
+    reason === 'subscription' ? 'pro' : reason === 'flag' || reason === 'allowlist' ? 'granted' : apiSubscribed ? 'developer' : 'free'
+
+  const proBadge = currentPlan === 'pro' || currentPlan === 'granted'
+  const devBadge = apiSubscribed
+  const freeBadge = currentPlan === 'free' && !apiSubscribed
 
   return (
     <div data-testid="pricing-plans" className="flex flex-col gap-4">
-      <div className="grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <section
           data-testid="pricing-free"
-          className={`${CARD_BASE} border border-line-subtle bg-surface-raised`}
+          aria-current={freeBadge ? 'true' : undefined}
+          className={`${CARD_BASE} border border-line-subtle bg-surface-raised ${freeBadge ? CARD_CURRENT : ''}`}
         >
           <div className="flex flex-col gap-0.5">
             <span className="font-display text-lg font-semibold text-ink">{t(locale, 'pricing.free.name')}</span>
             <PlanPrice price={t(locale, 'pricing.free.price')} />
             <span className="text-xs text-ink-muted">{t(locale, 'pricing.free.note')}</span>
           </div>
+          {freeBadge ? <CurrentBadge locale={locale} testId="pricing-free-badge" label="pricing.badge.current" /> : null}
           <FeatureList locale={locale} keys={FREE_FEATURES} />
         </section>
 
-        {!passEnabled ? null : (
-          <section
-            data-testid="pricing-pass"
-            className={`${CARD_BASE} border border-line-subtle bg-surface-raised`}
-          >
-            <div className="flex flex-col gap-0.5">
-              <span className="font-display text-lg font-semibold text-ink">{t(locale, 'pricing.pass.name')}</span>
-              <PlanPrice price={t(locale, 'pricing.pass.price')} />
-              <span className="text-xs text-ink-muted">{t(locale, 'pricing.pass.note')}</span>
-            </div>
-            <FeatureList locale={locale} keys={PASS_FEATURES} />
-
-            {mode === 'link' ? null : (
-              <div className="mt-auto flex flex-col gap-2 pt-1">
-                {passExpiresAt !== null ? (
-                  <span data-testid="pricing-pass-until" className="text-[13px] text-ink-secondary">
-                    {t(locale, 'pricing.pass.until', { date: formatDate(passExpiresAt, locale) })}
-                  </span>
-                ) : null}
-                {passBuyBlocked ? null : (
-                  <PlanCta
-                    locale={locale}
-                    enabled={billingEnabled}
-                    signedIn={signedIn}
-                    busy={busy}
-                    onBuy={() => buy('pass')}
-                    buyTestId="pricing-buy-pass"
-                    ctaKey="pricing.pass.cta"
-                    disabledTestId="pricing-pass-disabled"
-                    needAuthTestId="pricing-pass-need-auth"
-                    needAuthHref="/login?next=/pricing"
-                  />
-                )}
-              </div>
-            )}
-          </section>
-        )}
-
         <section
           data-testid="pricing-pro"
-          className={`${CARD_BASE} border border-accent-border bg-accent-soft`}
+          aria-current={proBadge ? 'true' : undefined}
+          className={`${CARD_BASE} border border-accent-border bg-accent-soft ${proBadge ? CARD_CURRENT : ''}`}
         >
           <div className="flex flex-col gap-0.5">
             <span className="font-display text-lg font-semibold text-ink">{t(locale, 'pricing.pro.name')}</span>
@@ -279,34 +256,38 @@ export function PricingPlans(props: PricingPlansProps) {
               >
                 {t(locale, 'pricing.cta.open')}
               </Button>
-            ) : proSubscribed ? (
+            ) : currentPlan === 'pro' ? (
               <div className="flex flex-col gap-1.5">
-                <span data-testid="pricing-current" className="text-[13px] font-semibold text-ink">
-                  {t(locale, 'pricing.current')}
+                <span data-testid="pricing-current" className="w-fit rounded-full border border-accent-border bg-accent-soft px-2 py-0.5 text-[11px] font-semibold tracking-wide text-accent uppercase">
+                  {t(locale, 'pricing.badge.current')}
                 </span>
                 {currentPeriodEnd === null ? null : (
                   <span data-testid="pricing-period" className="text-xs text-ink-secondary">
-                    {/* proSubscribed теперь означает ровно reason === 'subscription' (см. фикс
-                        «Пропуск не запирает от Pro»): вариант «оплачено до по формату Пропуска»
-                        сюда больше не приходит, эта карточка показывает только настоящую подписку. */}
-                    {/* Отменённая подписка честно говорит, что не продлится, а не «оплачено до». */}
                     {t(locale, cancelAtPeriodEnd ? 'pricing.canceling' : 'pricing.until', {
                       date: formatDate(currentPeriodEnd, locale),
                     })}
                   </span>
                 )}
                 {portalUrl.length === 0 ? null : (
-                  <a
-                    href={portalUrl}
-                    data-testid="pricing-manage"
-                    className="text-[13px] text-accent hover:underline"
-                  >
+                  <a href={portalUrl} data-testid="pricing-manage" className="text-[13px] text-accent hover:underline">
                     {t(locale, 'pricing.manage')}
                   </a>
                 )}
               </div>
+            ) : currentPlan === 'granted' ? (
+              <div className="flex flex-col gap-1.5">
+                <CurrentBadge locale={locale} testId="pricing-pro-badge" label="pricing.badge.granted" />
+                <span data-testid="pricing-granted-note" className="text-[13px] text-ink-secondary">
+                  {t(locale, 'pricing.granted.note')}
+                </span>
+              </div>
             ) : (
               <>
+                {legacyPassUntil === null ? null : (
+                  <span data-testid="pricing-legacy-pass" className="text-[13px] text-ink-secondary">
+                    {t(locale, 'pricing.legacyPass', { date: formatDate(legacyPassUntil, locale) })}
+                  </span>
+                )}
                 <PlanCta
                   locale={locale}
                   enabled={billingEnabled}
@@ -319,9 +300,6 @@ export function PricingPlans(props: PricingPlansProps) {
                   needAuthTestId="pricing-need-auth"
                   needAuthHref="/login?next=/pricing"
                 />
-                {billingEnabled ? (
-                  <span className="text-xs text-ink-muted">{t(locale, 'pricing.pro.checkoutHint')}</span>
-                ) : null}
               </>
             )}
           </div>
@@ -329,7 +307,8 @@ export function PricingPlans(props: PricingPlansProps) {
 
         <section
           data-testid="pricing-developer"
-          className={`${CARD_BASE} border border-line-subtle bg-surface-raised`}
+          aria-current={devBadge ? 'true' : undefined}
+          className={`${CARD_BASE} border border-line-subtle bg-surface-raised ${devBadge ? CARD_CURRENT : ''}`}
         >
           <div className="flex flex-col gap-0.5">
             <span className="font-display text-lg font-semibold text-ink">{t(locale, 'developer.name')}</span>
@@ -350,10 +329,22 @@ export function PricingPlans(props: PricingPlansProps) {
                 {t(locale, 'developer.emailNote')}
               </a>
             </p>
-          ) : mode === 'link' ? null : apiSubscribed ? (
-            <span data-testid="pricing-api-current" className="mt-auto text-[13px] font-semibold text-ink">
-              {t(locale, 'pricing.current')}
-            </span>
+          ) : mode === 'link' ? null : devBadge ? (
+            <div className="mt-auto flex flex-col gap-1.5">
+              <CurrentBadge locale={locale} testId="pricing-developer-badge" label="pricing.badge.current" />
+              {apiPeriodEnd === null ? null : (
+                <span data-testid="pricing-api-period" className="text-xs text-ink-secondary">
+                  {t(locale, apiCancelAtPeriodEnd ? 'pricing.canceling' : 'pricing.until', {
+                    date: formatDate(apiPeriodEnd, locale),
+                  })}
+                </span>
+              )}
+              {portalUrl.length === 0 ? null : (
+                <a href={portalUrl} data-testid="pricing-api-manage" className="text-[13px] text-accent hover:underline">
+                  {t(locale, 'pricing.manage')}
+                </a>
+              )}
+            </div>
           ) : (
             <div className="mt-auto flex flex-col gap-2 pt-1">
               <PlanCta
@@ -368,13 +359,6 @@ export function PricingPlans(props: PricingPlansProps) {
                 needAuthTestId="pricing-api-need-auth"
                 needAuthHref="/login?next=/pricing"
               />
-              {/* Сессия Developer стартует с месячной цены, тумблер на год рисует
-                  Stripe своим upsell'ом: подсказка обещает ровно то, что там есть. */}
-              {billingEnabled ? (
-                <span data-testid="pricing-api-hint" className="text-xs text-ink-muted">
-                  {t(locale, 'developer.checkoutHint')}
-                </span>
-              ) : null}
             </div>
           )}
         </section>

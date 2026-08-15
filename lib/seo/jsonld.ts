@@ -61,7 +61,6 @@ export function softwareApplicationJsonLd(): Record<string, unknown> {
       { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free' },
       { '@type': 'Offer', price: '9', priceCurrency: 'USD', name: 'Pro monthly', priceSpecification: { '@type': 'UnitPriceSpecification', price: '9', priceCurrency: 'USD', unitText: 'MONTH' } },
       { '@type': 'Offer', price: '90', priceCurrency: 'USD', name: 'Pro yearly', priceSpecification: { '@type': 'UnitPriceSpecification', price: '90', priceCurrency: 'USD', unitText: 'YEAR' } },
-      { '@type': 'Offer', price: '19', priceCurrency: 'USD', name: 'Pass' },
       { '@type': 'Offer', price: '20', priceCurrency: 'USD', name: 'Developer monthly', priceSpecification: { '@type': 'UnitPriceSpecification', price: '20', priceCurrency: 'USD', unitText: 'MONTH' } },
       { '@type': 'Offer', price: '200', priceCurrency: 'USD', name: 'Developer yearly', priceSpecification: { '@type': 'UnitPriceSpecification', price: '200', priceCurrency: 'USD', unitText: 'YEAR' } },
     ],

@@ -9,7 +9,7 @@ import type { PromoShotKind } from './types'
  * Модели картинок разбирают такую формулировку заметно точнее, чем «красивое
  * фото доски», а пользователю эта строка не показывается вовсе.
  */
-const SCENES: Readonly<Record<PromoShotKind, string>> = {
+export const SCENES: Readonly<Record<PromoShotKind, string>> = {
   hero:
     'Clean e-commerce hero shot. The board stands upright at a slight three-quarter angle on a seamless ' +
     'warm-white sweep, front face fully readable. Large softbox key light from the upper left, white bounce ' +
@@ -82,3 +82,33 @@ export function shotPrompt(kind: PromoShotKind, description: string): string {
 
 /** Общий хвост промпта: нужен и генерации по референсу, чтобы правила совпадали. */
 export const PROMO_COMMON_RULES = COMMON
+
+/**
+ * Итоговый промпт для job-пути (спека, раздел 6.3). Пользовательская сцена
+ * стоит ПЕРВОЙ, наши правила ПОСЛЕДНИМИ: модель картинок взвешивает хвост
+ * промпта сильнее, и «no text, no watermark» в конце переспорит «add a big
+ * logo» в начале. Обратный порядок сделал бы редактор промта дырой в правилах.
+ *
+ * scene приходит либо пресетным текстом из SCENES, либо правкой человека,
+ * прошедшей checkScene на сервере - сюда попадает уже провалидированная строка.
+ */
+export function composePrompt(scene: string, description: string): string {
+  return `${scene}\n\nSubject: ${description}\n\n${COMMON}`
+}
+
+/**
+ * Промпт правки готового кадра (спека, раздел 6.4). Инструкция пишется
+ * человеком на любом языке, а модель понимает английский лучше. Перевода не
+ * делаем (это ещё один платный вызов): вместо этого просим модель в самом
+ * промпте выполнить инструкцию на любом языке.
+ */
+export function editPrompt(instruction: string, description: string): string {
+  return (
+    'Edit the provided product photograph. Apply exactly this change, ' +
+    'written by the user in their own language, and change nothing else:\n' +
+    `"${instruction}"\n\n` +
+    `The subject is: ${description}\n\n` +
+    'Keep the same camera angle, lighting scheme and framing unless the change asks otherwise. ' +
+    `${COMMON}`
+  )
+}

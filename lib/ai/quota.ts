@@ -55,28 +55,42 @@ export function aiCost(feature: AiFeature, units = 1): number {
 export const AI_TRIAL_FEATURES: readonly AiFeature[] = ['promoShots', 'referenceShots', 'saleListing']
 
 /**
+ * Что можно купить кадрами без подписки. Совпадает с пробным тиром сознательно:
+ * разбор референса и мокапы мерча остаются Pro-фичами.
+ */
+export const AI_CREDIT_FEATURES: readonly AiFeature[] = ['promoShots', 'referenceShots', 'saleListing']
+
+/**
  * Почему отказали. anonymous - не вошёл (и гостевой тир недоступен), notPro -
  * вошёл без подписки и без пробных фич, quota - месячный лимит Pro выбран,
  * trialSpent - пробные генерации исчерпаны хотя бы по одному субъекту,
  * unavailable - гейт не построить (не настроен Supabase, service-ключ или RPC упал).
  */
-export type AiDenyReason = 'anonymous' | 'notPro' | 'quota' | 'trialSpent' | 'unavailable'
+export type AiDenyReason = 'anonymous' | 'notPro' | 'quota' | 'trialSpent' | 'unavailable' | 'noCredits'
 
 /**
  * Состояние доступа для интерфейса. mock значит, что нет ни одного провайдера
  * (ни Gemini, ни fal): вкладка рисует собственные заглушки, наружу никто не
  * ходит, платить не за что, поэтому на этом состоянии гейта нет. trial и
- * trialSpent появляются только когда настроен бесплатный тир.
+ * trialSpent появляются только когда настроен бесплатный тир. credits значит:
+ * не Pro, пробное кончилось, но на балансе есть купленные кадры - генерация
+ * не заперта.
  */
-export type AiAccessState = 'mock' | 'unavailable' | 'anonymous' | 'free' | 'trial' | 'trialSpent' | 'pro'
+export type AiAccessState = 'mock' | 'unavailable' | 'anonymous' | 'free' | 'trial' | 'trialSpent' | 'pro' | 'credits'
 
 export interface AiAccess {
   readonly state: AiAccessState
+  /** Месячный лимит (30 для Pro, 3 для trial). */
   readonly limit: number
   readonly used: number
+  /** Остаток бесплатной квоты периода. */
+  readonly freeRemaining: number
+  /** Купленные кадры на балансе. */
+  readonly credits: number
+  /** Единый счётчик для интерфейса: freeRemaining + credits. */
   readonly remaining: number
   /** Какой моделью будет нарисован следующий кадр: null пока это не определено (mock/unavailable/anonymous/free). */
-  readonly tier: 'pro' | 'trial' | null
+  readonly tier: 'pro' | 'trial' | 'credits' | null
 }
 
 /**
@@ -93,12 +107,28 @@ export function aiRemaining(used: number, limit: number = AI_MONTHLY_LIMIT): num
   return Math.max(0, limit - Math.max(0, used))
 }
 
-function tierOf(state: AiAccessState): 'pro' | 'trial' | null {
+function tierOf(state: AiAccessState): 'pro' | 'trial' | 'credits' | null {
   if (state === 'pro') return 'pro'
   if (state === 'trial' || state === 'trialSpent') return 'trial'
+  if (state === 'credits') return 'credits'
   return null
 }
 
-export function aiAccess(state: AiAccessState, used = 0, limit: number = AI_MONTHLY_LIMIT): AiAccess {
-  return { state, limit, used: Math.max(0, used), remaining: aiRemaining(used, limit), tier: tierOf(state) }
+/**
+ * credits - купленные кадры на балансе, независимо от тира. Единый счётчик
+ * remaining = freeRemaining + credits: components/promo/AiGate.tsx уже принимает
+ * решение по remaining <= 0, и это продолжает работать без правок в ветвлении там.
+ */
+export function aiAccess(state: AiAccessState, used = 0, limit: number = AI_MONTHLY_LIMIT, credits = 0): AiAccess {
+  const freeRemaining = aiRemaining(used, limit)
+  const safeCredits = Math.max(0, credits)
+  return {
+    state,
+    limit,
+    used: Math.max(0, used),
+    freeRemaining,
+    credits: safeCredits,
+    remaining: freeRemaining + safeCredits,
+    tier: tierOf(state),
+  }
 }

@@ -1,33 +1,41 @@
 'use server'
 
 import { headers } from 'next/headers'
-import { assertAiAllowed, getAiAccess, isAiDemoMode, releaseAiQuota, type AiGrant } from '@/lib/ai/entitlements'
-import { FREE_TRIAL_MAX_UNITS } from '@/lib/ai/quota'
-import { resolveImageProvider } from '@/lib/ai/providers'
+import { assertAiAllowed, getAiAccess, releaseAiQuota } from '@/lib/ai/entitlements'
+import { aiCost, type AiAccess, type AiDenyReason, type AiFeature } from '@/lib/ai/quota'
+import { compile } from '@/lib/engine'
+import { parseDesign } from '@/lib/persist'
 import {
   PRINTFUL_API_KEY,
   PRINTFUL_STORE_ID,
   isGeminiConfigured,
   isPrintfulConfigured,
 } from '@/lib/promo/config'
+import { boardAssetPath, uploadPromoAsset } from '@/lib/promo/assets'
+import { describeBoard } from '@/lib/promo/describe'
 import {
-  PROMO_DEFAULT_SHOTS,
-  type MerchError,
-  type MerchMockup,
-  type MerchResult,
-  type PromoError,
-  type PromoImage,
-  type PromoResult,
-  type PromoShotKind,
-} from '@/lib/promo/types'
-import { shotPrompt } from '@/lib/promo/prompts'
-import { normalizeStyle, referencePrompt, type StyleAnalysis } from '@/lib/promo/reference'
-import { merchSchema, promoShotsSchema, referenceAnalyzeSchema, referenceShotsSchema } from '@/lib/promo/schema'
+  fetchSeries,
+  fetchShot,
+  insertEditShot,
+  insertSeries,
+  listActiveSeries,
+  listProjectSeries,
+  settleSeries,
+  shotsToViews,
+  toSeriesView,
+  type NewShot,
+} from '@/lib/promo/db'
+import { checkScene } from '@/lib/promo/promptGuard'
+import { referenceRecipe, type StyleAnalysis } from '@/lib/promo/reference'
+import { SCENES } from '@/lib/promo/prompts'
+import { editPromoShotSchema, idSchema, merchSchema, promoSeriesSchema, referenceAnalyzeSchema } from '@/lib/promo/schema'
+import { type MerchError, type MerchMockup, type MerchResult, type PromoSeriesView, type PromoShotView } from '@/lib/promo/types'
 import { generateMockup, type PrintfulAuth, type PrintfulError } from '@/lib/promo/printful'
 import { removeArtwork, uploadArtwork } from '@/lib/promo/storage'
 import { PER_IP_PER_HOUR, PER_IP_PER_HOUR_ANON, clientIp, promoLimiter } from '@/lib/promo/rateLimit'
 import { analyzeReferenceImage } from '@/lib/promo/visionAnalyze'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
+import { getSupabaseService, isSupabaseServiceConfigured } from '@/lib/supabase/service'
 import { getCurrentUser } from '@/lib/supabase/session'
 
 /** base64 из data-url. Сам data-url уже проверен zod-схемой на магию файла. */
@@ -40,8 +48,6 @@ function payload(dataUrl: string): { readonly mimeType: string; readonly data: s
 /** Первый рубеж всех платных действий: счётчик по адресу, до похода в базу. */
 async function passRateLimit(): Promise<boolean> {
   const head = await headers()
-  // Аккаунты в проекте есть, а человек не вошёл: лимит жёстче, и до платного
-  // вызова он всё равно не дойдёт, но пусть флуд отвалится подешевле.
   const anonymous = isSupabaseConfigured() && (await getCurrentUser()) === null
   const verdict = promoLimiter.take(
     clientIp(head.get('x-forwarded-for'), head.get('x-real-ip')),
@@ -51,107 +57,262 @@ async function passRateLimit(): Promise<boolean> {
   return verdict === 'ok'
 }
 
-/**
- * Серия кадров одним заходом: параллельные запросы через провайдерскую
- * абстракцию, общий разбор исходов. Провайдер выбирается по тиру гранта:
- * Pro рисует хорошей моделью (с fallback на Gemini, если его ключ заведён),
- * пробный тир - дешёвой. Если для тира провайдера почему-то нет (защита от
- * рассинхрона конфигурации), серия не состоялась и резерв возвращается.
- */
-async function runSeries(
-  jobs: readonly { readonly kind: PromoShotKind; readonly prompt: string }[],
-  base64: string,
-  grant: AiGrant,
-): Promise<PromoResult> {
-  const provider = resolveImageProvider(grant.tier === 'pro' ? 'good' : 'cheap')
-  if (provider === null) {
-    await releaseAiQuota(grant)
-    return { ok: false, error: 'unavailable' }
-  }
+/** Коды, а не готовые фразы: текст выбирает клиент по своей локали. */
+export type PromoActionError = AiDenyReason | 'invalid' | 'notFound' | 'rateLimited' | 'failed'
+export type ActionResult<T> = { readonly ok: true; readonly data: T } | { readonly ok: false; readonly error: PromoActionError }
 
-  // Кадры параллельно: последовательно двенадцать штук это минуты ожидания на
-  // пустом экране. Каждый ловит свои ошибки сам, поэтому один обрыв не
-  // выбрасывает одиннадцать оплаченных.
-  const outcomes = await Promise.all(
-    jobs.map((job) => provider.generate({ prompt: job.prompt, referencePngBase64: base64 })),
-  )
-
-  const images: PromoImage[] = []
-  for (const [index, outcome] of outcomes.entries()) {
-    if (outcome.kind === 'image') images.push({ kind: jobs[index]!.kind, dataUrl: outcome.dataUrl })
+/** Куда отдаём остаток после отказа по деньгам: доводим до реального AiDenyReason по состоянию доступа. */
+function insufficientReason(access: AiAccess): AiDenyReason {
+  switch (access.state) {
+    case 'pro':
+      return 'quota'
+    case 'trial':
+    case 'trialSpent':
+      return access.credits > 0 ? 'noCredits' : 'trialSpent'
+    case 'credits':
+      return 'noCredits'
+    case 'free':
+      return 'notPro'
+    case 'anonymous':
+      return 'anonymous'
+    default:
+      return 'unavailable'
   }
-  if (images.length > 0) {
-    // Кадры серии могут разойтись по провайдеру, если сработал fallback:
-    // подпись берём с первого вышедшего кадра, панели этого достаточно.
-    const usedProvider = outcomes.find((outcome) => outcome.kind === 'image')
-    return {
-      ok: true,
-      mock: false,
-      images,
-      remaining: grant.remaining,
-      ...(usedProvider?.kind === 'image' ? { provider: usedProvider.provider } : {}),
-    }
-  }
-
-  // Ни одного кадра: серия не состоялась, значит и списывать не за что.
-  await releaseAiQuota(grant)
-  return { ok: false, error: outcomes.every((outcome) => outcome.kind === 'blocked') ? 'blocked' : 'failed' }
 }
 
 /**
- * Серия продуктовых кадров через провайдерскую абстракцию (Pro - fal nano
- * banana 2 с fallback на Gemini, пробный тир - fal flux/schnell).
- * Ключи читаются только на сервере: в клиентский бандл они не попадают никогда.
- * Без ни одного ключа возвращаем mock: true, и вкладка рисует собственные
- * заглушки поверх рендера доски.
+ * Job-путь (P0-3): заводит серию и её кадры со статусом queued, ничего не
+ * рисует и не списывает. Списание идёт поштучно из POST /api/promo/shot при
+ * захвате каждого кадра (см. lib/ai/entitlements.assertAiAllowed, ref строит
+ * lib/promo/spendRef.shotSpendRef из wallet_ref, id кадра и номера попытки) -
+ * здесь только честная проверка «хватит ли кадров», чтобы не заводить серию,
+ * заведомо обречённую на отказ по деньгам.
  *
- * Пресетов двенадцать, но генерируются только отмеченные: каждый кадр стоит
- * единицу квоты, и решать, за что платить, должен человек, а не набор по умолчанию.
- *
- * Два рубежа, и оба обязательны. Первый - счётчик из lib/promo/rateLimit: он в памяти
- * процесса, стоит ноль и режет флуд до похода в базу. Второй - assertAiAllowed: сессия,
- * Pro/пробный тир и квота в Postgres, то есть единственная защита, которую нельзя ни
- * подделать заголовком, ни обнулить перезапуском инстанса.
- *
- * maxDuration для этого действия задан на странице, которая его вызывает (app/page.tsx):
- * из файла с 'use server' Next разрешает экспортировать только асинхронные функции.
+ * description с клиента игнорируется (спека 6.3): сервер пересчитывает его
+ * сам из design проекта по projectId, взятого из базы, а не с клиента.
  */
-export async function generatePromoShotsAction(input: unknown): Promise<PromoResult> {
-  const parsed = promoShotsSchema.safeParse(input)
+export async function createPromoSeriesAction(
+  input: unknown,
+): Promise<ActionResult<{ readonly seriesId: string; readonly shots: readonly PromoShotView[] }>> {
+  const parsed = promoSeriesSchema.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'invalid' }
 
-  // Повторы в наборе оплачивались бы дважды за одну и ту же картинку.
-  const kinds = [...new Set(parsed.data.kinds)]
+  if (!isSupabaseConfigured() || !isSupabaseServiceConfigured()) return { ok: false, error: 'unavailable' }
 
-  // Ни одного ключа: наружу никто не идёт, платить не за что, поэтому и квоту не трогаем.
-  if (isAiDemoMode()) return { ok: true, mock: true, kinds }
+  const user = await getCurrentUser()
+  if (!user) return { ok: false, error: 'anonymous' }
 
   if (!(await passRateLimit())) return { ok: false, error: 'rateLimited' }
 
-  // Во free-тире серия режется до одного кадра ещё здесь: assertAiAllowed
-  // отказал бы целиком, увидев units > FREE_TRIAL_MAX_UNITS, а честнее
-  // сгенерировать один кадр из отмеченных, чем не сгенерировать ни одного.
-  // getAiAccess ничего не резервирует, это чистое чтение состояния.
+  const sb = getSupabaseService()
+  const { data: projectRow, error: projectError } = await sb
+    .from('projects')
+    .select('design')
+    .eq('id', parsed.data.projectId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (projectError) return { ok: false, error: 'failed' }
+  if (!projectRow) return { ok: false, error: 'notFound' }
+
+  let design
+  try {
+    design = parseDesign(projectRow.design)
+  } catch {
+    return { ok: false, error: 'invalid' }
+  }
+  const model = compile(design)
+  const boardDesc = describeBoard(design, model).text
+
+  const data = parsed.data
+  const feature: AiFeature = data.source === 'presets' ? 'promoShots' : 'referenceShots'
+
+  let newShots: NewShot[]
+  if (data.source === 'presets') {
+    newShots = []
+    for (const [index, shot] of data.shots.entries()) {
+      if (shot.scene !== undefined) {
+        const verdict = checkScene(shot.scene)
+        if (!verdict.ok) return { ok: false, error: 'invalid' }
+        newShots.push({ ordinal: index, kindSlug: shot.kind, scene: verdict.scene })
+      } else {
+        newShots.push({ ordinal: index, kindSlug: shot.kind, scene: SCENES[shot.kind] })
+      }
+    }
+  } else {
+    const style = data.style
+    newShots = Array.from({ length: data.count }, (_, index) => ({
+      ordinal: index,
+      kindSlug: 'custom',
+      scene: referenceRecipe(style, index),
+    }))
+  }
+
+  // Честный подсчёт остатка ДО списания (спека 4.3): списание всё равно идёт
+  // поштучно при исполнении, но заводить серию, которую нечем оплатить, незачем.
   const access = await getAiAccess()
-  const cappedKinds = access.tier === 'trial' ? kinds.slice(0, FREE_TRIAL_MAX_UNITS) : kinds
+  const units = aiCost(feature, newShots.length)
+  if (access.remaining < units) return { ok: false, error: insufficientReason(access) }
 
-  // Квота резервируется здесь, до обращения к модели: иначе параллельные запросы
-  // прочитали бы один и тот же остаток и все прошли бы. Возврат внутри runSeries.
-  const grant = await assertAiAllowed('promoShots', cappedKinds.length)
-  if (!grant.ok) return { ok: false, error: grant.reason }
+  const boardBytes = payload(parsed.data.boardPng).data
+  const uploadPath = boardAssetPath(user.id, crypto.randomUUID())
+  const uploaded = await uploadPromoAsset(uploadPath, boardBytes)
+  if (uploaded === null) return { ok: false, error: 'failed' }
 
-  const base64 = payload(parsed.data.boardPng).data
-  return runSeries(
-    cappedKinds.map((kind) => ({ kind, prompt: shotPrompt(kind, parsed.data.description) })),
-    base64,
-    grant,
-  )
+  const inserted = await insertSeries({
+    userId: user.id,
+    projectId: parsed.data.projectId,
+    source: parsed.data.source,
+    walletRef: parsed.data.walletRef,
+    boardDesc,
+    boardPngPath: uploaded.path,
+    shots: newShots,
+  })
+  if (inserted === null) return { ok: false, error: 'failed' }
+
+  const views = await shotsToViews(inserted.shots)
+  return { ok: true, data: { seriesId: inserted.series.id, shots: views } }
+}
+
+/** Кадры и серии проекта: подтягиваются при открытии панели, переживают перезагрузку страницы (P0-4). */
+export async function listPromoSeriesAction(
+  projectId: string,
+): Promise<ActionResult<{ readonly series: readonly PromoSeriesView[]; readonly shots: readonly PromoShotView[] }>> {
+  if (!idSchema.safeParse(projectId).success) return { ok: false, error: 'invalid' }
+  const user = await getCurrentUser()
+  if (!user) return { ok: false, error: 'anonymous' }
+  if (!isSupabaseServiceConfigured()) return { ok: false, error: 'unavailable' }
+
+  const { series, shots } = await listProjectSeries(projectId, user.id)
+  const views = await shotsToViews(shots)
+  return { ok: true, data: { series: series.map(toSeriesView), shots: views } }
+}
+
+/** Брошенные серии текущего пользователя за последний час (спека 4.7, п.1): дорисовываются заново тем же runner'ом. */
+export async function listActiveSeriesAction(): Promise<
+  ActionResult<{ readonly series: readonly PromoSeriesView[]; readonly shots: readonly PromoShotView[] }>
+> {
+  const user = await getCurrentUser()
+  if (!user) return { ok: false, error: 'anonymous' }
+  if (!isSupabaseServiceConfigured()) return { ok: false, error: 'unavailable' }
+
+  const { series, shots } = await listActiveSeries(user.id)
+  const views = await shotsToViews(shots)
+  return { ok: true, data: { series: series.map(toSeriesView), shots: views } }
+}
+
+/**
+ * Отмена (спека 5.3): не начатые кадры уходят в cancelled и не будут запущены
+ * рannerом, running-кадры не трогаем - они уже списаны и доедут.
+ */
+export async function cancelPromoSeriesAction(seriesId: string): Promise<ActionResult<PromoSeriesView>> {
+  if (!idSchema.safeParse(seriesId).success) return { ok: false, error: 'invalid' }
+  const user = await getCurrentUser()
+  if (!user) return { ok: false, error: 'anonymous' }
+  if (!isSupabaseServiceConfigured()) return { ok: false, error: 'unavailable' }
+
+  const sb = getSupabaseService()
+  const { error } = await sb
+    .from('promo_shots')
+    .update({ status: 'cancelled' })
+    .eq('series_id', seriesId)
+    .eq('user_id', user.id)
+    .eq('status', 'queued')
+  if (error) return { ok: false, error: 'failed' }
+
+  await settleSeries(seriesId)
+  const row = await fetchSeries(seriesId, user.id)
+  if (row === null) return { ok: false, error: 'notFound' }
+  return { ok: true, data: toSeriesView(row) }
+}
+
+/**
+ * Повтор упавшего кадра (спека 5.4): бесплатен для человека до третьей
+ * попытки (деньги за провал уже вернулись в POST /api/promo/shot), захват
+ * атомарный тем же приёмом «update ... where status=... returning».
+ */
+export async function retryPromoShotAction(shotId: string): Promise<ActionResult<PromoShotView>> {
+  if (!idSchema.safeParse(shotId).success) return { ok: false, error: 'invalid' }
+  const user = await getCurrentUser()
+  if (!user) return { ok: false, error: 'anonymous' }
+  if (!isSupabaseServiceConfigured()) return { ok: false, error: 'unavailable' }
+
+  // Атомарный захват: только один вызов (двойной клик по «Повторить») пройдёт
+  // это условие, второй увидит status уже 'queued' и вернёт invalid.
+  const sb = getSupabaseService()
+  const { data, error } = await sb
+    .from('promo_shots')
+    .update({ status: 'queued', error: null })
+    .eq('id', shotId)
+    .eq('user_id', user.id)
+    .eq('status', 'failed')
+    .lt('retries', 3)
+    .select(
+      'id, series_id, project_id, user_id, kind_slug, ordinal, status, parent_shot_id, variant_no, edit_prompt, storage_path, width, height, provider, prompt, scene, error, retries',
+    )
+    .maybeSingle()
+  if (error || !data) return { ok: false, error: 'invalid' }
+
+  // Счётчик попыток растёт отдельным точечным update: гонки уже нет, строка
+  // захвачена предыдущим update по условию status='failed' -> 'queued'.
+  const nextRetries = data.retries + 1
+  await sb.from('promo_shots').update({ retries: nextRetries }).eq('id', shotId)
+
+  await settleSeries(data.series_id)
+  const views = await shotsToViews([{ ...data, retries: nextRetries }])
+  return { ok: true, data: views[0] as PromoShotView }
+}
+
+/**
+ * Правка готового кадра (спека 6.4): новый кадр рядом, оригинал не трогаем.
+ * Референсом для route handler'а идёт КОРНЕВОЙ кадр группы вариантов - тот
+ * же, на который указывает parent_shot_id по построению.
+ */
+export async function editPromoShotAction(
+  input: unknown,
+): Promise<ActionResult<{ readonly seriesId: string; readonly shot: PromoShotView }>> {
+  const parsed = editPromoShotSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'invalid' }
+
+  const verdict = checkScene(parsed.data.instruction)
+  if (!verdict.ok) return { ok: false, error: 'invalid' }
+
+  const user = await getCurrentUser()
+  if (!user) return { ok: false, error: 'anonymous' }
+  if (!isSupabaseServiceConfigured()) return { ok: false, error: 'unavailable' }
+
+  const source = await fetchShot(parsed.data.shotId, user.id)
+  if (source === null || source.status !== 'done') return { ok: false, error: 'notFound' }
+
+  const rootId = source.parent_shot_id ?? source.id
+  const sb = getSupabaseService()
+  const { data: siblings } = await sb
+    .from('promo_shots')
+    .select('variant_no')
+    .or(`id.eq.${rootId},parent_shot_id.eq.${rootId}`)
+    .eq('user_id', user.id)
+  const nextVariantNo = 1 + Math.max(1, ...((siblings ?? []).map((s) => Number(s.variant_no))))
+
+  const access = await getAiAccess()
+  if (access.remaining < aiCost('promoShots', 1)) return { ok: false, error: insufficientReason(access) }
+
+  const inserted = await insertEditShot({
+    userId: user.id,
+    projectId: source.project_id,
+    walletRef: parsed.data.walletRef,
+    rootShotId: rootId,
+    nextVariantNo,
+    editPrompt: verdict.scene,
+  })
+  if (inserted === null) return { ok: false, error: 'failed' }
+
+  const views = await shotsToViews([inserted.shot])
+  return { ok: true, data: { seriesId: inserted.series.id, shot: views[0] as PromoShotView } }
 }
 
 export type ReferenceAnalysisResult =
   | { readonly ok: true; readonly mock: true; readonly style: StyleAnalysis }
   | { readonly ok: true; readonly mock: false; readonly style: StyleAnalysis; readonly remaining: number }
-  | { readonly ok: false; readonly error: PromoError }
+  | { readonly ok: false; readonly error: AiDenyReason | 'invalid' | 'failed' | 'blocked' | 'rateLimited' }
 
 /** Разбор-заглушка на случай, когда ключа Gemini нет: видно, что именно спрашивают у модели. */
 const DEMO_STYLE: StyleAnalysis = {
@@ -167,11 +328,8 @@ const DEMO_STYLE: StyleAnalysis = {
 
 /**
  * Шаг 1 генерации по референсу: раскладываем чужой кадр на приёмы съёмки.
- *
- * Возвращаем разбор пользователю до генерации сознательно: человек видит, что
- * модель поняла, правит формулировки и только потом платит квотой за картинки.
- * Молча превратить фото в промпт и сразу списать четыре кадра было бы дороже
- * и непрозрачнее.
+ * Не входит в job-путь: разбор ничего не рисует и не сохраняет байты,
+ * поэтому остаётся обычным синхронным действием, как и раньше.
  */
 export async function analyzeReferenceAction(input: unknown): Promise<ReferenceAnalysisResult> {
   const parsed = referenceAnalyzeSchema.safeParse(input)
@@ -190,37 +348,6 @@ export async function analyzeReferenceAction(input: unknown): Promise<ReferenceA
 
   await releaseAiQuota(grant)
   return { ok: false, error: outcome.kind === 'blocked' ? 'blocked' : 'failed' }
-}
-
-/**
- * Шаг 3 генерации по референсу: рисуем свою доску по разобранному рецепту.
- * Разбор приходит с клиента, уже показанный человеку и, возможно, им поправленный,
- * поэтому нормализуется здесь ещё раз: в промпт не должно уехать двух мегабайт текста.
- */
-export async function generateReferenceShotsAction(input: unknown): Promise<PromoResult> {
-  const parsed = referenceShotsSchema.safeParse(input)
-  if (!parsed.success) return { ok: false, error: 'invalid' }
-
-  const kinds = PROMO_DEFAULT_SHOTS.slice(0, parsed.data.count)
-  if (isAiDemoMode()) return { ok: true, mock: true, kinds }
-
-  if (!(await passRateLimit())) return { ok: false, error: 'rateLimited' }
-
-  // Тот же приём, что у серии по пресетам: во free-тире режем до одного кадра
-  // до похода в assertAiAllowed, а не полагаемся на его отказ.
-  const access = await getAiAccess()
-  const cappedKinds = access.tier === 'trial' ? kinds.slice(0, FREE_TRIAL_MAX_UNITS) : kinds
-
-  const grant = await assertAiAllowed('referenceShots', cappedKinds.length)
-  if (!grant.ok) return { ok: false, error: grant.reason }
-
-  const style = normalizeStyle(parsed.data.style)
-  const base64 = payload(parsed.data.boardPng).data
-  return runSeries(
-    cappedKinds.map((kind, index) => ({ kind, prompt: referencePrompt(style, parsed.data.description, index) })),
-    base64,
-    grant,
-  )
 }
 
 /** Код ошибки Printful в код, который понимает панель. */
@@ -245,42 +372,27 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Мокапы мерча через Printful Mockup Generator.
- *
- * Путь целиком: рендер доски приходит с клиента готовым PNG -> кладём его в
- * публичный bucket promo-mockups -> отдаём Printful публичный https-адрес
- * (data:URI он не принимает, файл тянет со своей стороны) -> создаём задачу на
- * каждый отмеченный товар -> опрашиваем task_key до готовности -> удаляем макет.
- *
- * Товары приходят списком, а не берутся все четыре: create-task у Printful
- * пускает пару запросов в минуту (замерено на живом ключе), и «собрать всё
- * разом» гарантированно упёрлось бы в 429 на половине товаров.
- *
- * Локальные силуэты никуда не делись: они рисуются в браузере всегда и остаются
- * на экране, если Printful недоступен. Вкладка не имеет права опустеть из-за
- * чужого сбоя, поэтому любая ошибка тут возвращает код причины, а не пустоту.
- *
- * Гейт стоит ради правила «промо-инструменты входят в Pro». Квоту мокапы не
- * тратят (стоимость 0 в AI_FEATURE_COST): генерация мокапа в Printful бесплатна,
- * и брать за неё единицу месячного лимита было бы враньём про цену.
+ * Мокапы мерча через Printful Mockup Generator. Не тронуто P0-3..P0-9:
+ * мокапы Printful рисует сам, байты у нас не задерживаются, персистить нечего.
  */
 export async function createMerchMockupsAction(input: unknown): Promise<MerchResult> {
   const parsed = merchSchema.safeParse(input)
   if (!parsed.success) return { printful: isPrintfulConfigured(), error: 'invalid' }
 
-  if (!isAiDemoMode()) {
+  // Гейт смотрит на Printful, а не на ключи Gemini/fal (P0-блокер ревью
+  // 14.08.2026): isAiDemoMode() отвечает только за рисовалку, и конфигурация
+  // «есть PRINTFUL_*, нет GEMINI_API_KEY и FAL_KEY» раньше пропускала живые
+  // вызовы Printful вовсе без гейта Pro/аккаунта, под одним лишь IP-лимитом.
+  if (isPrintfulConfigured()) {
     const grant = await assertAiAllowed('merchMockups')
     if (!grant.ok) return { printful: false, denied: grant.reason }
   }
 
-  // Повторы оплачиваются лимитом Printful дважды за одну и ту же картинку.
   const products = [...new Set(parsed.data.products)]
 
   const printful = isPrintfulConfigured()
   if (!printful) return { printful: false }
 
-  // Тот же счётчик, что у генерации кадров: каждый мокап это четыре задачи в
-  // Printful и один файл в Storage, и без потолка это чужой бесплатный конвейер.
   if (!(await passRateLimit())) return { printful, error: 'rateLimited' }
 
   const user = await getCurrentUser()
@@ -289,17 +401,15 @@ export async function createMerchMockupsAction(input: unknown): Promise<MerchRes
 
   const auth: PrintfulAuth = { apiKey: PRINTFUL_API_KEY, storeId: PRINTFUL_STORE_ID }
   try {
-    const outcomes = await Promise.all(
-      products.map((id) => generateMockup(id, uploaded.url, auth, fetch, sleep)),
-    )
+    const outcomes = await Promise.all(products.map((id) => generateMockup(id, uploaded.url, auth, fetch, sleep)))
     const mockups = outcomes.flatMap((outcome): MerchMockup[] => (outcome.ok ? [outcome.value] : []))
     if (mockups.length > 0) return { printful, mockups }
-    // Ни одного мокапа: причина у всех обычно одна, показываем первую.
     const first = outcomes.find((outcome) => !outcome.ok)
     return { printful, error: first === undefined || first.ok ? 'failed' : merchErrorFrom(first.error) }
   } finally {
-    // Макет своё отработал в любом случае: держать чужие файлы в публичном
-    // bucket дольше одного запроса не за чем.
     await removeArtwork(uploaded.path)
   }
 }
+
+// Явный ре-экспорт для читателей, которые ищут тип кадра/серии рядом с действиями.
+export type { PromoSeriesView, PromoShotView }

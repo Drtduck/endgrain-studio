@@ -1,45 +1,91 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProProvider } from '@/components/ProProvider'
+import { SessionProvider } from '@/components/SessionProvider'
 import { AI_MONTHLY_LIMIT, FREE_TRIAL_LIMIT, aiAccess, type AiAccessState } from '@/lib/ai/quota'
 import type { ProStatus } from '@/lib/stripe/pro'
-import {
-  MERCH_DEFAULT_PRODUCTS,
-  PROMO_DEFAULT_SHOTS,
-  PROMO_SHOT_META,
-  type MerchResult,
-  type PromoResult,
-} from '@/lib/promo/types'
+import { MERCH_DEFAULT_PRODUCTS, PROMO_DEFAULT_SHOTS, PROMO_SHOT_META, type MerchResult } from '@/lib/promo/types'
 import { useStudio } from '@/lib/store/studio'
 import { PromoPanel } from './PromoPanel'
 
 const FREE_STATUS: ProStatus = { pro: false, reason: 'free', plan: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }
 
-/** Панель в окружении с известным состоянием доступа: его считает сервер в layout. */
+/**
+ * Панель в окружении с известным состоянием доступа: его считает сервер в layout.
+ * Состояния кроме 'mock'/'anonymous' подразумевают вошедшего человека - сессия
+ * приезжает тем же пропсом, что и в проде (SessionProvider из корневого layout).
+ */
 function renderWithAccess(state: AiAccessState, used = 0, limit: number = AI_MONTHLY_LIMIT) {
+  const user = state === 'anonymous' || state === 'mock' ? null : { id: 'user-1', email: 'a@b.co' }
   return render(
-    <ProProvider value={{ status: FREE_STATUS, billingEnabled: true, ai: aiAccess(state, used, limit) }}>
-      <PromoPanel />
-    </ProProvider>,
+    <SessionProvider value={{ user, enabled: true }}>
+      <ProProvider value={{ status: FREE_STATUS, billingEnabled: true, ai: aiAccess(state, used, limit) }}>
+        <PromoPanel />
+      </ProProvider>
+    </SessionProvider>,
   )
 }
 
-const promoResult = { current: { ok: true, mock: true, kinds: PROMO_DEFAULT_SHOTS } as PromoResult }
 const merchResult = { current: { printful: false } as MerchResult }
 const merchInput = vi.fn<(input: unknown) => void>()
-const promoInput = vi.fn<(input: unknown) => void>()
+const createSeriesInput = vi.fn<(input: unknown) => void>()
+
+interface CreateSeriesInput {
+  readonly shots?: readonly { kind: string }[]
+}
+type CreateSeriesResult = { readonly ok: true; readonly data: unknown } | { readonly ok: false; readonly error: string }
+
+/**
+ * Ответ createPromoSeriesAction по умолчанию: одна серия, кадры сразу queued.
+ * Тесты, которым нужен другой исход (ошибка, конкретные кадры), переопределяют
+ * createSeriesResult.current перед рендером.
+ */
+const createSeriesResult: { current: (input: CreateSeriesInput) => CreateSeriesResult } = {
+  current: (input) => ({
+    ok: true,
+    data: {
+      seriesId: 'series-1',
+      shots: (input.shots ?? []).map((s, i) => ({
+        id: `shot-${i}`,
+        seriesId: 'series-1',
+        kindSlug: s.kind,
+        ordinal: i,
+        status: 'queued' as const,
+        parentShotId: null,
+        variantNo: 1,
+        editPrompt: null,
+        url: null,
+        width: null,
+        height: null,
+        provider: null,
+        prompt: null,
+        error: null,
+        retries: 0,
+      })),
+    },
+  }),
+}
+
+// ensureSaved() (useProjectGuard) должен успешно "сохранить" проект без похода
+// в Supabase, которого в юнит-тестах нет: иначе клик по генерации у вошедшего
+// человека всегда падал бы в guard.state === 'failed' раньше, чем дойти до
+// createPromoSeriesAction.
+vi.mock('@/app/actions/projects', () => ({
+  upsertProjectAction: () => Promise.resolve({ ok: true, data: { id: 'project-1', name: 'board', updatedAt: '2026-01-01' } }),
+}))
 
 vi.mock('@/app/actions/promo', () => ({
-  generatePromoShotsAction: (input: unknown) => {
-    promoInput(input)
-    return Promise.resolve(promoResult.current)
+  createPromoSeriesAction: (input: { shots?: readonly { kind: string }[] }) => {
+    createSeriesInput(input)
+    return Promise.resolve(createSeriesResult.current(input))
   },
+  cancelPromoSeriesAction: () => Promise.resolve({ ok: false, error: 'invalid' }),
+  retryPromoShotAction: () => Promise.resolve({ ok: false, error: 'invalid' }),
   createMerchMockupsAction: (input: unknown) => {
     merchInput(input)
     return Promise.resolve(merchResult.current)
   },
   analyzeReferenceAction: () => Promise.resolve({ ok: true, mock: true, style: DEMO_STYLE }),
-  generateReferenceShotsAction: () => Promise.resolve(promoResult.current),
 }))
 
 const DEMO_STYLE = {
@@ -58,10 +104,9 @@ vi.mock('@/lib/export/png', () => ({ svgToPngBlob: () => Promise.resolve(new Blo
 
 describe('PromoPanel', () => {
   beforeEach(() => {
-    promoResult.current = { ok: true, mock: true, kinds: PROMO_DEFAULT_SHOTS }
     merchResult.current = { printful: false }
     merchInput.mockClear()
-    promoInput.mockClear()
+    createSeriesInput.mockClear()
     act(() => {
       useStudio.getState().resetStudio()
     })
@@ -80,24 +125,20 @@ describe('PromoPanel', () => {
     }
   })
 
-  it('до нажатия кнопки обе панели молчат про недостающие ключи', () => {
+  it('до нажатия кнопки мерч молчит про недостающий ключ', () => {
     render(<PromoPanel />)
-    expect(screen.getByTestId('promo-note').textContent).not.toContain('ключ генерации')
     expect(screen.getByTestId('merch-note').textContent).not.toContain('PRINTFUL_API_KEY')
   })
 
-  it('мок-ответ про недостающий ключ генерации появляется только после генерации', async () => {
+  it('без ключей (демо-режим) генерация проходит локально: очередь доезжает до "готово" без единого запроса', async () => {
     render(<PromoPanel />)
     fireEvent.click(screen.getByTestId('promo-generate'))
-    await waitFor(() => expect(screen.getByTestId('promo-note').textContent).toContain('ключ генерации'))
-  })
-
-  it('после настоящей серии подписи про ключ нет', async () => {
-    promoResult.current = { ok: true, mock: false, images: [{ kind: 'hero', dataUrl: 'data:image/png;base64,AAAA' }] }
-    render(<PromoPanel />)
-    fireEvent.click(screen.getByTestId('promo-generate'))
-    await waitFor(() => expect(screen.getByTestId('promo-shot-hero').querySelector('img')).toBeTruthy())
-    expect(screen.getByTestId('promo-note').textContent).not.toContain('ключ генерации')
+    await waitFor(() => expect(screen.getByTestId('promo-series-progress').textContent ?? '').toContain('4'))
+    // Демо-режим не ходит на сервер вовсе: карточки остаются заглушками узора, а не пустеют.
+    expect(createSeriesInput).not.toHaveBeenCalled()
+    for (const kind of PROMO_DEFAULT_SHOTS) {
+      expect(screen.getByTestId(`promo-shot-${kind}`).querySelector('svg')).toBeTruthy()
+    }
   })
 
   it('без ключа Printful кнопки «Открыть в Printful» нет, а после ответа появляется подпись про ключ', async () => {
@@ -116,28 +157,21 @@ describe('PromoPanel', () => {
     expect(screen.getByTestId('merch-note').textContent).not.toContain('PRINTFUL_API_KEY')
   })
 
-  it('настоящие кадры от модели заменяют заглушки картинками', async () => {
-    promoResult.current = {
-      ok: true,
-      mock: false,
-      images: [{ kind: 'hero', dataUrl: 'data:image/png;base64,AAAA' }],
-    }
-    render(<PromoPanel />)
+  it('вошедший Pro: генерация заводит серию через createPromoSeriesAction с отмеченными пресетами', async () => {
+    renderWithAccess('pro', 4)
     fireEvent.click(screen.getByTestId('promo-generate'))
-    await waitFor(() => {
-      const shot = screen.getByTestId('promo-shot-hero')
-      expect(shot.querySelector('img')).toBeTruthy()
-    })
-    // Кадры, которых модель не отдала, остаются заглушками, а не пропадают из сетки.
-    expect(screen.getByTestId('promo-shot-macroOil').querySelector('img')).toBeNull()
+    await waitFor(() => expect(createSeriesInput).toHaveBeenCalled())
+    const input = createSeriesInput.mock.calls[0]?.[0] as { source: string; shots: readonly { kind: string }[] }
+    expect(input.source).toBe('presets')
+    expect(input.shots.map((s) => s.kind)).toEqual([...PROMO_DEFAULT_SHOTS])
+    await waitFor(() => expect(screen.getByTestId('promo-series-progress')).toBeTruthy())
   })
 
   it('ошибка серии показывает алерт с текстом своего кода', async () => {
-    promoResult.current = { ok: false, error: 'rateLimited' }
-    render(<PromoPanel />)
+    createSeriesResult.current = () => ({ ok: false, error: 'rateLimited' })
+    renderWithAccess('pro', 4)
     fireEvent.click(screen.getByTestId('promo-generate'))
     await waitFor(() => expect(screen.getByTestId('promo-error')).toBeTruthy())
-    // Лимит и сетевой сбой это разные тексты: человек должен понять, ждать ему или чинить.
     const limited = screen.getByTestId('promo-error').textContent ?? ''
     expect(limited).not.toBe('')
     expect(limited).not.toContain('Не получилось собрать серию')
@@ -146,9 +180,31 @@ describe('PromoPanel', () => {
 
 describe('PromoPanel: гейт AI', () => {
   beforeEach(() => {
-    promoResult.current = { ok: true, mock: true, kinds: PROMO_DEFAULT_SHOTS }
     merchResult.current = { printful: false }
-    promoInput.mockClear()
+    createSeriesInput.mockClear()
+    createSeriesResult.current = (input) => ({
+      ok: true,
+      data: {
+        seriesId: 'series-1',
+        shots: (input.shots ?? []).map((s, i) => ({
+          id: `shot-${i}`,
+          seriesId: 'series-1',
+          kindSlug: s.kind,
+          ordinal: i,
+          status: 'queued' as const,
+          parentShotId: null,
+          variantNo: 1,
+          editPrompt: null,
+          url: null,
+          width: null,
+          height: null,
+          provider: null,
+          prompt: null,
+          error: null,
+          retries: 0,
+        })),
+      },
+    })
     act(() => {
       useStudio.getState().resetStudio()
     })
@@ -175,7 +231,6 @@ describe('PromoPanel: гейт AI', () => {
     expect(screen.getByTestId('promo-generate').hasAttribute('disabled')).toBe(false)
     const note = screen.getByTestId('promo-gate').textContent ?? ''
     expect(note).toContain('26')
-    expect(note).toContain('30')
     // Мокапы квоту не тратят, поэтому счётчик под ними не дублируется.
     expect(screen.queryByTestId('merch-gate')).toBeNull()
   })
@@ -192,29 +247,19 @@ describe('PromoPanel: гейт AI', () => {
     expect(screen.queryByTestId('promo-gate')).toBeNull()
   })
 
-  it('после генерации счётчик обновляется остатком из ответа сервера', async () => {
-    promoResult.current = { ok: true, mock: false, images: [{ kind: 'hero', dataUrl: 'data:image/png;base64,AAAA' }], remaining: 17 }
-    renderWithAccess('pro', 4)
-    fireEvent.click(screen.getByTestId('promo-generate'))
-    await waitFor(() => expect(screen.getByTestId('promo-gate').textContent ?? '').toContain('17'))
-  })
-
-  it('отказ по квоте с сервера сразу вешает замок на кнопку', async () => {
-    promoResult.current = { ok: false, error: 'quota' }
+  it('отказ по квоте с сервера показывает алерт', async () => {
+    createSeriesResult.current = () => ({ ok: false, error: 'quota' })
     renderWithAccess('pro', 29)
     fireEvent.click(screen.getByTestId('promo-generate'))
     await waitFor(() => expect(screen.getByTestId('promo-error')).toBeTruthy())
-    // Кнопка остаётся выключенной уже не из-за busy, а из-за нулевого остатка.
-    expect(screen.getByTestId('promo-generate').hasAttribute('disabled')).toBe(true)
     expect(screen.getByTestId('promo-error').textContent ?? '').not.toBe('')
   })
 })
 
 describe('PromoPanel: выбор пресетов', () => {
   beforeEach(() => {
-    promoResult.current = { ok: true, mock: true, kinds: PROMO_DEFAULT_SHOTS }
     merchResult.current = { printful: false }
-    promoInput.mockClear()
+    createSeriesInput.mockClear()
     act(() => {
       useStudio.getState().resetStudio()
     })
@@ -259,9 +304,8 @@ describe('PromoPanel: выбор пресетов', () => {
 
 describe('PromoPanel: выбор пресетов в пробном тире', () => {
   beforeEach(() => {
-    promoResult.current = { ok: true, mock: true, kinds: PROMO_DEFAULT_SHOTS }
     merchResult.current = { printful: false }
-    promoInput.mockClear()
+    createSeriesInput.mockClear()
     act(() => {
       useStudio.getState().resetStudio()
     })
@@ -288,21 +332,9 @@ describe('PromoPanel: выбор пресетов в пробном тире', (
   it('генерация во free-тире шлёт ровно один кадр из выбранных', async () => {
     renderWithAccess('trial', 0, FREE_TRIAL_LIMIT)
     fireEvent.click(screen.getByTestId('promo-generate'))
-    await waitFor(() => expect(promoInput).toHaveBeenCalled())
-    const input = promoInput.mock.calls[0]?.[0] as { kinds?: readonly string[] }
-    expect(input.kinds).toHaveLength(1)
-  })
-
-  it('после списания одного кадра остаток отражает реальную трату, а не обещанную', async () => {
-    promoResult.current = {
-      ok: true,
-      mock: false,
-      images: [{ kind: 'hero', dataUrl: 'data:image/png;base64,AAAA' }],
-      remaining: 2,
-    }
-    renderWithAccess('trial', 0, FREE_TRIAL_LIMIT)
-    fireEvent.click(screen.getByTestId('promo-generate'))
-    await waitFor(() => expect(screen.getByTestId('promo-trial-note').textContent ?? '').toContain('2'))
+    await waitFor(() => expect(createSeriesInput).toHaveBeenCalled())
+    const input = createSeriesInput.mock.calls[0]?.[0] as { shots?: readonly { kind: string }[] }
+    expect(input.shots).toHaveLength(1)
   })
 })
 
@@ -317,9 +349,8 @@ describe('PromoPanel: генерация по референсу', () => {
   }
 
   beforeEach(() => {
-    promoResult.current = { ok: true, mock: true, kinds: PROMO_DEFAULT_SHOTS }
     merchResult.current = { printful: false }
-    promoInput.mockClear()
+    createSeriesInput.mockClear()
     act(() => {
       useStudio.getState().resetStudio()
     })
@@ -386,10 +417,9 @@ describe('PromoPanel: генерация по референсу', () => {
 
 describe('PromoPanel: мокапы Printful', () => {
   beforeEach(() => {
-    promoResult.current = { ok: true, mock: true, kinds: PROMO_DEFAULT_SHOTS }
     merchResult.current = { printful: false }
     merchInput.mockClear()
-    promoInput.mockClear()
+    createSeriesInput.mockClear()
     act(() => {
       useStudio.getState().resetStudio()
     })
@@ -456,11 +486,37 @@ describe('PromoPanel: мокапы Printful', () => {
     expect(screen.getByTestId('merch-item-tshirt').querySelector('svg')).toBeTruthy()
   })
 
-  it('ненастроенный Printful не считается ошибкой: это подпись, а не алерт', async () => {
+  it('ненастроенный магазин Printful честно показан человеку, а не спрятан за пустой подписью', async () => {
     merchResult.current = { printful: true, error: 'notConfigured' }
     render(<PromoPanel />)
     fireEvent.click(screen.getByTestId('merch-generate'))
-    await waitFor(() => expect(screen.getByTestId('merch-note')).toBeTruthy())
-    expect(screen.queryByTestId('merch-error')).toBeNull()
+    await waitFor(() => expect(screen.getByTestId('merch-error')).toBeTruthy())
+    const text = screen.getByTestId('merch-error').textContent ?? ''
+    expect(text).not.toBe('')
+    // Технический текст про переменную окружения владельцу здесь не место.
+    expect(text).not.toContain('PRINTFUL_STORE_ID')
+    // Компоновка остаётся на экране, вкладка не пустеет из-за чужого сбоя.
+    expect(screen.getByTestId('merch-item-tshirt').querySelector('svg')).toBeTruthy()
+  })
+
+  it('отказ сервера по гейту показан прямо в панели, а не молча', async () => {
+    // Кнопка открыта (Pro), но сервер на этот конкретный клик всё равно отказал -
+    // рассинхрон состояния (сессия истекла, квота выбрана параллельным вызовом).
+    // Раньше в этом случае панель молча показывала merch.idle, будто ничего не было.
+    merchResult.current = { printful: false, denied: 'quota' }
+    renderWithAccess('pro', 4)
+    expect(screen.getByTestId('merch-generate').hasAttribute('disabled')).toBe(false)
+    fireEvent.click(screen.getByTestId('merch-generate'))
+    await waitFor(() => expect(screen.getByTestId('merch-gate-note')).toBeTruthy())
+    expect(screen.getByTestId('merch-gate-note').textContent ?? '').not.toBe('')
+  })
+
+  it('в пробном тире кнопка мерча заперта заранее: мокапы не входят в trial', () => {
+    renderWithAccess('trial', 0, FREE_TRIAL_LIMIT)
+    expect(screen.getByTestId('merch-generate').hasAttribute('disabled')).toBe(true)
+    expect(screen.getByTestId('merch-gate')).toBeTruthy()
+    expect(screen.getByTestId('merch-gate').textContent ?? '').not.toBe('')
+    // Соседняя панель кадров, наоборот, остаётся открытой: promoShots в trial входит.
+    expect(screen.getByTestId('promo-generate').hasAttribute('disabled')).toBe(false)
   })
 })

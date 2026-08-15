@@ -7,7 +7,7 @@ import { t } from '@/lib/i18n'
 import { getLandingLocale } from '@/lib/landing/locale'
 import { pricingJsonLd } from '@/lib/seo/jsonld'
 import { appUrl, pageMetadata } from '@/lib/seo/metadata'
-import { STRIPE_PORTAL_URL, hasApiPrices, hasPassPrice, isStripeConfigured } from '@/lib/stripe/config'
+import { STRIPE_PORTAL_URL, hasApiPrices, isStripeConfigured } from '@/lib/stripe/config'
 import { getProStatus, getSubscriptionStatus } from '@/lib/stripe/pro'
 import { getCurrentUser } from '@/lib/supabase/session'
 
@@ -36,10 +36,10 @@ export default async function PricingPage(props: PageProps<'/pricing'>) {
   // Без пользователя (не вошёл) спрашивать нечего - и без него getSubscriptionStatus
   // сама вернёт FREE.
   const apiStatus = await getSubscriptionStatus('api')
-  // passExpiresAt читается отдельным вызовом getSubscriptionStatus('pro'), а не из
-  // status (getProStatus): allowlist и аварийный флаг NEXT_PUBLIC_PRO_UNLOCK
+  // legacyPassUntil читается отдельным вызовом getSubscriptionStatus('pro'), а не
+  // из status (getProStatus): allowlist и аварийный флаг NEXT_PUBLIC_PRO_UNLOCK
   // перекрывают status.reason на 'flag'/'allowlist' даже когда в базе лежит живой
-  // пропуск - карточка Пропуска тогда молчала бы о его настоящей дате окончания.
+  // пропуск - карточка тогда молчала бы о его настоящей дате окончания.
   const proSubscription = await getSubscriptionStatus('pro')
 
   // Отмена оплаты возвращает человека сюда, а не в студию: с этой страницы
@@ -70,9 +70,10 @@ export default async function PricingPage(props: PageProps<'/pricing'>) {
             cancelAtPeriodEnd={status.cancelAtPeriodEnd}
             portalUrl={STRIPE_PORTAL_URL}
             apiEnabled={hasApiPrices()}
-            passEnabled={hasPassPrice()}
             apiSubscribed={apiStatus.reason === 'subscription'}
-            passExpiresAt={proSubscription.reason === 'pass' ? proSubscription.currentPeriodEnd : null}
+            apiPeriodEnd={apiStatus.currentPeriodEnd}
+            apiCancelAtPeriodEnd={apiStatus.cancelAtPeriodEnd}
+            legacyPassUntil={proSubscription.reason === 'pass' ? proSubscription.currentPeriodEnd : null}
           />
         </div>
       </main>

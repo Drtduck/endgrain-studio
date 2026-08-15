@@ -1,7 +1,8 @@
 'use client'
 
-import { ListingPanel } from '@/components/promo/ListingPanel'
+import { ListingEditor } from '@/components/promo/ListingEditor'
 import { MerchMockups } from '@/components/promo/MerchMockups'
+import { PackDownload } from '@/components/promo/PackDownload'
 import { PhotoSeries } from '@/components/promo/PhotoSeries'
 import { ReferenceShots } from '@/components/promo/ReferenceShots'
 import { VideoPanel } from '@/components/promo/VideoPanel'
@@ -11,8 +12,9 @@ import { useStudio } from '@/lib/store/studio'
 /**
  * Вкладка «Промо»: всё, что делают с уже собранной доской после проектирования.
  * Сначала серия фото по готовым пресетам, следом съёмка по своему референсу,
- * ниже мерч с тем же узором. Все три панели рабочие без ключей: они показывают
- * компоновку, а не пустое место с обещанием.
+ * ниже пак под площадку и SEO-карточка (общий выбор кадров и площадки, см.
+ * lib/store/promo.ts), затем мерч с тем же узором. Все панели рабочие без
+ * ключей: они показывают компоновку, а не пустое место с обещанием.
  */
 export function PromoPanel() {
   const locale = useStudio((s) => s.locale)
@@ -20,8 +22,9 @@ export function PromoPanel() {
     <div data-testid="promo-panel" aria-label={t(locale, 'aria.promoPanel')} className="flex flex-col gap-6">
       <PhotoSeries />
       <ReferenceShots />
+      <PackDownload locale={locale} />
+      <ListingEditor locale={locale} />
       <MerchMockups />
-      <ListingPanel />
       <VideoPanel />
     </div>
   )

@@ -1,6 +1,6 @@
 import { PricingPlans } from '@/components/pricing/PricingPlans'
 import { t, type Locale } from '@/lib/i18n'
-import { STRIPE_PORTAL_URL, hasApiPrices, hasPassPrice, hasPublicPrices } from '@/lib/stripe/config'
+import { STRIPE_PORTAL_URL, hasApiPrices, hasPublicPrices } from '@/lib/stripe/config'
 
 /**
  * Лендинг анонимен и в Supabase не ходит принципиально (см. комментарий в proxy.ts),
@@ -26,9 +26,10 @@ export function PricingSection({ locale }: { locale: Locale }) {
           cancelAtPeriodEnd={false}
           portalUrl={STRIPE_PORTAL_URL}
           apiEnabled={hasApiPrices()}
-          passEnabled={hasPassPrice()}
           apiSubscribed={false}
-          passExpiresAt={null}
+          apiPeriodEnd={null}
+          apiCancelAtPeriodEnd={false}
+          legacyPassUntil={null}
         />
       </div>
     </section>

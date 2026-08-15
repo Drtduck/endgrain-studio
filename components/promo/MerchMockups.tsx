@@ -5,7 +5,7 @@ import { Check, Shirt } from 'lucide-react'
 import { createMerchMockupsAction } from '@/app/actions/promo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { AiGateNote, useAiGate } from '@/components/promo/AiGate'
+import { AiGateNote, denialGate, useAiGate } from '@/components/promo/AiGate'
 import { PatternCells } from '@/components/promo/PatternCells'
 import { boardPngDataUrl } from '@/components/promo/boardPng'
 import type { BoardModel } from '@/lib/engine'
@@ -63,8 +63,10 @@ export function MerchMockups() {
   // Какие товары отправлять в Printful. По умолчанию два: их генератор мокапов
   // пускает пару create-task в минуту, и «все четыре разом» упрётся в его 429.
   const [selected, setSelected] = useState<readonly MerchProductId[]>(MERCH_DEFAULT_PRODUCTS)
-  // Мокапы входят в Pro, поэтому кнопка живёт по тому же гейту, что и серия фото.
-  const gate = useAiGate()
+  // Мокапы входят в Pro, но, в отличие от серии фото, в пробный тир не входят
+  // (merchMockups нет в AI_TRIAL_FEATURES): в trial-состоянии кнопка обязана
+  // быть запертой заранее, а не тихо отваливаться после клика.
+  const gate = useAiGate(null, 'merchMockups')
 
   const toggle = (id: MerchProductId): void => {
     setSelected((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
@@ -172,13 +174,31 @@ export function MerchMockups() {
       {/* Остаток квоты здесь не показываем: мокапы её не тратят, только замок с причиной. */}
       {gate.locked ? <AiGateNote gate={gate} locale={locale} testId="merch-gate" /> : null}
 
-      {failed || (result?.error !== undefined && result.error !== 'notConfigured') ? (
+      {/*
+       * Отказ сервера (denied) - отдельная ветка от gate.locked: гейт выше судит
+       * по состоянию на момент рендера, а denied это то, что реально ответил
+       * сервер на конкретный клик. Раньше при denied панель молча показывала
+       * merch.idle, будто ничего не произошло - человек жал кнопку и не видел
+       * ни слова о причине.
+       */}
+      {result?.denied !== undefined ? (
+        <AiGateNote gate={denialGate(result.denied, gate.access)} locale={locale} testId="merch-gate-note" />
+      ) : null}
+
+      {failed || result?.error !== undefined ? (
         <p
           data-testid="merch-error"
           role="alert"
           className="rounded-md border border-error-border bg-error-soft px-3 py-[11px] text-[13px] font-semibold text-error-text"
         >
           {t(locale, failed || result?.error === undefined ? 'merch.error' : `merch.err.${result.error}`)}
+        </p>
+      ) : null}
+
+      {/* Технический текст с именем переменной виден только в dev: обычный человек её не заводит. */}
+      {process.env.NODE_ENV === 'development' && result?.error === 'notConfigured' ? (
+        <p data-testid="merch-error-dev" className="text-xs text-ink-muted">
+          {t(locale, 'merch.err.notConfiguredDev')}
         </p>
       ) : null}
 

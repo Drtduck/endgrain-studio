@@ -3,7 +3,14 @@ import { act, renderHook } from '@testing-library/react'
 import { baseDesign } from '@/lib/engine'
 import { LS_CURRENT_KEY, deserializeDesign, encodeDesignToHash, serializeDesign } from '@/lib/persist'
 import { useStudio } from './studio'
-import { makeDebouncedSaver, readInitialDesign, shareUrl, useStudioPersistence, SAVE_DEBOUNCE_MS } from './persist'
+import {
+  makeDebouncedSaver,
+  readInitialDesign,
+  shareUrl,
+  useStudioPersistence,
+  PROJECT_ID_KEY,
+  SAVE_DEBOUNCE_MS,
+} from './persist'
 
 describe('makeDebouncedSaver', () => {
   beforeEach(() => vi.useFakeTimers())
@@ -116,5 +123,62 @@ describe('useStudioPersistence', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('useStudioPersistence: привязка к облачному проекту переживает перезагрузку (раздел 3.2 спеки)', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+    window.location.hash = ''
+    useStudio.getState().resetStudio(baseDesign())
+  })
+  afterEach(() => {
+    window.location.hash = ''
+    useStudio.getState().resetStudio(baseDesign())
+  })
+
+  it('markProjectSaved пишет ref в localStorage, resetStudio его убирает', () => {
+    const { unmount } = renderHook(() => useStudioPersistence())
+
+    act(() => {
+      useStudio.getState().markProjectSaved('project-xyz', useStudio.getState().history.present)
+    })
+    const raw = window.localStorage.getItem(PROJECT_ID_KEY)
+    expect(raw).not.toBe(null)
+    expect(JSON.parse(raw as string).id).toBe('project-xyz')
+
+    act(() => {
+      useStudio.getState().resetStudio(baseDesign())
+    })
+    expect(window.localStorage.getItem(PROJECT_ID_KEY)).toBe(null)
+
+    unmount()
+  })
+
+  it('документ из localStorage (не из хэша) восстанавливает currentProjectId из ref', () => {
+    const design = baseDesign({ id: 'проект-с-диска', name: 'проект с диска' })
+    window.localStorage.setItem(LS_CURRENT_KEY, serializeDesign(design))
+    window.localStorage.setItem(
+      PROJECT_ID_KEY,
+      JSON.stringify({ id: 'project-restored', name: 'проект с диска', savedAt: Date.now() }),
+    )
+
+    const { unmount } = renderHook(() => useStudioPersistence())
+    expect(useStudio.getState().currentProjectId).toBe('project-restored')
+
+    unmount()
+  })
+
+  it('документ из хэш-ссылки НЕ восстанавливает currentProjectId, даже если ref есть в localStorage', () => {
+    window.localStorage.setItem(
+      PROJECT_ID_KEY,
+      JSON.stringify({ id: 'project-should-not-restore', name: 'старое', savedAt: Date.now() }),
+    )
+    window.location.hash = encodeDesignToHash(baseDesign({ name: 'из ссылки' }))
+
+    const { unmount } = renderHook(() => useStudioPersistence())
+    expect(useStudio.getState().currentProjectId).toBeNull()
+
+    unmount()
   })
 })

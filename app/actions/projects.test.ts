@@ -24,7 +24,8 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 
 const updateProject = vi.fn()
-vi.mock('@/lib/api/service', () => ({ updateProject }))
+const upsertProject = vi.fn()
+vi.mock('@/lib/api/service', () => ({ updateProject, upsertProject }))
 
 describe('app/actions/projects', () => {
   beforeEach(() => {
@@ -33,6 +34,7 @@ describe('app/actions/projects', () => {
     getUser.mockReset()
     from.mockReset()
     updateProject.mockReset()
+    upsertProject.mockReset()
   })
 
   it('без пользователя каждая функция даёт unauthenticated и не зовёт from()', async () => {
@@ -169,6 +171,49 @@ describe('app/actions/projects', () => {
     updateProject.mockResolvedValue({ ok: false, error: 'rateLimited' })
     const { updateProjectAction } = await import('./projects')
     const res = await updateProjectAction('proj-1', { name: 'новое' })
+    expect(res).toEqual({ ok: false, error: 'failed' })
+  })
+
+  it('upsertProjectAction без пользователя даёт unauthenticated и не зовёт сервис', async () => {
+    getUser.mockResolvedValue({ data: { user: null } })
+    const { upsertProjectAction } = await import('./projects')
+    const res = await upsertProjectAction({ projectId: null, name: 'доска', design: makeCheckerboard({ cols: 2, rows: 2 }) })
+    expect(res).toEqual({ ok: false, error: 'unauthenticated' })
+    expect(upsertProject).not.toHaveBeenCalled()
+  })
+
+  it('upsertProjectAction передаёт userId из сессии и projectId с клиента как есть в сервис', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
+    upsertProject.mockResolvedValue({ ok: true, data: { id: 'proj-1', name: 'доска', updatedAt: '2026-01-01T00:00:00.000Z' } })
+    const { upsertProjectAction } = await import('./projects')
+    const design = makeCheckerboard({ cols: 2, rows: 2 })
+    const res = await upsertProjectAction({ projectId: 'proj-1', name: 'доска', design })
+    expect(upsertProject).toHaveBeenCalledWith('user-1', 'proj-1', 'доска', design)
+    expect(res).toEqual({ ok: true, data: { id: 'proj-1', name: 'доска', updatedAt: '2026-01-01T00:00:00.000Z' } })
+  })
+
+  it('upsertProjectAction: два подряд вызова с одним и тем же projectId - это два UPDATE, не два INSERT (одна строка)', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
+    upsertProject.mockResolvedValue({ ok: true, data: { id: 'proj-1', name: 'доска', updatedAt: '2026-01-01T00:00:00.000Z' } })
+    const { upsertProjectAction } = await import('./projects')
+    const design = makeCheckerboard({ cols: 2, rows: 2 })
+
+    const first = await upsertProjectAction({ projectId: null, name: 'доска', design })
+    expect(first.ok).toBe(true)
+    const secondProjectId = first.ok ? first.data.id : null
+
+    const second = await upsertProjectAction({ projectId: secondProjectId, name: 'доска правленая', design })
+    expect(second.ok).toBe(true)
+
+    expect(upsertProject).toHaveBeenCalledTimes(2)
+    expect(upsertProject.mock.calls[1]?.[1]).toBe('proj-1')
+  })
+
+  it('upsertProjectAction сужает ошибки сервиса, которых у server action быть не может, до failed', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
+    upsertProject.mockResolvedValue({ ok: false, error: 'unavailable' })
+    const { upsertProjectAction } = await import('./projects')
+    const res = await upsertProjectAction({ projectId: null, name: 'доска', design: makeCheckerboard({ cols: 2, rows: 2 }) })
     expect(res).toEqual({ ok: false, error: 'failed' })
   })
 })

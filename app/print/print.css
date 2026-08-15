@@ -26,6 +26,18 @@
     background: #ffffff !important;
   }
 
+  /*
+   * Без этого браузер по умолчанию не печатает фоновые цвета: цветные плашки пород,
+   * полоса раскроя и серые полосы рядов уходили на бумагу пустыми белыми
+   * прямоугольниками. print-color-adjust наследуется потомками, поэтому достаточно
+   * задать его один раз на корне документа.
+   */
+  .print-doc {
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   /* Всё, что не документ, на бумаге не нужно: кнопки, баннер согласия, шапки. */
   [data-print-hide],
   [data-testid='consent-banner'] {
@@ -42,9 +54,65 @@
 
   .print-page-break {
     break-before: page;
+    page-break-before: always;
   }
 
   .print-keep {
     break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Заголовок секции не должен остаться сиротой на одной странице без своего содержимого. */
+  h2,
+  h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  p,
+  li,
+  dt,
+  dd {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /*
+   * Панель раскроя (щит) на сложной доске часто выше листа целиком, поэтому ей
+   * нельзя запрещать разрыв: break-inside:avoid у неё раньше уводил весь блок на
+   * следующую страницу и оставлял предыдущую полупустой. Разрыв внутри панели
+   * разрешён, но не между заголовком и первой строкой и не посреди отдельной строки.
+   */
+  .print-panel {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .print-panel > h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .print-panel li,
+  .print-strip-row {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /*
+   * Превью доски гарантированно влезает в лист целиком: без ограничения оно
+   * занимало почти весь первый лист и уводило «Характеристики» на второй,
+   * а следом оставляло вторую страницу почти пустой.
+   */
+  .print-preview {
+    max-height: 160mm;
+  }
+
+  .print-preview svg {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 160mm;
+    margin: 0 auto;
   }
 }

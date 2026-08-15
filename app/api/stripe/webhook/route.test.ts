@@ -13,13 +13,10 @@ vi.mock('@/lib/stripe/config', () => ({
   STRIPE_PRICE_YEARLY: 'price_yearly',
   STRIPE_PRICE_API_MONTHLY: 'price_api_monthly',
   STRIPE_PRICE_API_YEARLY: 'price_api_yearly',
-  STRIPE_PRICE_PASS: 'price_pass',
-  STRIPE_PRO_DEFAULT_PRICE: 'yearly',
   STRIPE_PORTAL_URL: '',
   isStripeConfigured: () => true,
   hasPublicPrices: () => true,
   hasApiPrices: () => true,
-  hasPassPrice: () => true,
 }))
 
 const supabase = { from: vi.fn(), rpc: vi.fn() }

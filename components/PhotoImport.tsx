@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useRef, useState } from 'react'
-import { ImagePlus } from 'lucide-react'
+import { Check, ImagePlus, Shapes, Waves, X } from 'lucide-react'
 import { BoardSvg } from '@/components/BoardSvg'
 import { ConfirmReplace } from '@/components/ConfirmReplace'
 import { Button } from '@/components/ui/button'
@@ -77,6 +77,49 @@ export function PhotoImport() {
         </div>
         <p className="text-base text-ink-secondary">{t(locale, 'photo.subtitle')}</p>
       </div>
+
+      <details
+        data-testid="photo-advice"
+        className="rounded-lg border border-line-subtle bg-surface-raised text-[13px]"
+      >
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 font-medium text-ink-secondary select-none [&::-webkit-details-marker]:hidden">
+          <Shapes size={15} className="shrink-0 text-ink-muted" aria-hidden />
+          <span>{t(locale, 'photo.advice.summary')}</span>
+        </summary>
+        <div className="flex flex-col gap-3 border-t border-line-subtle px-3 pt-3 pb-3">
+          <p className="text-ink-secondary">{t(locale, 'photo.advice.why')}</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-1.5 font-semibold text-ink">
+                <Shapes size={14} className="text-success-text" aria-hidden />
+                {t(locale, 'photo.advice.goodTitle')}
+              </div>
+              <ul className="flex flex-col gap-1">
+                {(['good1', 'good2', 'good3'] as const).map((key) => (
+                  <li key={key} className="flex items-start gap-1.5 text-ink-secondary">
+                    <Check size={13} className="mt-0.5 shrink-0 text-success-text" aria-hidden />
+                    <span>{t(locale, `photo.advice.${key}`)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-1.5 font-semibold text-ink">
+                <Waves size={14} className="text-error-text" aria-hidden />
+                {t(locale, 'photo.advice.badTitle')}
+              </div>
+              <ul className="flex flex-col gap-1">
+                {(['bad1', 'bad2', 'bad3'] as const).map((key) => (
+                  <li key={key} className="flex items-start gap-1.5 text-ink-secondary">
+                    <X size={13} className="mt-0.5 shrink-0 text-error-text" aria-hidden />
+                    <span>{t(locale, `photo.advice.${key}`)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </details>
 
       <div
         data-testid="photo-dropzone"

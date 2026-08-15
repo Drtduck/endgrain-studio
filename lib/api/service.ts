@@ -194,6 +194,68 @@ export async function updateProject(
   return { ok: true, data: toSummary(data) }
 }
 
+/**
+ * Create-or-update в одну атомарную операцию (лечение D12/D13,
+ * docs/specs/promo-studio.md раздел 3.3). projectId с клиента не является
+ * доверенным: UPDATE идёт с явным .eq('user_id', userId), и чужой/устаревший
+ * id просто не найдёт строку - тогда функция падает в INSERT, а не в отказ,
+ * потому что отказ здесь означал бы потерянную работу пользователя.
+ *
+ * UPDATE и проверка владения - один SQL-запрос (WHERE id=? AND user_id=?),
+ * поэтому гонки «прочитали строку - но её увели/удалили между select и update»
+ * здесь нет: Postgres сам атомарен на update с условием.
+ */
+export async function upsertProject(
+  userId: string,
+  projectId: string | null,
+  name: string,
+  design: unknown,
+): Promise<ActionResult<ProjectSummary>> {
+  const parsedName = nameSchema.safeParse(name)
+  if (!parsedName.success) return { ok: false, error: 'invalid' }
+
+  let checked: Design
+  try {
+    checked = parseDesign(design)
+  } catch {
+    return { ok: false, error: 'invalid' }
+  }
+
+  const sb = getSupabaseService()
+
+  if (projectId !== null) {
+    if (!idSchema.safeParse(projectId).success) return { ok: false, error: 'invalid' }
+    const { data, error } = await sb
+      .from('projects')
+      .update({ name: parsedName.data, design: checked })
+      .eq('id', projectId)
+      .eq('user_id', userId)
+      .select('id, name, updated_at')
+      .maybeSingle()
+    if (error) return { ok: false, error: 'failed' }
+    if (data) return { ok: true, data: toSummary(data) }
+    // Не нашли: проект удалили или id чужой/устаревший. Не отказ, а создание новой строки.
+  }
+
+  const { pro } = await proStatusForUser(userId)
+  if (!pro) {
+    const { count, error: countError } = await sb
+      .from('projects')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+    if (countError) return { ok: false, error: 'failed' }
+    if ((count ?? 0) >= FREE_PROJECT_LIMIT) return { ok: false, error: 'limit' }
+  }
+
+  const { data, error } = await sb
+    .from('projects')
+    .insert({ user_id: userId, name: parsedName.data, design: checked })
+    .select('id, name, updated_at')
+    .single()
+  if (error || !data) return { ok: false, error: 'failed' }
+  return { ok: true, data: toSummary(data) }
+}
+
 export async function deleteProject(userId: string, id: string): Promise<ActionResult<null>> {
   if (!idSchema.safeParse(id).success) return { ok: false, error: 'invalid' }
 

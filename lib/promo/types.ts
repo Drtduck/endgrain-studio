@@ -101,6 +101,53 @@ export type PromoResult =
     }
   | { readonly ok: false; readonly error: PromoError }
 
+/**
+ * Job-путь (P0-3): статус одного кадра в базе. queued/running/done/failed
+ * зеркалят promo_shots.status в SQL, blocked/cancelled - терминальные исходы,
+ * за которые деньги (кадры) уже возвращены и повтор либо запрещён (blocked),
+ * либо не имел места (cancelled).
+ */
+export type PromoShotStatus = 'queued' | 'running' | 'done' | 'failed' | 'blocked' | 'cancelled'
+
+/** Кто и как начал серию. Определяет, как собирается промпт каждого кадра. */
+export type PromoSeriesSource = 'presets' | 'reference' | 'edit' | 'merch'
+
+/** Общий статус серии: агрегат из promo_shots, считает settle_promo_series. */
+export type PromoSeriesStatus = 'queued' | 'running' | 'done' | 'partial' | 'failed' | 'cancelled'
+
+/** Один кадр целиком, как его видит клиент: карточка в галерее рисует ровно одно из шести состояний. */
+export interface PromoShotView {
+  readonly id: string
+  readonly seriesId: string
+  readonly kindSlug: string
+  readonly ordinal: number
+  readonly status: PromoShotStatus
+  readonly parentShotId: string | null
+  readonly variantNo: number
+  readonly editPrompt: string | null
+  /** Signed URL на час. null, пока кадр не готов. */
+  readonly url: string | null
+  readonly width: number | null
+  readonly height: number | null
+  readonly provider: string | null
+  readonly prompt: string | null
+  readonly error: string | null
+  readonly retries: number
+}
+
+/** Одна серия («одно нажатие «Сгенерировать»»): заказ и его исход. */
+export interface PromoSeriesView {
+  readonly id: string
+  readonly projectId: string
+  readonly source: PromoSeriesSource
+  readonly status: PromoSeriesStatus
+  readonly requested: number
+  readonly succeeded: number
+  readonly failed: number
+  readonly createdAt: string
+  readonly finishedAt: string | null
+}
+
 /** Товар мерча. Координаты в каталоге Printful лежат в printfulCatalog.ts. */
 export type MerchProductId = 'tshirt' | 'mug' | 'poster' | 'apron'
 

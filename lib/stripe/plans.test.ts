@@ -60,26 +60,17 @@ describe('plans', () => {
   })
 
   describe('checkoutPriceFor', () => {
-    // Сессия обязана стартовать с месячной цены: upsell Developer в Dashboard
-    // настроен веткой «месячная -> годовая», и тумблер месяц/год Stripe рисует
-    // только тогда. С годовой в line_items переключателя на Checkout нет.
+    // Сессия обязана стартовать с месячной цены и для Pro, и для Developer:
+    // тумблер месяц/год рисует Subscription upsell в Dashboard, настроенный
+    // веткой «месячная -> годовая», и работает только тогда. С годовой в
+    // line_items переключателя на Checkout нет вовсе.
     it('api всегда берёт месячную цену: иначе на Checkout нет тумблера месяц/год', async () => {
       const { checkoutPriceFor } = await load(FULL_ENV)
       expect(checkoutPriceFor('api')).toBe('price_api_m')
     })
 
-    it('api не зависит от STRIPE_PRO_DEFAULT_PRICE: это переключатель только для Pro', async () => {
-      const { checkoutPriceFor } = await load({ ...FULL_ENV, STRIPE_PRO_DEFAULT_PRICE: 'yearly' })
-      expect(checkoutPriceFor('api')).toBe('price_api_m')
-    })
-
-    it('pro берёт годовую по умолчанию (STRIPE_PRO_DEFAULT_PRICE не задан)', async () => {
+    it('pro тоже всегда берёт месячную цену: без переменной-переключателя', async () => {
       const { checkoutPriceFor } = await load(FULL_ENV)
-      expect(checkoutPriceFor('pro')).toBe('price_y')
-    })
-
-    it('pro переключается на месячную через STRIPE_PRO_DEFAULT_PRICE=monthly', async () => {
-      const { checkoutPriceFor } = await load({ ...FULL_ENV, STRIPE_PRO_DEFAULT_PRICE: 'monthly' })
       expect(checkoutPriceFor('pro')).toBe('price_m')
     })
   })

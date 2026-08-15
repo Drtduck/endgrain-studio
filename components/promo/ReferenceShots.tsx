@@ -1,8 +1,8 @@
 'use client'
 
-import { useRef, useState } from 'react'
-import { ImagePlus, Sparkles, Wand2 } from 'lucide-react'
-import { analyzeReferenceAction, generateReferenceShotsAction } from '@/app/actions/promo'
+import { useEffect, useRef, useState } from 'react'
+import { ImagePlus, Sparkles, Wand2, X } from 'lucide-react'
+import { analyzeReferenceAction, listActiveSeriesAction, listPromoSeriesAction } from '@/app/actions/promo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -10,10 +10,11 @@ import { AiGateNote, useAiGate } from '@/components/promo/AiGate'
 import { PromoMockShot } from '@/components/promo/PromoMockShot'
 import { TrialPaywall } from '@/components/promo/TrialPaywall'
 import { blobToDataUrl, boardPngDataUrl } from '@/components/promo/boardPng'
+import { useSession } from '@/components/SessionProvider'
 import { FREE_TRIAL_MAX_UNITS, aiCost } from '@/lib/ai/quota'
 import { safeFileName } from '@/lib/export'
 import { t, type MessageKey } from '@/lib/i18n'
-import { describeBoard } from '@/lib/promo/describe'
+import { useProjectGuard } from '@/lib/projects/useProjectGuard'
 import { STYLE_FIELDS, type StyleAnalysis } from '@/lib/promo/reference'
 import {
   MAX_PNG_CHARS,
@@ -23,7 +24,8 @@ import {
   REFERENCE_MAX_COUNT,
   REFERENCE_MIME,
 } from '@/lib/promo/schema'
-import { PROMO_DEFAULT_SHOTS, PROMO_SHOT_LAYOUT, type PromoResult, type PromoShotKind } from '@/lib/promo/types'
+import { PROMO_SHOT_LAYOUT, type PromoShotKind, type PromoShotStatus } from '@/lib/promo/types'
+import { useSeriesRunner } from '@/lib/promo/useSeriesRunner'
 import { useDerived } from '@/lib/store/derived'
 import { selectDesign, useStudio } from '@/lib/store/studio'
 
@@ -39,46 +41,92 @@ const FIELD_LABEL: Readonly<Record<(typeof STYLE_FIELDS)[number], MessageKey>> =
   postProcessing: 'ref.field.postProcessing',
 }
 
+const STATUS_KEY: Readonly<Record<PromoShotStatus, MessageKey>> = {
+  queued: 'promo.status.queued',
+  running: 'promo.status.running',
+  done: 'promo.status.done',
+  failed: 'promo.status.failed',
+  blocked: 'promo.status.blocked',
+  cancelled: 'promo.status.cancelled',
+}
+
 /**
  * Генерация по референсу. Человек приносит понравившийся кадр, модель со зрением
  * раскладывает его на приёмы съёмки, разбор показывается на экране и правится
- * руками, и только потом рисуются кадры с нашей доской.
- *
- * Показ разбора до генерации это не украшение: кадры платные, и человек должен
- * видеть, что модель поняла, прежде чем отдавать за это квоту. Заодно снимается
- * вопрос «а вы там мою картинку не копируете»: в промпт уезжает ровно тот текст,
- * который виден на экране.
+ * руками, и только потом рисуются кадры с нашей доской через тот же job-путь
+ * (lib/promo/useSeriesRunner), что и PhotoSeries - без Promise.all, с сохранением
+ * в Storage и честным прогрессом.
  */
 export function ReferenceShots() {
   const locale = useStudio((s) => s.locale)
   const design = useStudio(selectDesign)
   const { model } = useDerived()
+  const guard = useProjectGuard()
+  const { user } = useSession()
   const fileInput = useRef<HTMLInputElement>(null)
 
   const [preview, setPreview] = useState<string | null>(null)
   const [style, setStyle] = useState<StyleAnalysis | null>(null)
   const [busy, setBusy] = useState<'analyze' | 'generate' | null>(null)
   const [errorKey, setErrorKey] = useState<MessageKey | null>(null)
-  const [result, setResult] = useState<PromoResult | null>(null)
   const [remaining, setRemaining] = useState<number | null>(null)
-  const gate = useAiGate(remaining)
+  const gate = useAiGate(remaining, 'referenceShots')
   const trialMode = gate.access.state === 'trial'
-  // Во free-тире сервер режет серию до FREE_TRIAL_MAX_UNITS кадров: стартовый
-  // выбор обязан укладываться в тот же потолок, иначе счётчик под чипами
-  // обещает списать больше, чем реально спишется.
+  const demoMode = gate.access.state === 'mock'
   const [count, setCount] = useState(() => (trialMode ? FREE_TRIAL_MAX_UNITS : 2))
+  // Кадры готовы, но человек не проходил разбор референса заново (F5, другой
+  // визит): галерея показывает их и без style (спека раздела с разбором сама
+  // не персистится - персистятся кадры, ради которых всё затевалось).
+  const [hydrated, setHydrated] = useState(false)
+  const runner = useSeriesRunner()
+  const projectId = guard.state.kind === 'ready' ? guard.state.projectId : null
+
+  // Кадры переживают перезагрузку страницы (P0-6, ревью 14.08.2026): та же
+  // логика, что в PhotoSeries.tsx - сначала брошенная (queued/running) серия
+  // где угодно у пользователя, иначе последняя серия ЭТОГО проекта с
+  // source='reference', даже уже завершённая.
+  const hydratedRef = useRef(false)
+  useEffect(() => {
+    if (demoMode || !user || hydratedRef.current) return
+    let cancelled = false
+
+    function applyHydration(hydratedSeries: Parameters<typeof runner.hydrate>[0], shots: Parameters<typeof runner.hydrate>[1]): void {
+      hydratedRef.current = true
+      const ownCount = shots.filter((s) => s.seriesId === hydratedSeries.id && s.parentShotId === null).length
+      if (ownCount > 0) setCount(Math.min(REFERENCE_MAX_COUNT, ownCount))
+      setHydrated(true)
+      runner.hydrate(hydratedSeries, shots)
+    }
+
+    void (async () => {
+      const active = await listActiveSeriesAction()
+      if (cancelled) return
+      if (active.ok) {
+        const activeSeries = active.data.series.find((s) => s.source === 'reference')
+        if (activeSeries !== undefined) {
+          applyHydration(activeSeries, active.data.shots)
+          return
+        }
+      }
+      if (projectId === null) return
+      const mine = await listPromoSeriesAction(projectId)
+      if (cancelled || !mine.ok) return
+      const latest = mine.data.series.find((s) => s.source === 'reference')
+      if (latest === undefined) return
+      applyHydration(latest, mine.data.shots)
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demoMode, user, projectId, runner.hydrate])
 
   const cost = aiCost('referenceShots', count)
-  const images = result !== null && result.ok && !result.mock ? result.images : []
-  const kinds: readonly PromoShotKind[] = PROMO_DEFAULT_SHOTS.slice(0, count)
+  const kinds: readonly PromoShotKind[] = ['hero', 'serving', 'macroOil', 'package'].slice(0, count) as PromoShotKind[]
 
   const pick = async (file: File | undefined): Promise<void> => {
     if (file === undefined) return
     setErrorKey(null)
-    setResult(null)
+    runner.reset()
     setStyle(null)
-    // Тип и размер проверяются и здесь, и в zod-схеме на сервере. Здесь ради
-    // внятного текста без похода в сеть, там ради того, что клиенту веры нет.
     if (!REFERENCE_MIME.includes(file.type)) {
       setPreview(null)
       setErrorKey('ref.err.type')
@@ -90,7 +138,6 @@ export function ReferenceShots() {
       return
     }
     const dataUrl = await blobToDataUrl(file)
-    // Магия файла: расширение и поле type подделываются в два клика.
     if (!REFERENCE_DATA_URL_RE.test(dataUrl)) {
       setPreview(null)
       setErrorKey('ref.err.type')
@@ -106,7 +153,7 @@ export function ReferenceShots() {
     try {
       const res = await analyzeReferenceAction({ referenceImage: preview })
       if (!res.ok) {
-        setErrorKey(`promo.err.${res.error}`)
+        setErrorKey(`promo.err.${res.error}` as MessageKey)
         return
       }
       setStyle(res.style)
@@ -123,23 +170,26 @@ export function ReferenceShots() {
     if (style === null) return
     setBusy('generate')
     setErrorKey(null)
-    setResult(null)
     try {
+      if (demoMode) {
+        runner.startDemo(kinds.map((kind) => ({ kindSlug: kind })), 'reference')
+        return
+      }
+      const projectId = await guard.ensureSaved()
+      if (projectId === null) return
       const boardPng = await boardPngDataUrl(model)
       if (boardPng.length > MAX_PNG_CHARS) {
         setErrorKey('promo.err.tooLarge')
         return
       }
-      const res = await generateReferenceShotsAction({
+      await runner.start({
+        source: 'reference',
+        projectId,
+        walletRef: crypto.randomUUID(),
         boardPng,
-        description: describeBoard(design, model).text,
         style,
         count,
       })
-      setResult(res)
-      if (!res.ok) setErrorKey(`promo.err.${res.error}`)
-      if (res.ok && !res.mock && res.remaining !== undefined) setRemaining(res.remaining)
-      if (!res.ok && res.error === 'quota') setRemaining(0)
     } catch (err) {
       console.error(err)
       setErrorKey('promo.err.failed')
@@ -186,15 +236,12 @@ export function ReferenceShots() {
         className="sr-only"
         onChange={(e) => {
           void pick(e.target.files?.[0])
-          // Сброс значения: иначе повторный выбор того же файла не даст события.
           e.target.value = ''
         }}
       />
 
       <p className="max-w-[68ch] text-[13px] text-ink-secondary">{t(locale, 'ref.subtitle')}</p>
 
-      {/* Оговорка висит рядом с загрузкой, а не в подвале: человек должен прочитать
-          её до того, как принесёт чужой кадр, а не после. */}
       <p data-testid="ref-disclaimer" className="max-w-[68ch] rounded-md border border-line-subtle bg-surface-raised px-3 py-[11px] text-[13px] text-ink-secondary">
         {t(locale, 'ref.disclaimer')}
       </p>
@@ -207,13 +254,14 @@ export function ReferenceShots() {
           role="alert"
           className="rounded-md border border-error-border bg-error-soft px-3 py-[11px] text-[13px] font-semibold text-error-text"
         >
-          {t(locale, errorKey)}
+          {t(locale, errorKey, { remaining: gate.access.remaining })}
         </p>
       ) : null}
 
       {preview !== null ? (
         <div className="flex flex-wrap items-start gap-4">
           <div className="relative w-40 shrink-0 overflow-hidden rounded-lg border border-line-subtle bg-canvas">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={preview} alt={t(locale, 'ref.previewAlt')} data-testid="ref-preview" className="block h-auto w-full" />
             <Badge className="absolute top-2 right-2 bg-surface/90">{t(locale, 'ref.badge')}</Badge>
           </div>
@@ -243,7 +291,6 @@ export function ReferenceShots() {
             <span className="text-[13px] font-semibold">{t(locale, 'ref.count')}</span>
             <div className="flex gap-1.5">
               {Array.from({ length: REFERENCE_MAX_COUNT }, (_, i) => i + 1).map((n) => {
-                // Пробный тир: только один кадр за раз, остальные счётчики неактивны.
                 const disabled = trialMode && n !== 1
                 return (
                   <button
@@ -282,37 +329,67 @@ export function ReferenceShots() {
         </div>
       ) : null}
 
-      {style !== null ? (
+      {runner.error !== null ? (
+        <p
+          data-testid="promo-error"
+          role="alert"
+          className="rounded-md border border-error-border bg-error-soft px-3 py-[11px] text-[13px] font-semibold text-error-text"
+        >
+          {t(locale, `promo.err.${runner.error}` as MessageKey, { remaining: gate.access.remaining })}
+        </p>
+      ) : null}
+
+      {runner.series !== null ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <p data-testid="promo-series-progress" className="text-[13px] font-semibold">
+            {t(locale, 'promo.progress', { done: runner.series.succeeded, total: runner.series.requested })}
+            {runner.series.failed > 0 ? ` ${t(locale, 'promo.progress.failed', { failed: runner.series.failed })}` : ''}
+          </p>
+          {runner.series.status === 'queued' || runner.series.status === 'running' ? (
+            <Button size="sm" variant="outline" data-testid="promo-cancel" onClick={() => { runner.cancel() }}>
+              <X data-icon="inline-start" />
+              {t(locale, 'promo.cancel')}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {style !== null || hydrated ? (
         <ul data-testid="ref-gallery" className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
-          {kinds.map((kind, index) => {
-            const dataUrl = images[index]?.dataUrl
+          {runner.shots.map((shot, index) => {
+            const layout = PROMO_SHOT_LAYOUT.get(kinds[index] ?? 'hero') ?? 'solo'
+            const showMock = shot.url === null
             return (
               <li
-                key={kind}
+                key={shot.id}
                 data-testid={`ref-shot-${index + 1}`}
                 className="flex flex-col gap-2 overflow-hidden rounded-lg border border-line-subtle bg-surface-raised shadow-sm"
               >
                 <div className="relative bg-canvas">
-                  {dataUrl === undefined ? (
-                    <PromoMockShot layout={PROMO_SHOT_LAYOUT.get(kind) ?? 'solo'} model={model} />
+                  {showMock ? (
+                    <PromoMockShot layout={layout} model={model} />
                   ) : (
-                    <img src={dataUrl} alt={t(locale, 'ref.shotAlt', { n: index + 1 })} className="block h-auto w-full" />
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={shot.url ?? ''} alt={t(locale, 'ref.shotAlt', { n: index + 1 })} className="block h-auto w-full" />
                   )}
-                  {dataUrl === undefined ? (
-                    <Badge className="absolute top-2 right-2 bg-surface/90">{t(locale, 'promo.mockBadge')}</Badge>
-                  ) : null}
+                  <Badge className="absolute top-2 right-2 bg-surface/90">{t(locale, STATUS_KEY[shot.status])}</Badge>
                 </div>
                 <div className="flex flex-col gap-1 px-3 pb-3">
                   <span className="text-sm font-semibold">{t(locale, 'ref.shotAlt', { n: index + 1 })}</span>
-                  {dataUrl === undefined ? null : (
+                  {shot.status === 'failed' && shot.retries < 3 ? (
+                    <Button size="sm" variant="outline" data-testid={`promo-shot-retry-${shot.id}`} onClick={() => { void runner.retry(shot.id) }}>
+                      {t(locale, 'promo.retry')}
+                    </Button>
+                  ) : null}
+                  {shot.status === 'done' && shot.url ? (
                     <a
-                      href={dataUrl}
+                      href={shot.url}
                       download={safeFileName(`${design.name}-ref-${index + 1}`, 'png')}
                       className="mt-1 w-fit text-xs font-semibold text-accent underline-offset-4 hover:underline"
                     >
                       {t(locale, 'promo.download')}
                     </a>
-                  )}
+                  ) : null}
                 </div>
               </li>
             )
