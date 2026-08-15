@@ -31,7 +31,9 @@ test('вкладка «Промо» открывается и показывае
   await openStudio(page)
   await expect(page.getByTestId('promo-photo')).toBeVisible()
   await expect(page.getByTestId('promo-reference')).toBeVisible()
-  await expect(page.getByTestId('promo-merch')).toBeVisible()
+  // Мерч спрятан до готовности флоу покупки (спека merch-orders.md, PR #47):
+  // старая кнопка вела в чужой кабинет Printful, новая касса ещё не смержена.
+  await expect(page.getByTestId('promo-merch')).toHaveCount(0)
 })
 
 test('состояние без кадров: до генерации в сетке только заглушки набора по умолчанию', async ({ page }) => {
@@ -122,7 +124,13 @@ test('панель съёмки по референсу открыта и чес
   await expect(page.getByTestId('ref-analyze')).toBeDisabled()
 })
 
-test('без ключа Printful видны локальные мокапы мерча и нет кнопки Printful', async ({ page }) => {
+// Мерч спрятан из вкладки «Промо» до готовности кассы (спека merch-orders.md,
+// PR #47): секция MerchMockups больше не рендерится нигде в приложении, поэтому
+// её нельзя открыть через страницу. Поведение компонента (локальные мокапы,
+// ключ Printful, выбор товаров) покрыто прямым рендером в
+// components/promo/PromoPanel.test.tsx (describe MerchMockups). Тесты вернутся
+// сюда вместе с секцией по PR #47.
+test.skip('без ключа Printful видны локальные мокапы мерча и нет кнопки Printful', async ({ page }) => {
   test.skip(!noKeys, 'в окружении есть ключ: кнопка Printful появится, и это другой сценарий')
   await openStudio(page)
   for (const id of ['tshirt', 'mug', 'poster', 'apron']) {
@@ -134,7 +142,7 @@ test('без ключа Printful видны локальные мокапы ме
   await expect(page.getByTestId('merch-printful')).toHaveCount(0)
 })
 
-test('товары для Printful выбираются чипами, по умолчанию два', async ({ page }) => {
+test.skip('товары для Printful выбираются чипами, по умолчанию два', async ({ page }) => {
   await openStudio(page)
   await expect(page.getByTestId('merch-pick-tshirt')).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByTestId('merch-pick-poster')).toHaveAttribute('aria-pressed', 'false')

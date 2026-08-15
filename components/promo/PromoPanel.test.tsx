@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProProvider } from '@/components/ProProvider'
@@ -6,24 +7,31 @@ import { AI_MONTHLY_LIMIT, FREE_TRIAL_LIMIT, aiAccess, type AiAccessState } from
 import type { ProStatus } from '@/lib/stripe/pro'
 import { MERCH_DEFAULT_PRODUCTS, PROMO_DEFAULT_SHOTS, PROMO_SHOT_META, type MerchResult } from '@/lib/promo/types'
 import { useStudio } from '@/lib/store/studio'
+import { MerchMockups } from './MerchMockups'
 import { PromoPanel } from './PromoPanel'
 
 const FREE_STATUS: ProStatus = { pro: false, reason: 'free', plan: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }
 
 /**
- * Панель в окружении с известным состоянием доступа: его считает сервер в layout.
- * Состояния кроме 'mock'/'anonymous' подразумевают вошедшего человека - сессия
- * приезжает тем же пропсом, что и в проде (SessionProvider из корневого layout).
+ * Произвольный узел в окружении с известным состоянием доступа: его считает
+ * сервер в layout. Состояния кроме 'mock'/'anonymous' подразумевают вошедшего
+ * человека - сессия приезжает тем же пропсом, что и в проде (SessionProvider
+ * из корневого layout).
  */
-function renderWithAccess(state: AiAccessState, used = 0, limit: number = AI_MONTHLY_LIMIT, credits = 0) {
+function renderNodeWithAccess(node: ReactNode, state: AiAccessState, used = 0, limit: number = AI_MONTHLY_LIMIT, credits = 0) {
   const user = state === 'anonymous' || state === 'mock' ? null : { id: 'user-1', email: 'a@b.co' }
   return render(
     <SessionProvider value={{ user, enabled: true }}>
       <ProProvider value={{ status: FREE_STATUS, billingEnabled: true, ai: aiAccess(state, used, limit, credits) }}>
-        <PromoPanel />
+        {node}
       </ProProvider>
     </SessionProvider>,
   )
+}
+
+/** Панель промо-кадров в окружении с известным состоянием доступа. */
+function renderWithAccess(state: AiAccessState, used = 0, limit: number = AI_MONTHLY_LIMIT, credits = 0) {
+  return renderNodeWithAccess(<PromoPanel />, state, used, limit, credits)
 }
 
 const merchResult = { current: { printful: false } as MerchResult }
@@ -134,22 +142,16 @@ describe('PromoPanel', () => {
     })
   })
 
-  it('без ключей показывает все панели, кадры-заглушки набора по умолчанию и четыре товара', () => {
+  it('без ключей показывает все панели, кадры-заглушки набора по умолчанию', () => {
     render(<PromoPanel />)
     expect(screen.getByTestId('promo-photo')).toBeTruthy()
     expect(screen.getByTestId('promo-reference')).toBeTruthy()
-    expect(screen.getByTestId('promo-merch')).toBeTruthy()
+    // Мерч спрятан до готовности флоу покупки (спека merch-orders.md, PR #47):
+    // старая кнопка вела в чужой кабинет Printful, новая касса ещё не смержена.
+    expect(screen.queryByTestId('promo-merch')).toBeNull()
     for (const kind of PROMO_DEFAULT_SHOTS) {
       expect(screen.getByTestId(`promo-shot-${kind}`)).toBeTruthy()
     }
-    for (const id of ['tshirt', 'mug', 'poster', 'apron']) {
-      expect(screen.getByTestId(`merch-item-${id}`)).toBeTruthy()
-    }
-  })
-
-  it('до нажатия кнопки мерч молчит про недостающий ключ', () => {
-    render(<PromoPanel />)
-    expect(screen.getByTestId('merch-note').textContent).not.toContain('PRINTFUL_API_KEY')
   })
 
   it('без ключей (демо-режим) генерация проходит локально: очередь доезжает до "готово" без единого запроса', async () => {
@@ -162,9 +164,36 @@ describe('PromoPanel', () => {
       expect(screen.getByTestId(`promo-shot-${kind}`).querySelector('svg')).toBeTruthy()
     }
   })
+})
+
+/**
+ * Компонент мерча скрыт из вкладки «Промо» до готовности кассы (PR #47), но
+ * сам код остаётся рабочим и вернётся в панель без переписывания: тесты его
+ * поведения рендерят MerchMockups напрямую, минуя PromoPanel.
+ */
+describe('MerchMockups', () => {
+  beforeEach(() => {
+    merchResult.current = { printful: false }
+    merchInput.mockClear()
+    act(() => {
+      useStudio.getState().resetStudio()
+    })
+  })
+
+  it('показывает четыре товара', () => {
+    render(<MerchMockups />)
+    for (const id of ['tshirt', 'mug', 'poster', 'apron']) {
+      expect(screen.getByTestId(`merch-item-${id}`)).toBeTruthy()
+    }
+  })
+
+  it('до нажатия кнопки мерч молчит про недостающий ключ', () => {
+    render(<MerchMockups />)
+    expect(screen.getByTestId('merch-note').textContent).not.toContain('PRINTFUL_API_KEY')
+  })
 
   it('без ключа Printful кнопки «Открыть в Printful» нет, а после ответа появляется подпись про ключ', async () => {
-    render(<PromoPanel />)
+    render(<MerchMockups />)
     expect(screen.queryByTestId('merch-printful')).toBeNull()
     fireEvent.click(screen.getByTestId('merch-generate'))
     await waitFor(() => expect(screen.getByTestId('merch-note').textContent).toContain('PRINTFUL_API_KEY'))
@@ -173,10 +202,19 @@ describe('PromoPanel', () => {
 
   it('ответ с ключом Printful показывает кнопку и убирает предупреждение', async () => {
     merchResult.current = { printful: true }
-    render(<PromoPanel />)
+    render(<MerchMockups />)
     fireEvent.click(screen.getByTestId('merch-generate'))
     await waitFor(() => expect(screen.getByTestId('merch-printful')).toBeTruthy())
     expect(screen.getByTestId('merch-note').textContent).not.toContain('PRINTFUL_API_KEY')
+  })
+})
+
+describe('PromoPanel: генерация серии', () => {
+  beforeEach(() => {
+    createSeriesInput.mockClear()
+    act(() => {
+      useStudio.getState().resetStudio()
+    })
   })
 
   it('вошедший Pro: генерация заводит серию через createPromoSeriesAction с отмеченными пресетами', async () => {
@@ -235,11 +273,13 @@ describe('PromoPanel: гейт AI', () => {
   it('гостю кнопки выключены и объяснено, почему, а не молча', () => {
     renderWithAccess('anonymous')
     expect(screen.getByTestId('promo-generate').hasAttribute('disabled')).toBe(true)
-    expect(screen.getByTestId('merch-generate').hasAttribute('disabled')).toBe(true)
     expect(screen.getByTestId('promo-gate').textContent ?? '').not.toBe('')
-    expect(screen.getByTestId('merch-gate')).toBeTruthy()
     // Гостю предлагать тарифы рано: сначала вход.
     expect(screen.queryByTestId('promo-gate-pricing')).toBeNull()
+
+    renderNodeWithAccess(<MerchMockups />, 'anonymous')
+    expect(screen.getByTestId('merch-generate').hasAttribute('disabled')).toBe(true)
+    expect(screen.getByTestId('merch-gate')).toBeTruthy()
   })
 
   it('бесплатному аккаунту показывает ссылку на тарифы', () => {
@@ -253,7 +293,10 @@ describe('PromoPanel: гейт AI', () => {
     expect(screen.getByTestId('promo-generate').hasAttribute('disabled')).toBe(false)
     const note = screen.getByTestId('promo-gate').textContent ?? ''
     expect(note).toContain('26')
-    // Мокапы квоту не тратят, поэтому счётчик под ними не дублируется.
+  })
+
+  it('мокапы квоту не тратят, поэтому у подписчика счётчик под ними не дублируется', () => {
+    renderNodeWithAccess(<MerchMockups />, 'pro', 4)
     expect(screen.queryByTestId('merch-gate')).toBeNull()
   })
 
@@ -505,7 +548,7 @@ describe('PromoPanel: генерация по референсу', () => {
   })
 })
 
-describe('PromoPanel: мокапы Printful', () => {
+describe('MerchMockups: мокапы Printful', () => {
   beforeEach(() => {
     merchResult.current = { printful: false }
     merchInput.mockClear()
@@ -516,7 +559,7 @@ describe('PromoPanel: мокапы Printful', () => {
   })
 
   it('на сервер уезжает рендер доски и список отмеченных товаров', async () => {
-    render(<PromoPanel />)
+    render(<MerchMockups />)
     fireEvent.click(screen.getByTestId('merch-generate'))
     await waitFor(() => expect(merchInput).toHaveBeenCalled())
     const input = merchInput.mock.calls[0]?.[0] as { boardPng?: string; products?: string[] }
@@ -525,21 +568,21 @@ describe('PromoPanel: мокапы Printful', () => {
   })
 
   it('по умолчанию отмечено два товара: Printful пускает пару мокапов в минуту', () => {
-    render(<PromoPanel />)
+    render(<MerchMockups />)
     expect(MERCH_DEFAULT_PRODUCTS).toHaveLength(2)
     expect(screen.getByTestId('merch-pick-tshirt').getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByTestId('merch-pick-poster').getAttribute('aria-pressed')).toBe('false')
   })
 
   it('снятые товары выключают кнопку и объясняют почему', () => {
-    render(<PromoPanel />)
+    render(<MerchMockups />)
     for (const id of MERCH_DEFAULT_PRODUCTS) fireEvent.click(screen.getByTestId(`merch-pick-${id}`))
     expect(screen.getByTestId('merch-generate').hasAttribute('disabled')).toBe(true)
     expect(screen.getByTestId('merch-picks-note').textContent ?? '').not.toBe('')
   })
 
   it('добавленный товар уезжает в запрос вместе с остальными', async () => {
-    render(<PromoPanel />)
+    render(<MerchMockups />)
     fireEvent.click(screen.getByTestId('merch-pick-poster'))
     fireEvent.click(screen.getByTestId('merch-generate'))
     await waitFor(() => expect(merchInput).toHaveBeenCalled())
@@ -555,7 +598,7 @@ describe('PromoPanel: мокапы Printful', () => {
         { id: 'mug', url: 'https://printful.example/m.jpg' },
       ],
     }
-    render(<PromoPanel />)
+    render(<MerchMockups />)
     fireEvent.click(screen.getByTestId('merch-generate'))
     await waitFor(() => expect(screen.getByTestId('merch-item-tshirt').querySelector('img')).toBeTruthy())
     expect(screen.getByTestId('merch-link-tshirt').getAttribute('href')).toBe('https://printful.example/t.jpg')
@@ -566,7 +609,7 @@ describe('PromoPanel: мокапы Printful', () => {
 
   it('сбой Printful объясняется своей строкой и не выносит галерею', async () => {
     merchResult.current = { printful: true, error: 'rejected' }
-    render(<PromoPanel />)
+    render(<MerchMockups />)
     fireEvent.click(screen.getByTestId('merch-generate'))
     await waitFor(() => expect(screen.getByTestId('merch-error')).toBeTruthy())
     const text = screen.getByTestId('merch-error').textContent ?? ''
@@ -578,7 +621,7 @@ describe('PromoPanel: мокапы Printful', () => {
 
   it('ненастроенный магазин Printful честно показан человеку, а не спрятан за пустой подписью', async () => {
     merchResult.current = { printful: true, error: 'notConfigured' }
-    render(<PromoPanel />)
+    render(<MerchMockups />)
     fireEvent.click(screen.getByTestId('merch-generate'))
     await waitFor(() => expect(screen.getByTestId('merch-error')).toBeTruthy())
     const text = screen.getByTestId('merch-error').textContent ?? ''
@@ -594,7 +637,7 @@ describe('PromoPanel: мокапы Printful', () => {
     // рассинхрон состояния (сессия истекла, квота выбрана параллельным вызовом).
     // Раньше в этом случае панель молча показывала merch.idle, будто ничего не было.
     merchResult.current = { printful: false, denied: 'quota' }
-    renderWithAccess('pro', 4)
+    renderNodeWithAccess(<MerchMockups />, 'pro', 4)
     expect(screen.getByTestId('merch-generate').hasAttribute('disabled')).toBe(false)
     fireEvent.click(screen.getByTestId('merch-generate'))
     await waitFor(() => expect(screen.getByTestId('merch-gate-note')).toBeTruthy())
@@ -602,11 +645,14 @@ describe('PromoPanel: мокапы Printful', () => {
   })
 
   it('в пробном тире кнопка мерча заперта заранее: мокапы не входят в trial', () => {
-    renderWithAccess('trial', 0, FREE_TRIAL_LIMIT)
+    renderNodeWithAccess(<MerchMockups />, 'trial', 0, FREE_TRIAL_LIMIT)
     expect(screen.getByTestId('merch-generate').hasAttribute('disabled')).toBe(true)
     expect(screen.getByTestId('merch-gate')).toBeTruthy()
     expect(screen.getByTestId('merch-gate').textContent ?? '').not.toBe('')
-    // Соседняя панель кадров, наоборот, остаётся открытой: promoShots в trial входит.
+  })
+
+  it('соседняя панель кадров остаётся открытой в пробном тире: promoShots в trial входит', () => {
+    renderWithAccess('trial', 0, FREE_TRIAL_LIMIT)
     expect(screen.getByTestId('promo-generate').hasAttribute('disabled')).toBe(false)
   })
 })

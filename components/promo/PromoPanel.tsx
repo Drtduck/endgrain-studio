@@ -1,7 +1,6 @@
 'use client'
 
 import { ListingEditor } from '@/components/promo/ListingEditor'
-import { MerchMockups } from '@/components/promo/MerchMockups'
 import { PackDownload } from '@/components/promo/PackDownload'
 import { PhotoSeries } from '@/components/promo/PhotoSeries'
 import { ReferenceShots } from '@/components/promo/ReferenceShots'
@@ -24,7 +23,8 @@ export function PromoPanel() {
       <ReferenceShots />
       <PackDownload locale={locale} />
       <ListingEditor locale={locale} />
-      <MerchMockups />
+      {/* Мерч спрятан до готовности флоу покупки (спека merch-orders.md, PR #47):
+          старая кнопка вела в чужой кабинет Printful, новая касса ещё не смержена. */}
       <VideoPanel />
     </div>
   )
