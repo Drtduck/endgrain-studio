@@ -9,7 +9,11 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,
-  ...(isCI ? { workers: 1 } : {}),
+  // Живого Supabase в CI нет (webServer поднимается с PUBLIC_STUDIO=1), общего
+  // состояния между тестами тоже, поэтому один воркер был лишней осторожностью:
+  // на двухъядерном раннере два воркера дают почти двукратный выигрыш, а третий
+  // уже конкурирует за ядра с самим next start.
+  ...(isCI ? { workers: 2 } : {}),
   reporter: isCI ? [['github'], ['list']] : [['list']],
   use: {
     baseURL,

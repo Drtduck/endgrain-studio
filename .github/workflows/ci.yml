@@ -3,8 +3,15 @@ on:
   push:
     branches: [main]
   pull_request:
+
+# Новый пуш в ту же ветку отменяет предыдущий прогон: очередь не забивается
+# устаревшими проверками, а PR всё равно оценивается по последнему коммиту.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  check:
+  typecheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,11 +22,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
-      - run: pnpm lint
-      - run: pnpm test
-      - run: pnpm build
 
-  e2e:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,11 +33,78 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
+      - run: pnpm lint
+
+  # Юниты в jsdom упираются в число ядер раннера, а их больше двух тысяч.
+  # Три шарда идут параллельно на разных машинах: время падает втрое.
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm vitest run --shard=${{ matrix.shard }}/3
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+  # Внутри e2e поднимается свой next (webServer собирает и стартует приложение),
+  # поэтому шард стоит примерно полторы минуты накладных. Два шарда всё равно
+  # выгоднее: сами тесты делятся пополам, а они и есть основная часть времени.
+  e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Браузер весит сотни мегабайт и меняется только вместе с версией
+      # @playwright/test, поэтому ключ кэша берём из lock-файла.
+      - name: Кэш браузеров Playwright
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Playwright chromium
+        run: pnpm exec playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+      # Системные библиотеки не лежат в кэше браузеров, их ставим всегда:
+      # без них chromium не стартует даже при попадании в кэш.
+      - name: Системные зависимости для chromium
+        run: pnpm exec playwright install-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+      # Число воркеров задано в playwright.config.ts, чтобы настройка жила
+      # в одном месте, а не разъезжалась между конфигом и workflow.
+      - run: pnpm test:e2e --shard=${{ matrix.shard }}/2
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: playwright-report
+          # Имя с номером шарда: у одинаковых имён загрузка отчёта падает.
+          name: playwright-report-${{ matrix.shard }}
           path: playwright-report/
           retention-days: 7
