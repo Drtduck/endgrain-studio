@@ -1,0 +1,80 @@
+import { Answer } from '../../components/blog/Answer'
+
+export const meta = {
+  slug: 'free-end-grain-design-tool',
+  lang: 'en',
+  title: 'Is There a Free End Grain Cutting Board Design Tool?',
+  description:
+    'CBdesigner, SketchUp Free and board foot calculators each cover one step of the job. Here is what each one does, where it stops, and what fills the gaps.',
+  answer:
+    'Yes, several. CBdesigner mocks up strip patterns in the browser, SketchUp Free handles general 3D modeling, and board foot calculators estimate lumber volume. What none of them does is connect the pattern to a cut list with kerf, waste and cost. Endgrain Studio was built to close exactly that gap, and its base tier is free.',
+  date: '2026-08-15',
+  updated: '2026-08-15',
+  tags: ['tools', 'planning'],
+  cover: '/blog/free-end-grain-design-tool/cover.jpg',
+  readingMinutes: 7,
+}
+
+<Answer>{meta.answer}</Answer>
+
+The question comes up in every woodworking forum about once a week, usually from someone staring at a sketch of a checkerboard and realizing they have no idea how many strips to cut. The honest answer has two halves. Free tools for parts of the job exist and some are decent. A free tool that takes you from pattern idea to a lumber order used to not exist at all, which is why the standard advice for years was "use graph paper and accept the waste".
+
+## What free tools exist right now?
+
+| Tool | Does well | Leaves to you |
+|---|---|---|
+| Graph paper or a spreadsheet | Simple checkerboard and stripe layouts | All math: strip widths, kerf, waste, cost |
+| CBdesigner | Quick visual mockups of strip patterns | Cut list, crosscut widths, material volume |
+| SketchUp Free | Precise 3D model of anything, board included | Everything specific to end grain: two glue-ups, kerf, cut plan |
+| Board foot calculators | Lumber volume and rough price of a known cut list | The cut list itself; most ignore kerf and milling losses |
+| Endgrain Studio (free tier) | Pattern, cut plan, material and cost in one pass | Fancier patterns and saved project slots sit in the paid tier |
+
+CBdesigner deserves its reputation. It has circulated in cutting board communities for years, it runs in the browser, and for answering "would walnut squares against maple look good" it is quicker than anything else. It is a preview tool though. When the screen shows you a pattern you like, you still leave with no strip widths and no idea whether the board takes 2 or 4 board feet of lumber.
+
+SketchUp Free sits at the other extreme. You can model an end grain board down to the last strip, and furniture makers do. The catch is time: modeling 60 individual glued strips takes an evening, and the model still knows nothing about kerf or the order of glue-ups. I have yet to meet a hobbyist who did it twice.
+
+<ArticleFigure
+  src="/blog/images/free-end-grain-design-tool-1.jpg"
+  alt="A woodworker sketching project plans in a notebook with a ruler at a workshop bench"
+  caption="The default design tool of the craft: a notebook and an evening of arithmetic that has to be redone every time one strip width changes."
+  photographer="Tima Miroshnichenko"
+  photographerUrl="https://www.pexels.com/@tima-miroshnichenko"
+  pexelsUrl="https://www.pexels.com/photo/a-person-doing-a-woodwork-6790762/"
+/>
+
+## How far does a spreadsheet actually get you?
+
+Further than most people expect, as long as the pattern stays flat. A classic checkerboard from two species is four formulas: strip width equals square size, strip count equals panel width divided by square size, panel length equals slice count times slice width plus kerf per cut, lumber volume equals the sum of strips with a milling allowance.
+
+Take a 305 x 406 mm board (12 x 16 in) with 38 mm squares. Eight strips of maple, eight of walnut, crosscut into slices at 44 mm with a 3 mm kerf for a full-kerf blade on a 250 mm saw. The spreadsheet handles this fine, and if that is the only board you ever make, you may not need anything else.
+
+The model collapses on the first interesting pattern. A brick offset shifts every second row by half a square, which changes slice alignment and scrap. A chevron cuts at 45 degrees, and every angled cut throws away a triangle at each end of the strip. A 3D cube pattern uses three species in strips of two different widths, cut at two different angles. Each of these turns "four formulas" into a page of trigonometry where one wrong cell means the lumber order comes up a strip short, and matching walnut color from another board a week later is a lottery.
+
+The other thing a spreadsheet never tells you is waste. On end grain work the losses from kerf, milling and squaring routinely land at 25 to 30 percent of the purchased volume, and for angled patterns above 40 percent. Skipping that line item is the single most common reason first boards go over budget.
+
+<NewsletterBreak locale="en" />
+
+## Where do the mockup tools stop?
+
+The gap between a pretty preview and a production plan is a list of numbers: widths and count of strips for the first glue-up, panel length with kerf per crosscut, slice width with a flattening allowance, lumber volume by species, and what all of it costs. A preview tool gives you none of that list. A calculator gives you the last item only, and only if you have already worked out the rest by hand.
+
+There is also a quieter problem: repeatability. A customer who orders a second board expects it to match the first one. If the design lives in a screenshot and a pile of pencil notes, reproducing the exact strip sequence six months later is guesswork. This is the request that eventually pushes selling woodworkers off free preview tools, more often than any missing feature.
+
+<ArticleFigure
+  src="/blog/images/free-end-grain-design-tool-2.jpg"
+  alt="A craftsman with a sketchbook of drawings standing at a workbench next to a laptop"
+  caption="The usual workflow in the wild: the pattern lives in the sketchbook, the math lives in the laptop, and nothing checks one against the other."
+  photographer="Tima Miroshnichenko"
+  photographerUrl="https://www.pexels.com/@tima-miroshnichenko"
+  pexelsUrl="https://www.pexels.com/photo/a-person-doing-carpentry-6790085/"
+/>
+
+## Does Endgrain Studio close the gap?
+
+That gap is the reason [Endgrain Studio](/?tab=editor) exists. You lay out the pattern in the browser, the same way a preview tool works, and the production side comes out of the pattern itself: strip widths and counts for the first glue-up, the crosscut plan with your kerf, material volume by species with the waste already counted, a cost estimate, and a printable PDF instruction for the shop. Projects are saved, so a repeat order is a repeat print, and the free tier is enough to design and build a real board rather than a demo.
+
+To keep this an honest comparison and not an ad: if all you want is to see two species side by side before buying lumber, CBdesigner does that in under a minute and you need nothing more. The dividing line is the moment you pick up a pencil to turn the picture into cut sizes. Everything after that line is what the studio automates.
+
+## The short version
+
+For a one-off checkerboard, graph paper and a board foot calculator genuinely suffice, and I would not talk anyone out of them. The moment the pattern goes angled or a second copy of the board is on the table, hand math starts costing real lumber: a wrong kerf assumption on a 16-slice board eats 48 mm of panel length, which is one full slice. Free tools that stop at the preview leave that math to you. Pick the tool by whether it outputs cut sizes, and check what one cut costs you in [kerf and allowances](/blog/kerf-i-pripuski-en), where that 3 mm per cut is traced through a whole lumber order.

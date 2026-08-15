@@ -6,6 +6,8 @@ import { meta as shemaPerekleyki } from '@/content/blog/shema-perekleyki.mdx'
 import { meta as shemaPerekleykiEn } from '@/content/blog/shema-perekleyki-en.mdx'
 import { meta as shirinaPolosVtoroySkleyki } from '@/content/blog/shirina-polos-vtoroy-skleyki.mdx'
 import { meta as shirinaPolosVtoroySkleykiEn } from '@/content/blog/shirina-polos-vtoroy-skleyki-en.mdx'
+import { meta as freeEndGrainDesignTool } from '@/content/blog/free-end-grain-design-tool.mdx'
+import { meta as freeEndGrainDesignToolRu } from '@/content/blog/free-end-grain-design-tool-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -23,4 +25,6 @@ export const POST_METAS: readonly PostMeta[] = [
   shemaPerekleykiEn,
   shirinaPolosVtoroySkleyki,
   shirinaPolosVtoroySkleykiEn,
+  freeEndGrainDesignTool,
+  freeEndGrainDesignToolRu,
 ]

@@ -3,7 +3,7 @@
 // screenshot HTML-заглушки вместо подключения sharp/ImageMagick.
 // Запускать вручную: node scripts/blog-covers.mjs. Результаты коммитятся.
 import { chromium } from '@playwright/test'
-import { writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const WIDTH = 1200
@@ -58,6 +58,18 @@ const COVERS = [
     subtitle: 'From strips to a finished board',
     stripes: ['#5b3a24', '#e3caa1', '#a8422a', '#3a2a20'],
   },
+  {
+    slug: 'free-end-grain-design-tool',
+    title: 'A Free Design Tool for End Grain Boards',
+    subtitle: 'What the free options do and where they stop',
+    stripes: ['#3a2a20', '#e3caa1', '#a5613b'],
+  },
+  {
+    slug: 'free-end-grain-design-tool-ru',
+    title: 'Бесплатная программа для торцевой доски',
+    subtitle: 'Что умеют бесплатные инструменты и где они кончаются',
+    stripes: ['#3a2a20', '#e3caa1', '#a5613b'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {
@@ -83,12 +95,17 @@ function html({ title, subtitle, stripes }) {
 }
 
 async function main() {
+  // Опциональный фильтр по slug: node scripts/blog-covers.mjs <slug> [slug...]
+  // Без аргументов рендерит все обложки, как раньше.
+  const only = process.argv.slice(2)
+  const covers = only.length ? COVERS.filter((c) => only.includes(c.slug)) : COVERS
   const browser = await chromium.launch()
   try {
     const page = await browser.newPage({ viewport: { width: WIDTH, height: HEIGHT } })
-    for (const cover of COVERS) {
+    for (const cover of covers) {
       await page.setContent(html(cover))
       const out = path.resolve(import.meta.dirname, `../public/blog/${cover.slug}/cover.jpg`)
+      await mkdir(path.dirname(out), { recursive: true })
       const buffer = await page.screenshot({ type: 'jpeg', quality: 88 })
       await writeFile(out, buffer)
       console.log(`written ${out}`)
