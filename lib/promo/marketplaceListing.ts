@@ -1,7 +1,27 @@
 import { z } from 'zod'
+import { SPECIES } from '@/lib/species'
 import type { BoardDescription } from './describe'
 import { demoListing } from './listing'
 import type { MarketplaceSpec } from './marketplaces'
+
+/**
+ * Словарь «английское имя породы -> русское». BoardDescription.species хранит
+ * только английские имена (см. комментарий в describe.ts - так лучше понимают
+ * модели картинок), а справочник пород (lib/species) уже знает русские имена
+ * (nameRu), просто по id, а не по английской строке. Ключ - в нижнем регистре,
+ * чтобы не зависеть от регистра, в котором имя пришло в BoardDescription.
+ * Порода без пары в справочнике падает на английское имя как есть - лучше
+ * показать английское слово, чем выдумать русское.
+ */
+const WOOD_NAME_RU: ReadonlyMap<string, string> = new Map(SPECIES.map((s) => [s.nameEn.toLowerCase(), s.nameRu]))
+
+function woodNameRu(nameEn: string): string {
+  return WOOD_NAME_RU.get(nameEn.toLowerCase()) ?? nameEn
+}
+
+function capitalizeRu(word: string): string {
+  return word.length === 0 ? word : word[0]!.toUpperCase() + word.slice(1)
+}
 
 /**
  * Карточка товара под конкретную площадку (спека, раздел 8). В отличие от
@@ -42,19 +62,79 @@ function clampList(
 }
 
 /**
- * Демо-карточка без единого запроса наружу: собирается из demoListing (та же
- * честная функция от реальных чисел проекта, что и в generic-карточке), просто
- * обрезанная под лимиты выбранной площадки - переиспользование, а не второй
- * генератор тех же чисел.
+ * Русский демо-черновик для площадок scope 'ru' (Wildberries, Ozon,
+ * Яндекс.Маркет): русская площадка обязана получать русский текст, а не
+ * обрезанный английский demoListing (баг с прода - «Black walnut End-Grain
+ * Cutting Board...» на Яндекс.Маркете). Данные те же самые (размеры в мм,
+ * породы, число блоков узора, финиш), просто слова русские.
+ */
+function buildRuDemoListing(description: BoardDescription, sizeIn: string): PromoListingDraft {
+  const woodsRu = description.species.length > 0 ? description.species.map(woodNameRu).join(', ') : 'массив дерева'
+  const primaryWoodRu = description.species[0] !== undefined ? woodNameRu(description.species[0]) : 'дерево'
+
+  const title = `${capitalizeRu(primaryWoodRu)}, торцевая разделочная доска ${description.sizeMm}, ручная работа`
+
+  const bullets = [
+    `Торцевая разделочная доска ручной работы: ${description.sizeMm} (${sizeIn}), рассчитана на годы ежедневного использования.`,
+    `Бережно к ножу: торцевой срез древесины меньше тупит лезвие, чем доска с продольным волокном.`,
+    `Настоящее дерево: ${woodsRu}, рисунок и оттенок каждой доски уникальны.`,
+    `Пищевое покрытие: пропитка маслом до сатинового блеска, готова к использованию сразу после покупки.`,
+    `Подарок с пользой: доска на кухню к свадьбе, новоселью или празднику.`,
+  ]
+
+  const tagPool = [
+    'разделочная доска',
+    'торцевая доска',
+    'разделочная доска из дерева',
+    'доска ручной работы',
+    'подарок на кухню',
+    'подарок на новоселье',
+    'подарок на свадьбу',
+    primaryWoodRu.toLowerCase(),
+    'доска для нарезки',
+    'кухонная доска',
+    'деревянная доска',
+    'подарок повару',
+    'доска торцевая шахматная',
+  ]
+
+  const descriptionText =
+    `Торцевая разделочная доска ручной работы, ${description.sizeMm} (${sizeIn}), из ${woodsRu.toLowerCase()}. ` +
+    `Торец доски собран из ${description.cellCount} деревянных блоков в геометрический узор, покрытие - масло до сатинового блеска. ` +
+    `Торцевой срез пускает нож между волокон древесины, а не поперёк них, поэтому доска бережнее к лезвиям ` +
+    `и сама затягивает небольшие следы от ножа со временем.`
+
+  return {
+    title,
+    description: descriptionText,
+    bullets,
+    tags: tagPool,
+  }
+}
+
+/** SaleListing (generic-карточка) -> PromoListingDraft: keywords переименовываются в tags, остальное 1-в-1. */
+function saleListingToDraft(listing: ReturnType<typeof demoListing>): PromoListingDraft {
+  return { title: listing.title, description: listing.description, bullets: listing.bullets, tags: listing.keywords }
+}
+
+/**
+ * Демо-карточка без единого запроса наружу. Для площадок scope 'global'
+ * собирается из demoListing (та же честная функция от реальных чисел проекта,
+ * что и в generic-карточке), просто обрезанная под лимиты выбранной площадки -
+ * переиспользование, а не второй генератор тех же чисел. Для scope 'ru'
+ * (Wildberries, Ozon, Яндекс.Маркет) русская площадка обязана получать русский
+ * текст - собирается отдельным русским шаблоном (buildRuDemoListing), обрезка
+ * под лимиты площадки та же самая.
  */
 export function demoListingForMarketplace(description: BoardDescription, sizeIn: string, spec: MarketplaceSpec): PromoListingDraft {
-  const base = demoListing(description, sizeIn)
+  const base =
+    spec.scope === 'ru' ? buildRuDemoListing(description, sizeIn) : saleListingToDraft(demoListing(description, sizeIn))
   const rules = spec.listing
   return {
     title: base.title.slice(0, rules.titleMax),
     description: base.description.slice(0, rules.descriptionMax),
     bullets: clampList(base.bullets, rules.bulletCount, rules.bulletMax),
-    tags: clampList(base.keywords, rules.tagCount, rules.tagMax, truncateAtWordBoundary),
+    tags: clampList(base.tags, rules.tagCount, rules.tagMax, truncateAtWordBoundary),
   }
 }
 
@@ -79,6 +159,18 @@ export function marketplaceListingPrompt(
     `Size (imperial): ${sizeIn}`,
   ]
   if (sceneNotes.length > 0) lines.push(`Photos that will accompany this listing show: ${sceneNotes.join('; ')}.`)
+  // Русские площадки (Wildberries, Ozon, Яндекс.Маркет) обязаны получать русский текст -
+  // баг с прода был именно в этом, английская карточка попала на Яндекс.Маркет. Mercado
+  // Libre сюда не попадает: у него scope 'global', его языковую политику не трогаем.
+  if (spec.scope === 'ru') {
+    lines.push(
+      '',
+      'This marketplace is Russian-only: write every field value in Russian, not English.',
+      'Title, description, bullets and tags must all be in Russian. Use natural Russian ' +
+        'woodworking terms where relevant (e.g. "торцевая разделочная доска", "орех", "клён"), ' +
+        'not transliterations or English loanwords.',
+    )
+  }
   lines.push(
     '',
     'Answer with JSON only, using exactly these keys:',
