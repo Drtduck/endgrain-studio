@@ -2,7 +2,7 @@
 
 import { create } from 'zustand'
 import { DEFAULT_MARKETPLACE, type MarketplaceId } from '@/lib/promo/marketplaces'
-import type { PromoShotView } from '@/lib/promo/types'
+import type { PromoShotKind, PromoShotView } from '@/lib/promo/types'
 
 /**
  * Один источник истины для вкладки «Промо» между PhotoSeries/ReferenceShots
@@ -20,7 +20,18 @@ export interface PromoStoreState {
   readonly marketplace: MarketplaceId
   readonly shotsById: Readonly<Record<string, PromoShotView>>
   readonly selectedShotIds: ReadonlySet<string>
+  /**
+   * Выбор пресетов серии кадров (PhotoSeries). null значит «человек ещё ничего
+   * не выбирал руками»: панель тогда рисует набор по умолчанию, а гидратация
+   * прошлой серии имеет право его заменить. Как только выбор сделан руками, он
+   * живёт здесь и переживает уход на другую вкладку - PromoPanel вместе с
+   * PhotoSeries размонтируется целиком (StudioShell рисует одну вкладку за раз),
+   * и локальный useState умирал вместе с ним, откатывая выбор к дефолтным
+   * четырём кадрам. Баг ручной приёмки 15.08.2026: «Спишется 4» вместо одного.
+   */
+  readonly selectedKinds: readonly PromoShotKind[] | null
   setMarketplace(id: MarketplaceId): void
+  setSelectedKinds(kinds: readonly PromoShotKind[]): void
   upsertShot(shot: PromoShotView): void
   toggleShot(id: string): void
   selectAll(): void
@@ -37,8 +48,11 @@ export const usePromoStore = create<PromoStoreState>((set, get) => ({
   marketplace: DEFAULT_MARKETPLACE,
   shotsById: {},
   selectedShotIds: new Set(),
+  selectedKinds: null,
 
   setMarketplace: (id) => { set({ marketplace: id }) },
+
+  setSelectedKinds: (kinds) => { set({ selectedKinds: [...kinds] }) },
 
   upsertShot: (shot) => {
     set((state) => ({ shotsById: { ...state.shotsById, [shot.id]: shot } }))
@@ -60,5 +74,5 @@ export const usePromoStore = create<PromoStoreState>((set, get) => ({
 
   deselectAll: () => { set({ selectedShotIds: new Set() }) },
 
-  reset: () => { set({ shotsById: {}, selectedShotIds: new Set() }) },
+  reset: () => { set({ shotsById: {}, selectedShotIds: new Set(), selectedKinds: null }) },
 }))

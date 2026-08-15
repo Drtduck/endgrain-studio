@@ -5,6 +5,7 @@ import { Lock } from 'lucide-react'
 import { usePro } from '@/components/ProProvider'
 import { AI_MONTHLY_LIMIT, AI_TRIAL_FEATURES, type AiAccess, type AiDenyReason, type AiFeature } from '@/lib/ai/quota'
 import { t, type Locale, type MessageKey } from '@/lib/i18n'
+import { useAiAccessStore } from '@/lib/store/aiAccess'
 
 /**
  * Клиентская половина гейта AI. Решение всё равно принимает сервер в
@@ -40,7 +41,14 @@ export interface AiGateView {
  * тихо ничего не делало. Теперь замок вешается заранее, по конкретной фиче.
  */
 export function useAiGate(remainingOverride: number | null = null, feature: AiFeature): AiGateView {
-  const { ai } = usePro()
+  const { ai: aiSnapshot } = usePro()
+  // Снапшот из серверного layout живёт до перезагрузки страницы, поэтому после
+  // списания кадров счётчик под кнопкой врал на весь израсходованный объём (баг
+  // ручной приёмки 15.08.2026). Перечитанный остаток (lib/store/aiAccess.ts,
+  // обновляется сразу после списания) перекрывает снапшот, пока его нет - в силе
+  // именно снапшот, никакого мигания «свободно -> замок» на первом кадре.
+  const fresh = useAiAccessStore((s) => s.access)
+  const ai = fresh ?? aiSnapshot
   const remaining = remainingOverride ?? ai.remaining
   const limit = ai.limit || AI_MONTHLY_LIMIT
   // free/credits нужны шаблону ai.quota ("{free} бесплатных и {credits} купленных"):

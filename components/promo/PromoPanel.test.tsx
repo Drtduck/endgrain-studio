@@ -3,9 +3,11 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProProvider } from '@/components/ProProvider'
 import { SessionProvider } from '@/components/SessionProvider'
-import { AI_MONTHLY_LIMIT, FREE_TRIAL_LIMIT, aiAccess, type AiAccessState } from '@/lib/ai/quota'
+import { AI_MONTHLY_LIMIT, FREE_TRIAL_LIMIT, aiAccess, type AiAccess, type AiAccessState } from '@/lib/ai/quota'
+import { useAiAccessStore } from '@/lib/store/aiAccess'
 import type { ProStatus } from '@/lib/stripe/pro'
 import { MERCH_DEFAULT_PRODUCTS, PROMO_DEFAULT_SHOTS, PROMO_SHOT_META, type MerchResult } from '@/lib/promo/types'
+import { usePromoStore } from '@/lib/store/promo'
 import { useStudio } from '@/lib/store/studio'
 import { MerchMockups } from './MerchMockups'
 import { PromoPanel } from './PromoPanel'
@@ -131,6 +133,26 @@ const DEMO_STYLE = {
 
 // Растеризация живёт в канвасе, которого в jsdom нет: подменяем на пустой blob.
 vi.mock('@/lib/export/png', () => ({ svgToPngBlob: () => Promise.resolve(new Blob(['png'], { type: 'image/png' })) }))
+
+/**
+ * Свежий остаток кадров, который панель перечитывает после списания (баг ручной
+ * приёмки 15.08.2026). По умолчанию 'mock': стор такое состояние игнорирует, и
+ * все остальные тесты видят ровно тот доступ, что задан через ProProvider.
+ */
+const readAiAccessResult: { current: AiAccess } = { current: aiAccess('mock') }
+vi.mock('@/app/actions/credits', () => ({
+  readAiAccessAction: () => Promise.resolve(readAiAccessResult.current),
+}))
+
+// Выбор пресетов живёт в общем сторе (lib/store/promo.ts) и намеренно переживает
+// размонтирование панели - значит, переживает и переход между тестами: без сброса
+// следующий кейс видел бы кадры, отмеченные предыдущим. Перечитанный остаток
+// кадров (lib/store/aiAccess.ts) живёт там же и сбрасывается по той же причине.
+beforeEach(() => {
+  usePromoStore.setState({ selectedKinds: null })
+  useAiAccessStore.setState({ access: null })
+  readAiAccessResult.current = aiAccess('mock')
+})
 
 describe('PromoPanel', () => {
   beforeEach(() => {
@@ -719,5 +741,113 @@ describe('PromoPanel: подъём существующей серии без л
     await waitFor(() => expect(screen.getByTestId('promo-shot-done')).toBeTruthy())
     // Плашка проекта разрешилась в успех, а не висит вечно на "Saving...".
     expect(screen.getByTestId('promo-project-plaque').textContent ?? '').not.toBe('')
+  })
+})
+
+/**
+ * Баг ручной приёмки 15.08.2026: выбор кадров жил локальным useState внутри
+ * PhotoSeries, а StudioShell рисует одну вкладку за раз - уход на «Проекты» и
+ * обратно размонтировал панель вместе с выбором, и вместо одного отмеченного
+ * кадра снова оказывались дефолтные четыре («Спишется 4»). Плюс гидратация
+ * прошлой серии затирала выбор, сделанный руками.
+ */
+describe('PromoPanel: выбор пресетов переживает переключение вкладок', () => {
+  beforeEach(() => {
+    listActiveSeriesResult.current = { ok: true, data: { series: [], shots: [] } }
+    listPromoSeriesResult.current = { ok: true, data: { series: [], shots: [] } }
+    act(() => {
+      useStudio.getState().resetStudio()
+    })
+  })
+
+  it('снятые кадры остаются снятыми после ухода на другую вкладку и возврата', () => {
+    const first = render(<PromoPanel />)
+    for (const kind of ['serving', 'macroOil', 'package']) {
+      fireEvent.click(screen.getByTestId(`promo-preset-${kind}`))
+    }
+    expect(screen.getByTestId('promo-cost').textContent ?? '').toContain('1')
+
+    // Уход на другую вкладку: StudioShell размонтирует PromoPanel целиком.
+    first.unmount()
+    render(<PromoPanel />)
+
+    expect(screen.getByTestId('promo-preset-hero').getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByTestId('promo-preset-serving').getAttribute('aria-pressed')).toBe('false')
+    expect(screen.getByTestId('promo-cost').textContent ?? '').toContain('1')
+  })
+
+  it('гидратация прошлой серии не затирает выбор, сделанный руками', async () => {
+    const shots = ['hero', 'serving', 'macroOil', 'package'].map((kind, i) => ({
+      id: `shot-${kind}`,
+      seriesId: 'series-old',
+      kindSlug: kind,
+      ordinal: i,
+      status: 'done' as const,
+      parentShotId: null,
+      variantNo: 1,
+      editPrompt: null,
+      url: `https://storage.example/${kind}.png`,
+      width: 1024,
+      height: 1024,
+      provider: 'fal',
+      prompt: 'a board',
+      error: null,
+      retries: 0,
+    }))
+    listActiveSeriesResult.current = {
+      ok: true,
+      data: {
+        series: [{
+          id: 'series-old',
+          projectId: 'project-1',
+          source: 'presets' as const,
+          status: 'done' as const,
+          requested: 4,
+          succeeded: 4,
+          failed: 0,
+          createdAt: '2026-08-01T00:00:00.000Z',
+          finishedAt: '2026-08-01T00:01:00.000Z',
+        }],
+        shots,
+      },
+    }
+    act(() => {
+      usePromoStore.getState().setSelectedKinds(['catalog'])
+    })
+
+    renderWithAccess('pro', 4)
+    // Ждём, пока гидратация действительно доедет: серия из базы уже в панели.
+    await waitFor(() => expect(screen.getByTestId('promo-series-progress')).toBeTruthy())
+
+    expect(screen.getByTestId('promo-preset-catalog').getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByTestId('promo-preset-hero').getAttribute('aria-pressed')).toBe('false')
+    expect(screen.getByTestId('promo-cost').textContent ?? '').toContain('1')
+  })
+})
+
+/**
+ * Баг ручной приёмки 15.08.2026: счётчик кадров под кнопкой приезжал снапшотом
+ * из серверного layout и после генерации не менялся вовсе. Человек видел
+ * «Осталось 7 кадров» при двух на балансе, жал генерацию и упирался в отказ.
+ */
+describe('PromoPanel: счётчик кадров после списания', () => {
+  beforeEach(() => {
+    createSeriesInput.mockClear()
+    listActiveSeriesResult.current = { ok: true, data: { series: [], shots: [] } }
+    listPromoSeriesResult.current = { ok: true, data: { series: [], shots: [] } }
+    act(() => {
+      useStudio.getState().resetStudio()
+    })
+  })
+
+  it('после генерации серии остаток перечитывается с сервера, а не остаётся снапшотом', async () => {
+    // На балансе честно осталось 3 кадра, а страница была отрендерена, когда их было 7.
+    readAiAccessResult.current = aiAccess('credits', 0, 0, 3)
+    renderWithAccess('credits', 0, 0, 7)
+    expect(screen.getByTestId('promo-gate').textContent ?? '').toContain('Осталось 7 кадров')
+
+    fireEvent.click(screen.getByTestId('promo-generate'))
+    await waitFor(() => expect(createSeriesInput).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByTestId('promo-gate').textContent ?? '').toContain('Осталось 3 кадров'))
   })
 })
