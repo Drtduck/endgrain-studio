@@ -127,6 +127,21 @@ describe('lib/promo/listingRequest', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it('основная модель отказала долго (>=10с): запасной автороутер не пробуется', async () => {
+    let now = 0
+    vi.spyOn(Date, 'now').mockImplementation(() => now)
+    const fetchMock = vi.fn().mockImplementation((...args: unknown[]) => {
+      if (!isOpenRouterCall(args)) return Promise.resolve(geminiFail())
+      now += 11_000
+      return Promise.resolve(openRouterFail())
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const { requestListing } = await import('./listingRequest')
+    const res = await requestListing('prompt')
+    expect(res).toEqual({ ok: false })
+    expect(fetchMock.mock.calls.filter((c) => isOpenRouterCall(c))).toHaveLength(1)
+  })
+
   it('OpenRouter отвечает пустым content: ok:false после обеих попыток', async () => {
     geminiKeySet = false
     const fetchMock = vi.fn().mockResolvedValue(openRouterOk(''))

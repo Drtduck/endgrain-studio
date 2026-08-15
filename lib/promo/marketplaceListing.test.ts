@@ -98,4 +98,21 @@ describe('parseMarketplaceListing', () => {
     const draft = parseMarketplaceListing(raw, spec)
     expect(draft?.bullets).toEqual([])
   })
+
+  it('обрезает длинный тег по последнему пробелу, а не посимвольно', () => {
+    const spec = marketplaceById('etsy')
+    expect(spec.listing.tagMax).toBe(20)
+    // 'handmade cutting board' - 23 символа, посимвольная обрезка до 20 дала бы 'handmade cutting boa'.
+    const raw = JSON.stringify({ title: 't', description: 'd', bullets: [], tags: ['handmade cutting board'] })
+    const draft = parseMarketplaceListing(raw, spec)
+    expect(draft?.tags[0]).toBe('handmade cutting')
+  })
+
+  it('тег из одного слова длиннее лимита - обрезается посимвольно (пробела внутри лимита нет)', () => {
+    const spec = marketplaceById('etsy')
+    const longWord = 'supercalifragilisticexpialidocious'
+    const raw = JSON.stringify({ title: 't', description: 'd', bullets: [], tags: [longWord] })
+    const draft = parseMarketplaceListing(raw, spec)
+    expect(draft?.tags[0]).toBe(longWord.slice(0, spec.listing.tagMax))
+  })
 })

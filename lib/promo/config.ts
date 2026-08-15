@@ -21,7 +21,7 @@ export const FAL_KEY: string = process.env['FAL_KEY'] ?? ''
 export const OPENROUTER_API_KEY: string = process.env['OPENROUTER_API_KEY'] ?? ''
 
 /** Бесплатная модель по умолчанию, переопределима переменной окружения. */
-export const OPENROUTER_TEXT_MODEL: string = process.env['OPENROUTER_TEXT_MODEL'] ?? 'nvidia/nemotron-3-super-120b-a12b:free'
+export const OPENROUTER_TEXT_MODEL: string = process.env['OPENROUTER_TEXT_MODEL'] ?? 'nvidia/nemotron-3-nano-30b-a3b:free'
 
 /**
  * Секрет подписи гостевой cookie egs_ft и хеша IP в бесплатном тире. Без него

@@ -19,9 +19,13 @@ const ERROR_KEYS: Readonly<Record<ListingError, MessageKey>> = {
   quota: 'ai.gate.quota',
   unavailable: 'ai.gate.unavailable',
   noCredits: 'ai.gate.noCredits',
-  invalid: 'salePrep.error',
+  // invalid/notFound - протухший или битый projectId (см. generate(): дальше не
+  // "попробуйте через минуту" ничего не изменит, врать про это нельзя - см.
+  // отдельное сообщение и очистку currentProjectId, тот же принцип, что в
+  // useSeriesRunner.ts.
+  invalid: 'salePrep.err.projectMissing',
   failed: 'salePrep.error',
-  notFound: 'promo.err.notFound',
+  notFound: 'salePrep.err.projectMissing',
   rateLimited: 'promo.err.rateLimited',
 }
 
@@ -127,6 +131,10 @@ export function ListingEditor({ locale }: { readonly locale: Locale }) {
       })
       if (!res.ok) {
         setError(res.error)
+        // Битый или протухший projectId (чужой проект после смены аккаунта,
+        // удалённый проект) - молча биться в ту же стену на следующем клике
+        // нельзя: отвязываем документ, как это уже делает useSeriesRunner.ts.
+        if (res.error === 'invalid' || res.error === 'notFound') useStudio.getState().clearCurrentProjectId()
         return
       }
       setDraft(res.listing)

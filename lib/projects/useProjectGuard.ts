@@ -25,6 +25,7 @@ export type ProjectGuardState =
   | { readonly kind: 'ready'; readonly projectId: string; readonly projectName: string }
   | { readonly kind: 'anonymous' }
   | { readonly kind: 'saving' }
+  | { readonly kind: 'unsaved' }
   | { readonly kind: 'failed'; readonly error: ProjectsError }
 
 export interface ProjectGuard {
@@ -81,12 +82,12 @@ export function useProjectGuard(): ProjectGuard {
     return run
   }, [user, currentProjectId, design, locale, markProjectSaved])
 
-  // 'saving' покрывает два случая: реальный запрос в полёте, и "документ ещё ни разу не
-  // сохранён, ensureSaved ещё не вызывался". Спека (раздел 3.4) не заводит пятого варианта
-  // состояния под последний случай - формально это не "идёт запрос", но потребитель хука
-  // в любом случае не должен запускать платное действие без projectId, а разница между
-  // "жду первого клика" и "жду ответа сервера" для UI не имеет значения: в обоих случаях
-  // кнопка неактивна/показывает ожидание, пока не появится 'ready' или 'failed'.
+  // 'saving' и 'unsaved' разведены отдельно (правка UX-приёмки 15.08.2026): раньше
+  // "документ ещё ни разу не сохранён, ensureSaved ещё не вызывался" тоже красился
+  // в 'saving', и плашка над кнопкой генерации бесконечно врала «Сохраняем...», хотя
+  // никакой запрос не летел. Платное действие всё так же не запускается без
+  // projectId ни в 'saving', ни в 'unsaved' - разница только в тексте для человека:
+  // 'saving' значит "запрос реально в полёте", 'unsaved' - "сохранится при первой генерации".
   const state: ProjectGuardState = !user
     ? { kind: 'anonymous' }
     : saving
@@ -95,7 +96,7 @@ export function useProjectGuard(): ProjectGuard {
         ? { kind: 'failed', error }
         : currentProjectId
           ? { kind: 'ready', projectId: currentProjectId, projectName: designDisplayName(design, locale) }
-          : { kind: 'saving' }
+          : { kind: 'unsaved' }
 
   return { state, ensureSaved }
 }

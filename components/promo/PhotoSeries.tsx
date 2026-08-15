@@ -120,14 +120,25 @@ export function PhotoSeries() {
 
   const cost = aiCost('promoShots', selected.length)
   const meta = new Map(PROMO_SHOT_META.map((m) => [m.kind, m]))
-  // Формулировка списания подбирается по факту, а не захардкожена под месячную
-  // квоту Pro (P0-блокер приёмки 15.08.2026): аккаунт без подписки может тратить
-  // пробные или купленные кадры, и текст обязан говорить правду про источник.
-  // access.credits проверяется раньше tier === 'trial': состояние 'trial' само по
-  // себе означает только «пробное не исчерпано», а купленные кадры могут лежать
-  // на балансе поверх него (ровно тот сценарий, что породил блокер).
+  // Формулировка списания подбирается по факту реального расхода, а не по одному
+  // лишь наличию купленных кадров на балансе (правка UX-приёмки 15.08.2026):
+  // сервер (consume_ai_units, supabase/migrations/20260815100000_ai_credits.sql)
+  // всегда тратит бесплатные/пробные единицы первыми и лезет в купленные только
+  // на остаток. Прежняя проверка `credits > 0` красила текст в «купленные», даже
+  // когда этот конкретный клик целиком покрывался бесплатным остатком, а купленные
+  // кадры просто лежали на балансе нетронутыми - вот и получалось враньё про
+  // источник списания при честном счётчике «N бесплатных и M купленных» рядом.
+  const freeRemaining = Math.max(0, gate.access.freeRemaining)
+  const freeSpent = Math.min(cost, freeRemaining)
+  const creditSpent = cost - freeSpent
   const costKey: MessageKey =
-    gate.access.credits > 0 ? 'promo.cost.credits' : gate.access.tier === 'trial' ? 'promo.cost.trial' : 'promo.cost'
+    creditSpent <= 0
+      ? gate.access.tier === 'trial'
+        ? 'promo.cost.trial'
+        : 'promo.cost'
+      : freeSpent <= 0
+        ? 'promo.cost.credits'
+        : 'promo.cost.mixed'
 
   const toggle = (kind: PromoShotKind): void => {
     setSelected((prev) => {
@@ -203,7 +214,9 @@ export function PhotoSeries() {
             ? t(locale, 'promo.project.saved', { name: guard.state.projectName })
             : guard.state.kind === 'failed'
               ? t(locale, 'promo.project.failed')
-              : t(locale, 'promo.project.pending')}
+              : guard.state.kind === 'saving'
+                ? t(locale, 'promo.project.pending')
+                : t(locale, 'promo.project.unsaved')}
         </p>
       ) : null}
 
@@ -237,7 +250,7 @@ export function PhotoSeries() {
         <p data-testid="promo-cost" className="text-[13px] text-ink-secondary">
           {selected.length === 0
             ? t(locale, 'promo.pickAtLeastOne')
-            : t(locale, costKey, { count: selected.length, cost })}
+            : t(locale, costKey, { count: selected.length, cost, free: freeSpent, credits: creditSpent })}
         </p>
       </fieldset>
 

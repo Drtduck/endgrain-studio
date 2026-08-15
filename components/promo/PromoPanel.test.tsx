@@ -289,10 +289,26 @@ describe('PromoPanel: гейт AI', () => {
     expect(note).toContain('10')
   })
 
-  it('trial с купленными кадрами: строка списания говорит про купленные кадры, не про месячную квоту', () => {
+  /**
+   * Правка UX-приёмки 15.08.2026: формулировка списания обязана называть
+   * ФАКТИЧЕСКИЙ источник, а не сам факт наличия купленных кадров на балансе.
+   * Пробное ещё не тронуто (used=0, лимит 3), значит один кадр этого клика
+   * спишется из пробного, а десять купленных на балансе лежат нетронутыми -
+   * строка обязана говорить "пробных", а не "купленных".
+   */
+  it('trial не исчерпан, но на балансе есть купленные: строка списания говорит про пробные, а не про купленные', () => {
     renderWithAccess('trial', 0, FREE_TRIAL_LIMIT, 10)
     const cost = screen.getByTestId('promo-cost').textContent ?? ''
     expect(cost).not.toContain('месячной квоты')
+    expect(cost).not.toContain('купленных')
+    expect(cost).toContain('пробных')
+  })
+
+  it('trial исчерпан, платит купленными: строка списания честно говорит про купленные кадры', () => {
+    renderWithAccess('trial', FREE_TRIAL_LIMIT, FREE_TRIAL_LIMIT, 10)
+    const cost = screen.getByTestId('promo-cost').textContent ?? ''
+    expect(cost).not.toContain('месячной квоты')
+    expect(cost).not.toContain('пробных')
     expect(cost).toContain('купленных')
   })
 
@@ -300,6 +316,33 @@ describe('PromoPanel: гейт AI', () => {
     renderWithAccess('pro', 4)
     const cost = screen.getByTestId('promo-cost').textContent ?? ''
     expect(cost).toContain('месячной квоты')
+  })
+
+  /**
+   * Месячная квота почти выбрана (28 из 30, остаток 2), а выбор по умолчанию -
+   * четыре кадра: два спишутся из квоты, два - из купленных. Строка обязана
+   * назвать оба источника, а не соврать про один из них.
+   */
+  it('квота почти исчерпана и есть купленные: строка списания называет оба источника', () => {
+    renderWithAccess('pro', 28, AI_MONTHLY_LIMIT, 5)
+    const cost = screen.getByTestId('promo-cost').textContent ?? ''
+    expect(cost).toContain('2')
+    expect(cost).toContain('бесплатных')
+    expect(cost).toContain('купленных')
+  })
+
+  /**
+   * Правка UX-приёмки 15.08.2026: у нового (несохранённого) проекта плашка
+   * статуса вечно висела на "Сохраняем проект…", хотя ensureSaved() ещё ни разу
+   * не вызывался и ни один запрос не летел. Проект реально сохраняется только
+   * при первой генерации, до этого честное состояние - нейтральное "ещё не
+   * сохранён", а не подделка под идущий запрос.
+   */
+  it('несохранённый проект: плашка честно говорит "ещё не сохранён", а не "Сохраняем…"', () => {
+    renderWithAccess('pro', 4)
+    const plaque = screen.getByTestId('promo-project-plaque').textContent ?? ''
+    expect(plaque).not.toContain('Сохраняем')
+    expect(plaque).toContain('не сохранён')
   })
 })
 
