@@ -86,6 +86,11 @@ vi.mock('@/app/actions/promo', () => ({
     return Promise.resolve(merchResult.current)
   },
   analyzeReferenceAction: () => Promise.resolve({ ok: true, mock: true, style: DEMO_STYLE }),
+  // Гидратация серий при монтировании панели: в этом тесте она не проверяется,
+  // но без заглушек эффект падает на отсутствующем экспорте мока.
+  listActiveSeriesAction: () => Promise.resolve({ ok: true, series: [] }),
+  listPromoSeriesAction: () => Promise.resolve({ ok: true, series: [] }),
+  editPromoShotAction: () => Promise.resolve({ ok: false, error: 'invalid' }),
 }))
 
 const DEMO_STYLE = {
