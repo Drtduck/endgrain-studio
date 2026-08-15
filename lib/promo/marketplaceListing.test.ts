@@ -48,6 +48,22 @@ describe('demoListingForMarketplace', () => {
     const b = demoListingForMarketplace(DESC, SIZE_IN, spec)
     expect(a).toEqual(b)
   })
+
+  it('Яндекс.Маркет (scope ru) отдаёт русский текст, а не английский demoListing', () => {
+    const spec = marketplaceById('yandexmarket')
+    const draft = demoListingForMarketplace(DESC, SIZE_IN, spec)
+    expect(draft.title).toMatch(/[а-яё]/i)
+    expect(draft.description).toMatch(/[а-яё]/i)
+    expect(draft.title).not.toContain('Cutting Board')
+    expect(draft.description).not.toContain('Cutting Board')
+  })
+
+  it('Amazon (scope global) остаётся английским, как раньше', () => {
+    const spec = marketplaceById('amazon')
+    const draft = demoListingForMarketplace(DESC, SIZE_IN, spec)
+    expect(draft.title).not.toMatch(/[а-яё]/i)
+    expect(draft.description).not.toMatch(/[а-яё]/i)
+  })
 })
 
 describe('marketplaceListingPrompt', () => {
@@ -63,6 +79,21 @@ describe('marketplaceListingPrompt', () => {
     const spec = marketplaceById('ozon')
     const prompt = marketplaceListingPrompt(DESC, SIZE_IN, spec, [])
     expect(prompt).toContain('no bullet field')
+  })
+
+  it('для ru-площадки требует русский язык всех полей', () => {
+    const spec = marketplaceById('yandexmarket')
+    const prompt = marketplaceListingPrompt(DESC, SIZE_IN, spec, [])
+    expect(prompt).toMatch(/Russian/)
+    expect(prompt).toContain('every field value in Russian')
+  })
+
+  it('для global-площадки (включая Mercado Libre) требование русского не появляется', () => {
+    for (const id of ['amazon', 'etsy', 'mercadolibre'] as const) {
+      const spec = marketplaceById(id)
+      const prompt = marketplaceListingPrompt(DESC, SIZE_IN, spec, [])
+      expect(prompt).not.toContain('every field value in Russian')
+    }
   })
 })
 
