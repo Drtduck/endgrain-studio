@@ -65,8 +65,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
+  # Внутри e2e поднимается свой next (webServer собирает и стартует приложение),
+  # поэтому шард стоит примерно полторы минуты накладных. Два шарда всё равно
+  # выгоднее: сами тесты делятся пополам, а они и есть основная часть времени.
   e2e:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -93,10 +100,11 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
       # Число воркеров задано в playwright.config.ts, чтобы настройка жила
       # в одном месте, а не разъезжалась между конфигом и workflow.
-      - run: pnpm test:e2e
+      - run: pnpm test:e2e --shard=${{ matrix.shard }}/2
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: playwright-report
+          # Имя с номером шарда: у одинаковых имён загрузка отчёта падает.
+          name: playwright-report-${{ matrix.shard }}
           path: playwright-report/
           retention-days: 7
