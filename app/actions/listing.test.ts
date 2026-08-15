@@ -9,11 +9,14 @@ let verdict: 'ok' | 'ip' = 'ok'
 const take = vi.fn<(key: string, limit: number, now: number) => 'ok' | 'ip'>(() => verdict)
 
 const grant = { ok: true as const, tier: 'pro' as const, userId: 'user-1', period: '2026-08', cost: 1, used: 1, remaining: 29, ref: 'r', free: 1, credits: 0 }
-const allowed = vi.fn<(feature: string, units: number, ref: string) => Promise<typeof grant>>(() => Promise.resolve(grant))
+// Ref третьим аргументом больше не приходит от action (генерируется по
+// умолчанию внутри реального assertAiAllowed) - мок его просто пробрасывает,
+// каким бы он ни был (undefined на проде это ветка default в entitlements.ts).
+const allowed = vi.fn<(feature: string, units: number, ref?: string) => Promise<typeof grant>>(() => Promise.resolve(grant))
 const release = vi.fn<(g: unknown) => Promise<void>>(() => Promise.resolve())
 
 vi.mock('@/lib/ai/entitlements', () => ({
-  assertAiAllowed: (feature: string, units: number, ref: string) => allowed(feature, units, ref),
+  assertAiAllowed: (feature: string, units: number, ref?: string) => allowed(feature, units, ref),
   releaseAiQuota: (g: unknown) => release(g),
 }))
 
@@ -175,5 +178,21 @@ describe('app/actions/listing: generateListingAction', () => {
     if (!res.ok) throw new Error('ожидался успех')
     expect(res.mock).toBe(true)
     expect(requestListing).not.toHaveBeenCalled()
+  })
+
+  it('переиспользованный клиентский walletRef не переиспользуется как ключ идемпотентности: два вызова - два независимых списания', async () => {
+    requestListing.mockResolvedValue({ ok: true, listing: validListing() })
+    const { generateListingAction } = await import('./listing')
+
+    await generateListingAction({ projectId: PROJECT_ID, marketplace: 'amazon', shotIds: [], walletRef: WALLET_REF })
+    await generateListingAction({ projectId: PROJECT_ID, marketplace: 'amazon', shotIds: [], walletRef: WALLET_REF })
+
+    // Один и тот же walletRef с клиента на двух вызовах - но assertAiAllowed
+    // зовётся дважды (не задедуплено по клиентскому ref), и клиентский
+    // walletRef в него вообще не долетает (третий аргумент не передан).
+    expect(allowed).toHaveBeenCalledTimes(2)
+    expect(allowed).toHaveBeenNthCalledWith(1, 'saleListing', 1, undefined)
+    expect(allowed).toHaveBeenNthCalledWith(2, 'saleListing', 1, undefined)
+    expect(requestListing).toHaveBeenCalledTimes(2)
   })
 })

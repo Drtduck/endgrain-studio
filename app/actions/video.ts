@@ -36,17 +36,22 @@ function mockVideoJob(boardPng: string): { readonly videoUrl: string; readonly p
 
 /**
  * ref это ключ идемпотентности списания и возможного возврата (см.
- * wallet_spend в supabase/migrations/20260813110000_wallet.sql). Он обязан
- * приходить от клиента и быть одним и тем же на всю попытку генерации:
- * VideoPanel генерирует его один раз на клик по кнопке, а не здесь на каждый
- * вызов action - иначе повторный вызов того же действия (ретрай после обрыва
- * сети, до того как клиент увидел ответ) получал бы новый ref и списывал
- * заново, и вся идемпотентность на стороне SQL была бы бесполезна.
+ * wallet_spend в supabase/migrations/20260813110000_wallet.sql). Генерируется
+ * НА СЕРВЕРЕ, один раз на вызов action, и переиспользуется для парного
+ * wallet_refund - иначе возврат не нашёл бы своё списание. Клиентский
+ * аргумент ref остаётся в сигнатуре ради контракта вызова (VideoPanel.tsx
+ * его всё ещё шлёт, генерируя свежий crypto.randomUUID() на каждый клик), но
+ * его значение недоверенное и в rpc не используется: переиспользованный
+ * клиентский ref через прямой вызов server action читался бы SQL-функцией
+ * как «уже оплачено» и открывал бы бесплатную генерацию. Защита от двойного
+ * клика на клиенте держится на setBusy, а не на этом ref.
  */
 export async function generateVideoAction(seconds: unknown, boardPng: unknown, ref: unknown): Promise<VideoResult> {
   if (!isVideoSeconds(seconds) || typeof boardPng !== 'string' || boardPng.length === 0) {
     return { ok: false, error: 'invalid' }
   }
+  // Валидация формы клиентского ref сохранена (защита от мусора во входе),
+  // но само значение ниже не используется - см. джсдок выше.
   const parsedRef = refSchema.safeParse(ref)
   if (!parsedRef.success) return { ok: false, error: 'invalid' }
   const duration: VideoSeconds = seconds
@@ -69,10 +74,14 @@ export async function generateVideoAction(seconds: unknown, boardPng: unknown, r
 
   const sb = getSupabaseService()
 
+  // Серверный ref один на всю попытку: используется и в wallet_spend, и (при
+  // неудаче) в парном wallet_refund ниже - они обязаны совпадать.
+  const spendRef = crypto.randomUUID()
+
   const { data: balanceAfterSpend, error: spendError } = await sb.rpc('wallet_spend', {
     p_user_id: user.id,
     p_amount: cost,
-    p_ref: parsedRef.data,
+    p_ref: spendRef,
   })
   if (spendError) {
     console.error('wallet_spend failed', spendError)
@@ -90,7 +99,7 @@ export async function generateVideoAction(seconds: unknown, boardPng: unknown, r
   }
 
   // Ролик не вышел вовсе: возвращаем списанное тем же ref, что и списание.
-  const { error: refundError } = await sb.rpc('wallet_refund', { p_user_id: user.id, p_amount: cost, p_ref: parsedRef.data })
+  const { error: refundError } = await sb.rpc('wallet_refund', { p_user_id: user.id, p_amount: cost, p_ref: spendRef })
   if (refundError) console.error('wallet_refund failed', refundError)
   return { ok: false, error: 'failed' }
 }
