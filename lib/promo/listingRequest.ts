@@ -21,8 +21,22 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GE
 const REQUEST_TIMEOUT_MS = 20_000
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+/**
+ * nano-30b по замерам отвечает ~21с, в 20-секундный таймаут Gemini не укладывается -
+ * отдельная, более длинная константа именно под OpenRouter.
+ */
+const OPENROUTER_REQUEST_TIMEOUT_MS = 45_000
+/** Карточка - это ~600 токенов JSON, 4000 был явно с запасом. */
+const OPENROUTER_MAX_TOKENS = 1600
 /** Запасной автороутер бесплатных моделей: одна попытка, если основная бесплатная модель отказала или отдала пустой ответ. */
 const OPENROUTER_FALLBACK_MODEL = 'openrouter/free'
+/**
+ * Запасную модель имеет смысл пробовать только если основная отказала быстро
+ * (например, мгновенный 429 rate-limit) - тогда есть время на вторую попытку.
+ * Если основная уже съела время до этого порога, две долгие попытки подряд не
+ * влезают в лимит серверной функции, и юзер ждёт вечность ради демо-черновика.
+ */
+const FALLBACK_ATTEMPT_THRESHOLD_MS = 10_000
 
 interface GeminiResponse {
   readonly candidates?: readonly { readonly content?: { readonly parts?: readonly { readonly text?: string }[] } }[]
@@ -105,9 +119,9 @@ async function requestOpenRouterModel(prompt: string, model: string): Promise<Sa
     const res = await fetch(OPENROUTER_URL, {
       method: 'POST',
       headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages: [{ role: 'user', content: openRouterListingPrompt(prompt) }], max_tokens: 4000 }),
+      body: JSON.stringify({ model, messages: [{ role: 'user', content: openRouterListingPrompt(prompt) }], max_tokens: OPENROUTER_MAX_TOKENS }),
       cache: 'no-store',
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(OPENROUTER_REQUEST_TIMEOUT_MS),
     })
     if (!res.ok) {
       let message = ''
@@ -137,11 +151,18 @@ async function requestOpenRouterModel(prompt: string, model: string): Promise<Sa
   }
 }
 
-/** Основная бесплатная модель, при отказе - одна попытка запасного автороутера бесплатных моделей. */
+/**
+ * Основная бесплатная модель, при отказе - запасной автороутер, но только если
+ * основная модель отказала быстро (см. FALLBACK_ATTEMPT_THRESHOLD_MS): иначе
+ * бюджет серверной функции на вторую долгую попытку уже не остаётся.
+ */
 async function requestOpenRouter(prompt: string): Promise<SaleListing | null> {
   if (!isOpenRouterConfigured()) return null
+  const startedAt = Date.now()
   const primary = await requestOpenRouterModel(prompt, OPENROUTER_TEXT_MODEL)
   if (primary !== null) return primary
+  const elapsedMs = Date.now() - startedAt
+  if (elapsedMs >= FALLBACK_ATTEMPT_THRESHOLD_MS) return null
   return requestOpenRouterModel(prompt, OPENROUTER_FALLBACK_MODEL)
 }
 

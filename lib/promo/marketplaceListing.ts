@@ -17,10 +17,28 @@ export interface PromoListingDraft {
   readonly tags: readonly string[]
 }
 
+/**
+ * Обрезка по последнему пробелу в пределах лимита, а не посимвольно: иначе
+ * тег обрывается на середине слова ('handmade cutting boa' вместо
+ * 'handmade cutting'). Если слово одно и само длиннее лимита - пробела внутри
+ * лимита нет, откатываемся на обычную посимвольную обрезку.
+ */
+function truncateAtWordBoundary(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text
+  const cut = text.slice(0, maxLen)
+  const lastSpace = cut.lastIndexOf(' ')
+  return lastSpace > 0 ? cut.slice(0, lastSpace) : cut
+}
+
 /** count <= 0 значит «площадка это поле не использует» - обрезаем до пустого массива, не до «сколько дали». */
-function clampList(items: readonly string[], count: number, maxLen: number): readonly string[] {
+function clampList(
+  items: readonly string[],
+  count: number,
+  maxLen: number,
+  truncate: (item: string, maxLen: number) => string = (item, m) => item.slice(0, m),
+): readonly string[] {
   if (count <= 0) return []
-  return items.slice(0, count).map((item) => item.slice(0, maxLen))
+  return items.slice(0, count).map((item) => truncate(item, maxLen))
 }
 
 /**
@@ -36,7 +54,7 @@ export function demoListingForMarketplace(description: BoardDescription, sizeIn:
     title: base.title.slice(0, rules.titleMax),
     description: base.description.slice(0, rules.descriptionMax),
     bullets: clampList(base.bullets, rules.bulletCount, rules.bulletMax),
-    tags: clampList(base.keywords, rules.tagCount, rules.tagMax),
+    tags: clampList(base.keywords, rules.tagCount, rules.tagMax, truncateAtWordBoundary),
   }
 }
 
@@ -113,7 +131,7 @@ export function parseMarketplaceListing(text: string, spec: MarketplaceSpec): Pr
         title: parsed.data.title.slice(0, rules.titleMax),
         description: parsed.data.description.slice(0, rules.descriptionMax),
         bullets: clampList(parsed.data.bullets ?? [], rules.bulletCount, rules.bulletMax),
-        tags: clampList(parsed.data.tags ?? [], rules.tagCount, rules.tagMax),
+        tags: clampList(parsed.data.tags ?? [], rules.tagCount, rules.tagMax, truncateAtWordBoundary),
       }
     }
   }
