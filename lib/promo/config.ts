@@ -14,6 +14,16 @@ export const PRINTFUL_API_KEY: string = process.env['PRINTFUL_API_KEY'] ?? ''
 export const FAL_KEY: string = process.env['FAL_KEY'] ?? ''
 
 /**
+ * Текстовый fallback карточки товара, когда Gemini недоступен или упал
+ * (например, prepay-квота исчерпана): бесплатная модель через OpenRouter.
+ * Отдельный ключ от FAL_KEY - fal остаётся только под картинки.
+ */
+export const OPENROUTER_API_KEY: string = process.env['OPENROUTER_API_KEY'] ?? ''
+
+/** Бесплатная модель по умолчанию, переопределима переменной окружения. */
+export const OPENROUTER_TEXT_MODEL: string = process.env['OPENROUTER_TEXT_MODEL'] ?? 'nvidia/nemotron-3-super-120b-a12b:free'
+
+/**
  * Секрет подписи гостевой cookie egs_ft и хеша IP в бесплатном тире. Без него
  * подписать нечего: гостевой тир выключается целиком, и подделать cookie
  * новым uuid на каждый запрос было бы можно.
@@ -39,6 +49,10 @@ export function isPrintfulConfigured(): boolean {
 
 export function isFalConfigured(): boolean {
   return FAL_KEY.length > 0
+}
+
+export function isOpenRouterConfigured(): boolean {
+  return OPENROUTER_API_KEY.length > 0
 }
 
 /** Секрет есть и есть дешёвый провайдер: обе вещи нужны, чтобы дать гостю пробные генерации. */

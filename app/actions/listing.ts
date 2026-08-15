@@ -6,7 +6,7 @@ import type { AiDenyReason } from '@/lib/ai/quota'
 import { compile } from '@/lib/engine'
 import { t } from '@/lib/i18n'
 import { parseDesign } from '@/lib/persist'
-import { isGeminiConfigured } from '@/lib/promo/config'
+import { isGeminiConfigured, isOpenRouterConfigured } from '@/lib/promo/config'
 import { describeBoard } from '@/lib/promo/describe'
 import { boardSizeInches } from '@/lib/promo/listing'
 import { demoListingForMarketplace, marketplaceListingPrompt, parseMarketplaceListing, type PromoListingDraft } from '@/lib/promo/marketplaceListing'
@@ -40,8 +40,9 @@ async function passRateLimit(): Promise<boolean> {
  * товара логически не про фото, хотя и делит с ним отобранные кадры.
  *
  * requestListing/parseMarketplaceListing переиспользуют тот же сетевой ход к
- * Gemini (lib/promo/listingRequest.ts), что и старая generic-карточка -
- * responseSchema там не завязана на форму ответа, JSON-парсинг общий.
+ * моделям (lib/promo/listingRequest.ts: Gemini, с текстовым fallback на
+ * OpenRouter), что и старая generic-карточка - responseSchema там не завязана
+ * на форму ответа, JSON-парсинг общий.
  */
 
 export type ListingError = AiDenyReason | 'invalid' | 'failed' | 'notFound' | 'rateLimited'
@@ -177,9 +178,9 @@ export async function generateListingAction(input: unknown): Promise<ListingResu
     return { ok: true, mock: true, listing: demoListingForMarketplace(description, sizeIn, spec) }
   }
 
-  // Есть Supabase и аккаунт, но нет ключа Gemini: демо-заготовка от РЕАЛЬНОГО
-  // design'а проекта, прочитанного из базы, а не с клиента.
-  if (!isGeminiConfigured()) {
+  // Есть Supabase и аккаунт, но платного пути нет вовсе (ни Gemini, ни OpenRouter):
+  // демо-заготовка от РЕАЛЬНОГО design'а проекта, прочитанного из базы, а не с клиента.
+  if (!isGeminiConfigured() && !isOpenRouterConfigured()) {
     const loaded = await loadDesignDescription(parsed.data.projectId, user.id)
     if (loaded === null) return { ok: false, error: 'notFound' }
     return { ok: true, mock: true, listing: demoListingForMarketplace(loaded.description, loaded.sizeIn, spec) }
@@ -200,13 +201,15 @@ export async function generateListingAction(input: unknown): Promise<ListingResu
   const prompt = marketplaceListingPrompt(loaded.description, loaded.sizeIn, spec, notes)
   const result = await requestListing(prompt)
   if (!result.ok) {
+    // Gemini и OpenRouter оба отказали (или упали): кадр не списан, человек получает
+    // рабочий черновик от реального design'а вместо красной плашки (спека 8.3).
     await releaseAiQuota(grant)
-    return { ok: false, error: 'failed' }
+    return { ok: true, mock: true, listing: demoListingForMarketplace(loaded.description, loaded.sizeIn, spec) }
   }
   const draft = parseMarketplaceListing(JSON.stringify(result.listing), spec)
   if (draft === null) {
     await releaseAiQuota(grant)
-    return { ok: false, error: 'failed' }
+    return { ok: true, mock: true, listing: demoListingForMarketplace(loaded.description, loaded.sizeIn, spec) }
   }
   return { ok: true, mock: false, listing: draft, remaining: grant.remaining }
 }
