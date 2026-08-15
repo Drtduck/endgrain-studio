@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto'
 import type { FreeSubject } from '@/lib/ai/freeSubjects'
 import { releaseAiQuota, type AiGrant } from '@/lib/ai/entitlements'
 import { settleSeries } from '@/lib/promo/db'
@@ -54,11 +55,20 @@ function reapGrant(row: RunningRow): AiGrant | null {
   return null
 }
 
+/**
+ * Сравнение через timingSafeEqual, как и в lib/stripe/signature.ts: обычный
+ * === на секрете короткозамыкающийся и утекает длину совпавшего префикса по
+ * таймингу. Длины сверяются до вызова - при их несовпадении timingSafeEqual
+ * бросает, а нам нужен обычный false. Пустой secret по-прежнему fails closed.
+ */
 function authorized(req: Request): boolean {
   const secret = process.env['CRON_SECRET'] ?? ''
   if (secret.length === 0) return false
   const header = req.headers.get('authorization') ?? ''
-  return header === `Bearer ${secret}`
+  const expected = Buffer.from(`Bearer ${secret}`, 'utf8')
+  const actual = Buffer.from(header, 'utf8')
+  if (actual.length !== expected.length) return false
+  return timingSafeEqual(actual, expected)
 }
 
 export async function GET(req: Request): Promise<Response> {

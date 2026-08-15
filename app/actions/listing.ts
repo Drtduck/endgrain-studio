@@ -191,10 +191,13 @@ export async function generateListingAction(input: unknown): Promise<ListingResu
 
   if (!(await passRateLimit())) return { ok: false, error: 'rateLimited' }
 
-  // walletRef - ключ идемпотентности с клиента (двойной клик по «Сгенерировать
-  // карточку»): раньше отбрасывался в пользу crypto.randomUUID() по умолчанию,
-  // и повтор клика списывал дважды (P0-блокер ревью 14.08.2026).
-  const grant = await assertAiAllowed('saleListing', 1, parsed.data.walletRef)
+  // Ключ идемпотентности списания генерируется на сервере (crypto.randomUUID()
+  // по умолчанию внутри assertAiAllowed, см. lib/ai/entitlements.ts). Клиентский
+  // walletRef недоверенный вход: переиспользованный ref через прямой вызов
+  // server action читался бы как «уже оплачено» и открывал бы бесконечную
+  // бесплатную платную генерацию. Честный клиент (ListingEditor.tsx) и так
+  // защищён от двойного клика через setBusy, а не через этот ref.
+  const grant = await assertAiAllowed('saleListing', 1)
   if (!grant.ok) return { ok: false, error: grant.reason }
 
   const notes = await sceneNotes(parsed.data.shotIds, user.id)
