@@ -12,6 +12,9 @@ import { SessionProvider } from "@/components/SessionProvider";
 import { getAiAccess } from "@/lib/ai/entitlements";
 import { getGoogleAuthAvailable } from "@/lib/auth/googleAuth";
 import { getConsentContext } from "@/lib/consent/server";
+import { isMerchConfigured } from "@/lib/merch/config";
+import { merchRetailPrices } from "@/lib/merch/pricing";
+import { isPrintfulConfigured } from "@/lib/promo/config";
 import { isStripeConfigured } from "@/lib/stripe/config";
 import { getProStatus } from "@/lib/stripe/pro";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -55,6 +58,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Считается один раз на серверный рендер, ровно как остальные значения выше:
   // первый же HTML либо содержит баннер согласия, либо нет, без мигания на клиенте.
   const consent = await getConsentContext();
+  // Гейт и цены мерча (§9.5 спеки merch-orders.md): кнопка «Купить» не рендерится
+  // вовсе, если рубильник выключен или не настроена одна из касс. Цены посчитаны
+  // здесь той же формулой, что и в кассе, и уезжают пропсом - клиент их не считает.
+  const merchEnabled = isMerchConfigured(isStripeConfigured(), isPrintfulConfigured());
+  const merchPrices = merchRetailPrices();
   return (
     <html
       lang={lang}
@@ -70,7 +78,14 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <Analytics regime={consent.regime} initialDecision={consent.decision} />
         <SessionProvider value={{ user, enabled: isSupabaseConfigured(), avatarUrl }}>
           <GoogleAuthProvider value={googleAuthAvailable}>
-            <ProProvider value={{ status: proStatus, billingEnabled: isStripeConfigured(), ai: aiAccess }}>
+            <ProProvider
+              value={{
+                status: proStatus,
+                billingEnabled: isStripeConfigured(),
+                ai: aiAccess,
+                merch: { enabled: merchEnabled, prices: merchPrices },
+              }}
+            >
               <ConsentProvider regime={consent.regime} initialDecision={consent.decision}>
                 <LocaleBootstrap locale={lang} />
                 {children}

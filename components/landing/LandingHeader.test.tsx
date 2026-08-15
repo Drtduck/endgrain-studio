@@ -18,7 +18,9 @@ const PRO_STATUS = { pro: false, reason: 'free' as const, plan: null, currentPer
 function renderHeader(session: SessionValue) {
   return render(
     <SessionProvider value={session}>
-      <ProProvider value={{ status: PRO_STATUS, billingEnabled: false, ai: aiAccess('mock') }}>
+      <ProProvider
+        value={{ status: PRO_STATUS, billingEnabled: false, ai: aiAccess('mock'), merch: { enabled: false, prices: { tshirt: 0, mug: 0, poster: 0, apron: 0 } } }}
+      >
         <LandingHeader locale="ru" />
       </ProProvider>
     </SessionProvider>,

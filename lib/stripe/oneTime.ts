@@ -12,7 +12,25 @@ import { z } from 'zod'
  * (kind, ref) в public.wallet_transactions / stripe_session_id в project_purchases.
  */
 
-export type OneTimeKind = 'wallet_topup' | 'gallery_purchase' | 'pro_pass' | 'ai_pack'
+export type OneTimeKind = 'wallet_topup' | 'gallery_purchase' | 'pro_pass' | 'ai_pack' | 'merch'
+
+/**
+ * Адрес доставки и контакты покупателя для заказа мерча (§6.1, §6.3 спеки).
+ * Строки, а не null у отсутствующих полей: undefined/null внутри Stripe-объекта
+ * нормализуются в null здесь же, чтобы lib/merch/recipient.ts работал с одной
+ * формой пустоты.
+ */
+export interface OneTimeShipping {
+  readonly name: string | null
+  readonly line1: string | null
+  readonly line2: string | null
+  readonly city: string | null
+  readonly state: string | null
+  readonly postalCode: string | null
+  readonly country: string | null
+  readonly email: string | null
+  readonly phone: string | null
+}
 
 export interface OneTimePayment {
   readonly kind: OneTimeKind
@@ -26,9 +44,34 @@ export interface OneTimePayment {
   readonly publishedId: string | null
   /** Только для ai_pack: какой пакет кадров куплен. */
   readonly packId: string | null
+  /** Только для merch: id строки merch_orders. */
+  readonly merchOrderId: string | null
+  /** Только для merch: адрес доставки, если он вообще пришёл в событии. */
+  readonly shipping: OneTimeShipping | null
 }
 
-const kindSchema = z.enum(['wallet_topup', 'gallery_purchase', 'pro_pass', 'ai_pack'])
+const kindSchema = z.enum(['wallet_topup', 'gallery_purchase', 'pro_pass', 'ai_pack', 'merch'])
+
+/**
+ * Адрес доставки лежит по разным путям в разных версиях Stripe API: в старых
+ * это session.shipping_details, в новых session.collected_information.shipping_details
+ * (§6.1). Схема принимает оба, парсер берёт первый непустой.
+ */
+const shippingDetailsSchema = z
+  .object({
+    name: z.string().nullish(),
+    address: z
+      .object({
+        line1: z.string().nullish(),
+        line2: z.string().nullish(),
+        city: z.string().nullish(),
+        state: z.string().nullish(),
+        postal_code: z.string().nullish(),
+        country: z.string().nullish(),
+      })
+      .nullish(),
+  })
+  .nullish()
 
 const sessionSchema = z.object({
   id: z.string(),
@@ -42,9 +85,48 @@ const sessionSchema = z.object({
       kind: z.string().optional(),
       published_id: z.string().optional(),
       pack_id: z.string().optional(),
+      merch_order_id: z.string().optional(),
+    })
+    .nullish(),
+  shipping_details: shippingDetailsSchema,
+  collected_information: z.object({ shipping_details: shippingDetailsSchema }).nullish(),
+  customer_details: z
+    .object({
+      email: z.string().nullish(),
+      phone: z.string().nullish(),
+      name: z.string().nullish(),
     })
     .nullish(),
 })
+
+type SessionShippingDetails = z.infer<typeof shippingDetailsSchema>
+type SessionData = z.infer<typeof sessionSchema>
+
+function nullify(value: string | null | undefined): string | null {
+  return value === null || value === undefined || value.trim().length === 0 ? null : value
+}
+
+/**
+ * Собирает адрес и контакты из сессии для merch. Первый непустой источник
+ * побеждает: новый collected_information, иначе старый shipping_details.
+ * customer_details даёт email/телефон и (в редком случае) имя, если его нет
+ * в самом shipping_details.
+ */
+function shippingFrom(session: SessionData): OneTimeShipping {
+  const details: SessionShippingDetails = session.collected_information?.shipping_details ?? session.shipping_details ?? null
+  const address = details?.address ?? null
+  return {
+    name: nullify(details?.name) ?? nullify(session.customer_details?.name),
+    line1: nullify(address?.line1),
+    line2: nullify(address?.line2),
+    city: nullify(address?.city),
+    state: nullify(address?.state),
+    postalCode: nullify(address?.postal_code),
+    country: nullify(address?.country),
+    email: nullify(session.customer_details?.email),
+    phone: nullify(session.customer_details?.phone),
+  }
+}
 
 const eventSchema = z.object({
   type: z.string(),
@@ -89,5 +171,7 @@ export function parseOneTimeEvent(raw: unknown): OneTimePayment | null {
     eventAt: new Date(event.created === undefined ? Date.now() : event.created * 1000).toISOString(),
     publishedId: session.metadata?.published_id ?? null,
     packId: session.metadata?.pack_id ?? null,
+    merchOrderId: session.metadata?.merch_order_id ?? null,
+    shipping: kindParsed.data === 'merch' ? shippingFrom(session) : null,
   }
 }

@@ -1,6 +1,13 @@
 import { aiPack, isAiPackId } from '@/lib/ai/packs'
+import { PRINTFUL_CONFIRM_ORDERS } from '@/lib/merch/config'
+import { MERCH_PRINTS_BUCKET } from '@/lib/merch/print'
+import { createPrintfulOrder, type PrintfulOrderOutcome } from '@/lib/merch/printfulOrder'
+import { recipientFrom } from '@/lib/merch/recipient'
+import { PRINTFUL_API_KEY, PRINTFUL_STORE_ID } from '@/lib/promo/config'
+import type { PrintfulAuth } from '@/lib/promo/printful'
+import type { MerchProductId } from '@/lib/promo/types'
 import { parseSubscriptionEvent } from '@/lib/stripe/events'
-import { parseOneTimeEvent } from '@/lib/stripe/oneTime'
+import { parseOneTimeEvent, type OneTimePayment } from '@/lib/stripe/oneTime'
 import { STRIPE_WEBHOOK_SECRET, isStripeConfigured } from '@/lib/stripe/config'
 import { verifyStripeSignature } from '@/lib/stripe/signature'
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabase/admin'
@@ -11,6 +18,21 @@ export const dynamic = 'force-dynamic'
 
 /** Статусы, при которых сохранённая подписка считается живой и её нельзя перетереть чужой. */
 const LIVE_STATUSES: readonly string[] = ['active', 'trialing', 'past_due']
+
+/** Потолок попыток заказа Printful (§6.2 спеки): дальше разбирается человек, а не Stripe-ретрай. */
+const MAX_PRINTFUL_ATTEMPTS = 5
+
+interface MerchOrderRow {
+  readonly id: string
+  readonly user_id: string
+  readonly product: MerchProductId
+  readonly variant_id: number
+  readonly print_path: string
+  readonly retail_cents: number
+  readonly printful_order_id: string | null
+  readonly printful_attempts: number
+  readonly status: 'pending_payment' | 'paid' | 'draft_created' | 'failed' | 'cancelled'
+}
 
 /** Ответ всегда короткий текст: никакого JSON и никакого эха события наружу. */
 function text(body: string, status: number): Response {
@@ -30,7 +52,157 @@ function text(body: string, status: number): Response {
  * Доступ к design открывает published_project_design() сама, по наличию этой строки -
  * никакого отдельного «разблокирования» тут делать не нужно.
  */
+/**
+ * Заказ мерча (§6.2, §6.4 спеки merch-orders.md). Три рубежа идемпотентности:
+ * stripe_session_id unique в таблице, условный update where status='pending_payment'
+ * на переводе в paid, и external_id = наш order.id в самом Printful (ветка 'exists'
+ * из createPrintfulOrder). Порядок шагов жёсткий и весь про «не потерять деньги»:
+ * 4xx Printful это «мы прислали ерунду» -> failed + 200 (ретрай не поможет),
+ * 5xx/таймаут это «у них не работает» -> 500 (Stripe переотправит около трёх суток).
+ */
+async function handleMerchOrder(payment: OneTimePayment): Promise<Response> {
+  const merchOrderId = payment.merchOrderId
+  if (merchOrderId === null) {
+    // Сессия создана не нашим action (либо испорченные metadata): ретраить бессмысленно.
+    console.error('stripe webhook: merch без merch_order_id', { sessionId: payment.sessionId })
+    return text('ok', 200)
+  }
+
+  const sb = getSupabaseAdmin()
+  const { data: order, error: readError } = await sb
+    .from('merch_orders')
+    .select('id, user_id, product, variant_id, print_path, retail_cents, printful_order_id, printful_attempts, status')
+    .eq('id', merchOrderId)
+    .maybeSingle<MerchOrderRow>()
+  if (readError) {
+    console.error('stripe webhook: merch чтение заказа упало', readError)
+    return text('read failed', 500)
+  }
+  if (!order) {
+    // Строку не создали (упавший server action) или её снесли руками: чинить нечего.
+    console.warn('stripe webhook: merch заказ не найден', { merchOrderId })
+    return text('ok', 200)
+  }
+  if (order.user_id !== payment.userId) {
+    // Подделка metadata на чужую сессию: печатать нельзя ни в коем случае.
+    console.error('stripe webhook: merch чужой user_id', { merchOrderId, orderUser: order.user_id, paymentUser: payment.userId })
+    return text('ok', 200)
+  }
+  if (order.retail_cents !== payment.amountCents) {
+    console.error('stripe webhook: merch сумма разошлась', { merchOrderId, retail: order.retail_cents, paid: payment.amountCents })
+    return text('ok', 200)
+  }
+
+  // Повторная доставка событий по уже доведённому или отменённому заказу: всё уже сделано.
+  if (order.status === 'draft_created' || order.status === 'cancelled') return text('ok', 200)
+
+  if (order.status === 'pending_payment') {
+    const shipping = payment.shipping
+    const { error: paidError } = await sb
+      .from('merch_orders')
+      .update({
+        status: 'paid',
+        paid_at: new Date().toISOString(),
+        ship_name: shipping?.name ?? null,
+        ship_address1: shipping?.line1 ?? null,
+        ship_address2: shipping?.line2 ?? null,
+        ship_city: shipping?.city ?? null,
+        ship_state: shipping?.state ?? null,
+        ship_country: shipping?.country ?? null,
+        ship_zip: shipping?.postalCode ?? null,
+        ship_email: shipping?.email ?? null,
+        ship_phone: shipping?.phone ?? null,
+      })
+      // Условный update: повторная доставка события не перезапишет уже продвинутый
+      // статус и не сдвинет paid_at (§6.4, п.2).
+      .eq('id', merchOrderId)
+      .eq('status', 'pending_payment')
+    if (paidError) {
+      console.error('stripe webhook: merch запись paid упала', paidError)
+      return text('write failed', 500)
+    }
+  } else if (order.status === 'failed' && order.printful_attempts >= MAX_PRINTFUL_ATTEMPTS) {
+    // Потолок попыток исчерпан прошлыми доставками: дальше разбирается человек руками.
+    return text('ok', 200)
+  }
+
+  const recipient = recipientFrom(payment.shipping)
+  if (recipient === null) {
+    // Без адреса печатать физически некуда, а ретраить нечего: адрес больше не появится.
+    const { error } = await sb.from('merch_orders').update({ status: 'failed', last_error: 'no shipping address' }).eq('id', merchOrderId)
+    if (error) console.error('stripe webhook: merch запись failed(no address) упала', error)
+    return text('ok', 200)
+  }
+
+  const { data: publicUrlData } = sb.storage.from(MERCH_PRINTS_BUCKET).getPublicUrl(order.print_path)
+  const printFileUrl = publicUrlData.publicUrl
+  if (!printFileUrl) {
+    console.error('stripe webhook: merch нет публичного url print-файла', { merchOrderId })
+    return text('write failed', 500)
+  }
+
+  const auth: PrintfulAuth = { apiKey: PRINTFUL_API_KEY, storeId: PRINTFUL_STORE_ID }
+  let outcome: PrintfulOrderOutcome
+  try {
+    outcome = await createPrintfulOrder(
+      {
+        orderId: order.id,
+        product: order.product,
+        variantId: order.variant_id,
+        retailCents: order.retail_cents,
+        printFileUrl,
+        recipient,
+      },
+      PRINTFUL_CONFIRM_ORDERS,
+      auth,
+      fetch,
+    )
+  } catch (err) {
+    console.error('stripe webhook: merch createPrintfulOrder threw', err)
+    return text('write failed', 500)
+  }
+
+  if (outcome.kind === 'created' || outcome.kind === 'exists') {
+    const printfulOrderId = outcome.kind === 'created' ? outcome.printfulOrderId : (order.printful_order_id ?? 'exists')
+    const { error } = await sb
+      .from('merch_orders')
+      .update({ status: 'draft_created', printful_order_id: printfulOrderId })
+      .eq('id', merchOrderId)
+    if (error) {
+      console.error('stripe webhook: merch запись draft_created упала', error)
+      return text('write failed', 500)
+    }
+    return text('ok', 200)
+  }
+
+  const nextAttempts = order.printful_attempts + 1
+
+  if (outcome.kind === 'rejected') {
+    // 4xx (кривые данные): мы прислали ерунду, ретрай её не исправит.
+    const { error } = await sb
+      .from('merch_orders')
+      .update({ status: 'failed', printful_attempts: nextAttempts, last_error: outcome.message })
+      .eq('id', merchOrderId)
+    if (error) console.error('stripe webhook: merch запись failed(4xx) упала', error)
+    return text('ok', 200)
+  }
+
+  // 5xx / таймаут / сеть: у них не работает, статус остаётся как есть (не failed),
+  // пока не исчерпан потолок попыток. 500 просит Stripe переотправить событие.
+  const hitCeiling = nextAttempts >= MAX_PRINTFUL_ATTEMPTS
+  const { error: attemptError } = await sb
+    .from('merch_orders')
+    .update({ printful_attempts: nextAttempts, last_error: outcome.message, ...(hitCeiling ? { status: 'failed' } : {}) })
+    .eq('id', merchOrderId)
+  if (attemptError) console.error('stripe webhook: merch запись attempts упала', attemptError)
+
+  if (hitCeiling) return text('ok', 200)
+  return text('write failed', 500)
+}
+
 async function handleOneTime(payment: import('@/lib/stripe/oneTime').OneTimePayment): Promise<Response> {
+  if (payment.kind === 'merch') return handleMerchOrder(payment)
+
   if (payment.kind === 'gallery_purchase') {
     const publishedId = payment.publishedId
     if (publishedId === null) {

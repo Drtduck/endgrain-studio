@@ -21,6 +21,7 @@ function renderPro(pro: boolean) {
         status: { pro, reason: pro ? 'flag' : 'free', plan: null, currentPeriodEnd: null, cancelAtPeriodEnd: false },
         billingEnabled: true,
         ai: aiAccess('mock'),
+        merch: { enabled: false, prices: { tshirt: 0, mug: 0, poster: 0, apron: 0 } },
       }}
     >
       <PrintInstruction />

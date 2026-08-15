@@ -18,7 +18,9 @@ const FREE: ProStatus = { pro: false, reason: 'free', plan: null, currentPeriodE
 function renderHeader(props: Parameters<typeof AppHeader>[0] = {}) {
   return render(
     <SessionProvider value={{ user: null, enabled: true }}>
-      <ProProvider value={{ status: FREE, billingEnabled: false, ai: aiAccess('mock') }}>
+      <ProProvider
+        value={{ status: FREE, billingEnabled: false, ai: aiAccess('mock'), merch: { enabled: false, prices: { tshirt: 0, mug: 0, poster: 0, apron: 0 } } }}
+      >
         <AppHeader {...props} />
       </ProProvider>
     </SessionProvider>,

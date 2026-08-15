@@ -11,7 +11,14 @@ const FREE_STATUS: ProStatus = { pro: false, reason: 'free', plan: null, current
 function wrapperFor(state: Parameters<typeof aiAccess>[0], used: number, limit: number, credits: number) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <ProProvider value={{ status: FREE_STATUS, billingEnabled: true, ai: aiAccess(state, used, limit, credits) }}>
+      <ProProvider
+        value={{
+          status: FREE_STATUS,
+          billingEnabled: true,
+          ai: aiAccess(state, used, limit, credits),
+          merch: { enabled: false, prices: { tshirt: 0, mug: 0, poster: 0, apron: 0 } },
+        }}
+      >
         {children}
       </ProProvider>
     )

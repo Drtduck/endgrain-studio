@@ -1,7 +1,7 @@
 'use client'
 
 import { useTransition, type ReactElement } from 'react'
-import { CreditCard, LogIn, LogOut, Plug, Sparkles, User } from 'lucide-react'
+import { CreditCard, LogIn, LogOut, Package, Plug, Sparkles, User } from 'lucide-react'
 import { signOutAction } from '@/app/actions/auth'
 import { Avatar } from '@/components/account/Avatar'
 import { NavLink } from '@/components/NavLink'
@@ -105,6 +105,15 @@ export function AccountMenu({ locale: localeProp, hrefBase }: { locale?: Locale;
         <MenuLinkItem data-testid="account-menu-mcp" render={accountLink('/account/api')}>
           <Plug />
           {t(locale, 'account.mcp')}
+        </MenuLinkItem>
+
+        {/* Раздел появляется всегда, даже при нуле заказов (§7 спеки merch-orders.md):
+            человек, который ищет «а где мой заказ», должен найти пункт, а не
+            вспоминать, покупал ли он что-то вообще. Не зависит от billingEnabled -
+            это чтение своих заказов, а не оформление подписки. */}
+        <MenuLinkItem data-testid="account-menu-orders" render={accountLink('/account/orders')}>
+          <Package />
+          {t(locale, 'merch.orders.title')}
         </MenuLinkItem>
 
         <MenuSeparator />

@@ -22,7 +22,9 @@ const USER: SessionValue = { user: { id: 'u1', email: 'a@example.com' }, enabled
 function renderWith(session: SessionValue, pro: Partial<ProValue> = {}) {
   return render(
     <SessionProvider value={session}>
-      <ProProvider value={{ status: FREE, billingEnabled: false, ai: aiAccess('mock'), ...pro }}>
+      <ProProvider
+        value={{ status: FREE, billingEnabled: false, ai: aiAccess('mock'), merch: { enabled: false, prices: { tshirt: 0, mug: 0, poster: 0, apron: 0 } }, ...pro }}
+      >
         <AccountMenu />
       </ProProvider>
     </SessionProvider>,
@@ -100,6 +102,16 @@ describe('AccountMenu', () => {
     const mcp = screen.getByTestId('account-menu-mcp')
     expect(mcp.getAttribute('href')).toBe('/account/api')
     expect(mcp.textContent).toContain('MCP')
+  })
+
+  // §7 спеки merch-orders.md: пункт «Мои заказы» всегда виден вошедшему,
+  // даже при выключенной кассе - это чтение своих строк, а не подписка.
+  it('пункт «Мои заказы» виден всегда, даже без кассы', async () => {
+    renderWith(USER, { billingEnabled: false })
+    fireEvent.click(screen.getByTestId('account-menu-trigger'))
+
+    const orders = await screen.findByTestId('account-menu-orders')
+    expect(orders.getAttribute('href')).toBe('/account/orders')
   })
 
   it('бесплатному аккаунту первым пунктом даёт апгрейд, но и оплату с кадрами тоже показывает', async () => {

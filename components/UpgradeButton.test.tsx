@@ -14,10 +14,12 @@ const PRO: ProStatus = {
   cancelAtPeriodEnd: false,
 }
 
-// Кнопка апгрейда про AI ничего не знает, поэтому состояние доступа тут любое.
-function renderWith(value: Omit<ProValue, 'ai'>) {
+// Кнопка апгрейда про AI и мерч ничего не знает, поэтому оба состояния тут любые.
+const MERCH_DEFAULT: ProValue['merch'] = { enabled: false, prices: { tshirt: 0, mug: 0, poster: 0, apron: 0 } }
+
+function renderWith(value: Omit<ProValue, 'ai' | 'merch'>) {
   return render(
-    <ProProvider value={{ ...value, ai: aiAccess('mock') }}>
+    <ProProvider value={{ ...value, ai: aiAccess('mock'), merch: MERCH_DEFAULT }}>
       <UpgradeButton />
     </ProProvider>,
   )

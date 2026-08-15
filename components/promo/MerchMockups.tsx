@@ -1,15 +1,19 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useId, useState, useTransition } from 'react'
 import { Check, Shirt } from 'lucide-react'
+import { createMerchCheckoutAction, type MerchCheckoutError } from '@/app/actions/merch'
 import { createMerchMockupsAction } from '@/app/actions/promo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { AiGateNote, denialGate, useAiGate } from '@/components/promo/AiGate'
 import { PatternCells } from '@/components/promo/PatternCells'
 import { boardPngDataUrl } from '@/components/promo/boardPng'
+import { usePro } from '@/components/ProProvider'
 import type { BoardModel } from '@/lib/engine'
-import { t } from '@/lib/i18n'
+import { t, type MessageKey } from '@/lib/i18n'
+import { MERCH_SIZES_BY_PRODUCT, type MerchSize } from '@/lib/merch/catalog'
 import { fitPatternCover } from '@/lib/promo/fit'
 import { MERCH_SILHOUETTE_BY_ID, type MerchSilhouette } from '@/lib/promo/merch'
 import { MAX_PNG_CHARS } from '@/lib/promo/schema'
@@ -21,11 +25,32 @@ import {
   type MerchResult,
 } from '@/lib/promo/types'
 import { useDerived } from '@/lib/store/derived'
-import { useStudio } from '@/lib/store/studio'
+import { selectDesign, useStudio } from '@/lib/store/studio'
 
-// Прямого url у генератора мокапов внутри кабинета нет: /dashboard/generator отдаёт 404,
-// поэтому ведём на корень кабинета (гостя Printful сам отправит на логин).
-const PRINTFUL_GENERATOR_URL = 'https://www.printful.com/dashboard'
+/** Тексты ошибок покупки по коду server action (§4.1, §9.4 спеки). */
+const MERCH_CHECKOUT_ERROR_KEYS: Readonly<Record<MerchCheckoutError, MessageKey>> = {
+  invalid: 'merch.buy.err.invalid',
+  disabled: 'merch.buy.err.disabled',
+  unauthenticated: 'merch.buy.needAuth',
+  render: 'merch.buy.err.render',
+  storage: 'merch.buy.err.storage',
+  failed: 'merch.buy.err.failed',
+}
+
+/**
+ * Размерная сетка Bella+Canvas 3001 (ширина груди, см), для перепечатки
+ * текстом прямо в модалке (§9.3 спеки: свою витрину размеров заводить не надо).
+ */
+const TSHIRT_SIZE_CHART: readonly { size: MerchSize; chestCm: string }[] = [
+  { size: 's', chestCm: '86-91' },
+  { size: 'm', chestCm: '97-102' },
+  { size: 'l', chestCm: '107-112' },
+  { size: 'xl', chestCm: '117-122' },
+]
+
+function formatUsd(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`
+}
 
 /** Локальный мокап: силуэт товара, узор доски в области печати, обрезка по clipPath. */
 function LocalMockup({ silhouette, model, label }: { silhouette: MerchSilhouette; model: BoardModel; label: string }) {
@@ -70,11 +95,59 @@ export function MerchMockups() {
   // быть запертой заранее, а не тихо отваливаться после клика.
   const gate = useAiGate(null, 'merchMockups')
 
+  // Покупка (§4, §9 спеки merch-orders.md): своё состояние, не зависящее от гейта
+  // мокапов выше - кнопка «Купить» видна и работает без Pro и без сборки мокапов.
+  const { merch } = usePro()
+  const design = useStudio(selectDesign)
+  const currentProjectId = useStudio((s) => s.currentProjectId)
+  const [sizeModalProduct, setSizeModalProduct] = useState<MerchProductId | null>(null)
+  const [selectedSize, setSelectedSize] = useState<MerchSize>('m')
+  const [buyingProduct, setBuyingProduct] = useState<MerchProductId | null>(null)
+  const [buyError, setBuyError] = useState<MerchCheckoutError | null>(null)
+  const [, startBuyTransition] = useTransition()
+
   const toggle = (id: MerchProductId): void => {
     setSelected((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
   }
 
-  const printful = result === null || result.denied !== undefined ? null : result.printful
+  // window.location.href - внешний домен Stripe, не router.push. Обёрнуто в
+  // startTransition по тому же образцу, что и остальные кассы проекта
+  // (WalletPanel, CreditsPanel, PurchaseButton): без неё react-hooks/immutability
+  // считает прямое присвоение location.href мутацией вне эффекта.
+  const startCheckout = (productId: MerchProductId, size: MerchSize): void => {
+    setBuyError(null)
+    setBuyingProduct(productId)
+    startBuyTransition(async () => {
+      try {
+        const res = await createMerchCheckoutAction({ product: productId, size, projectId: currentProjectId, design })
+        if (res.ok) {
+          window.location.href = res.url
+          return
+        }
+        // Модалка размера закрывается: иначе текст ошибки под галереей человек
+        // не увидит - он перекрыт бэкдропом диалога.
+        setSizeModalProduct(null)
+        setBuyError(res.error)
+        setBuyingProduct(null)
+      } catch (err) {
+        console.error(err)
+        setSizeModalProduct(null)
+        setBuyError('failed')
+        setBuyingProduct(null)
+      }
+    })
+  }
+
+  const onBuyClick = (productId: MerchProductId): void => {
+    setBuyError(null)
+    if (productId === 'tshirt') {
+      setSelectedSize('m')
+      setSizeModalProduct('tshirt')
+      return
+    }
+    startCheckout(productId, 'one')
+  }
+
   const mockupById = new Map<MerchProductId, string>((result?.mockups ?? []).map((m) => [m.id, m.url]))
 
   const run = async (): Promise<void> => {
@@ -121,16 +194,6 @@ export function MerchMockups() {
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-display text-[17px] font-semibold">{t(locale, 'merch.title')}</h2>
         <div className="flex-1" />
-        {printful === true ? (
-          <Button
-            size="sm"
-            variant="outline"
-            data-testid="merch-printful"
-            render={<a href={PRINTFUL_GENERATOR_URL} target="_blank" rel="noopener noreferrer" />}
-          >
-            {t(locale, 'merch.openPrintful')}
-          </Button>
-        ) : null}
         <Button
           size="sm"
           data-testid="merch-generate"
@@ -237,6 +300,30 @@ export function MerchMockups() {
                   {t(locale, 'merch.openMockup')}
                 </a>
               )}
+
+              {/*
+               * Кнопка «Купить» видна всем, без Pro-гейта и до сборки мокапов
+               * (§9.2 спеки merch-orders.md): она не зависит ни от gate, ни от
+               * result выше. Цена приезжает уже посчитанной с сервера через
+               * usePro(): формула серверная, клиент её не пересчитывает.
+               */}
+              {merch.enabled ? (
+                <div className="mt-1 flex flex-col gap-1.5 border-t border-line-subtle pt-2" data-testid={`merch-buy-${product.id}`}>
+                  <span className="text-sm font-semibold text-ink" data-testid={`merch-price-${product.id}`}>
+                    {formatUsd(merch.prices[product.id])} · {t(locale, 'merch.shipIncluded')}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    data-testid={`merch-buy-button-${product.id}`}
+                    disabled={buyingProduct !== null}
+                    onClick={() => { onBuyClick(product.id) }}
+                  >
+                    {buyingProduct === product.id ? t(locale, 'merch.buyBusy') : t(locale, 'merch.buy')}
+                  </Button>
+                  <p className="text-[11px] text-ink-muted">{t(locale, 'merch.shipCountries')}</p>
+                </div>
+              ) : null}
             </li>
           )
         })}
@@ -245,6 +332,71 @@ export function MerchMockups() {
       <p data-testid="merch-note" className="text-xs text-ink-muted">
         {t(locale, noteKey)}
       </p>
+
+      {buyError !== null ? (
+        <p
+          data-testid="merch-buy-error"
+          role="alert"
+          className="rounded-md border border-error-border bg-error-soft px-3 py-[11px] text-[13px] font-semibold text-error-text"
+        >
+          {t(locale, MERCH_CHECKOUT_ERROR_KEYS[buyError])}
+        </p>
+      ) : null}
+
+      {/* Модалка размера - только для футболки (§9.3 спеки): у остальных товаров
+          клик по «Купить» ведёт сразу в Checkout. */}
+      <Dialog
+        open={sizeModalProduct !== null}
+        onOpenChange={(open) => {
+          if (!open) setSizeModalProduct(null)
+        }}
+      >
+        <DialogContent data-testid="merch-size-dialog" backdropTestId="merch-size-backdrop" className="w-[min(420px,92vw)] gap-4">
+          <DialogTitle>{t(locale, 'merch.sizeTitle')}</DialogTitle>
+          <DialogDescription>
+            {sizeModalProduct === null ? null : formatUsd(merch.prices[sizeModalProduct])}
+          </DialogDescription>
+
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t(locale, 'merch.sizeTitle')}>
+            {MERCH_SIZES_BY_PRODUCT.tshirt.map((size) => (
+              <button
+                key={size}
+                type="button"
+                data-testid={`merch-size-${size}`}
+                aria-pressed={selectedSize === size}
+                onClick={() => { setSelectedSize(size) }}
+                className={
+                  selectedSize === size
+                    ? 'flex items-center gap-1.5 rounded-full border border-accent bg-accent/10 px-3 py-1.5 text-[13px] font-semibold text-accent'
+                    : 'flex items-center gap-1.5 rounded-full border border-line-subtle bg-surface px-3 py-1.5 text-[13px] text-ink-secondary hover:border-line'
+                }
+              >
+                {size.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
+          <div data-testid="merch-size-chart" className="flex flex-col gap-1 text-[13px] text-ink-secondary">
+            <span className="font-semibold text-ink">{t(locale, 'merch.sizeChart')}</span>
+            {TSHIRT_SIZE_CHART.map((row) => (
+              <span key={row.size}>
+                {row.size.toUpperCase()}: {t(locale, 'merch.sizeChart.cm', { cm: row.chestCm })}
+              </span>
+            ))}
+          </div>
+
+          <Button
+            data-testid="merch-size-checkout"
+            disabled={sizeModalProduct !== null && buyingProduct === sizeModalProduct}
+            onClick={() => {
+              if (sizeModalProduct === null) return
+              startCheckout(sizeModalProduct, selectedSize)
+            }}
+          >
+            {sizeModalProduct !== null && buyingProduct === sizeModalProduct ? t(locale, 'merch.buyBusy') : t(locale, 'merch.toCheckout')}
+          </Button>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }

@@ -19,7 +19,7 @@ vi.mock('@/lib/stripe/config', () => ({
   hasApiPrices: () => true,
 }))
 
-const supabase = { from: vi.fn(), rpc: vi.fn() }
+const supabase = { from: vi.fn(), rpc: vi.fn(), storage: { from: vi.fn() } }
 vi.mock('@/lib/supabase/admin', () => ({
   isSupabaseAdminConfigured: () => true,
   getSupabaseAdmin: () => supabase,
@@ -436,5 +436,262 @@ describe('POST /api/stripe/webhook: разовый платёж', () => {
     expect(res.status).toBe(200)
     expect(sb.upsert.mock.calls[0]?.[0]).toMatchObject({ product: 'api' })
     expect(supabase.rpc).toHaveBeenCalledWith('set_api_tier', { p_user_id: 'user-1', p_tier: 'free' })
+  })
+
+  describe('merch', () => {
+    const MERCH_ORDER_ID = 'order-1'
+
+    function merchOrder(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+      return {
+        id: MERCH_ORDER_ID,
+        user_id: 'user-1',
+        product: 'tshirt',
+        variant_id: 4012,
+        print_path: 'user-1/order-1.png',
+        retail_cents: 2199,
+        printful_order_id: null,
+        printful_attempts: 0,
+        status: 'pending_payment',
+        ...overrides,
+      }
+    }
+
+    function merchEventBody(overrides: Record<string, unknown> = {}): string {
+      return topupEventBody({
+        amount_total: 2199,
+        metadata: { supabase_user_id: 'user-1', kind: 'merch', merch_order_id: MERCH_ORDER_ID },
+        shipping_details: {
+          name: 'John Doe',
+          address: { line1: '1 Main St', line2: null, city: 'Springfield', state: 'IL', postal_code: '62701', country: 'US' },
+        },
+        customer_details: { email: 'john@example.com', phone: '+15551234567', name: null },
+        ...overrides,
+      })
+    }
+
+    /**
+     * Отдельный мок from(): merch трогает одну таблицу (merch_orders), но двумя
+     * разными формами запроса - select().eq('id').maybeSingle() на чтение и
+     * update(...).eq(...) (одно или два условия подряд) на запись. update()
+     * возвращает "thenable"-цепочку: и await после одного .eq, и после двух
+     * должны увидеть { error }.
+     */
+    function mockMerchSupabase(
+      options: {
+        readonly order?: Record<string, unknown> | null
+        readonly readError?: unknown
+        readonly updateError?: unknown
+        readonly publicUrl?: string | null
+      } = {},
+    ) {
+      const maybeSingle = vi.fn().mockResolvedValue({ data: options.order === undefined ? merchOrder() : options.order, error: options.readError ?? null })
+      const selectEq = vi.fn().mockReturnValue({ maybeSingle })
+      const select = vi.fn().mockReturnValue({ eq: selectEq })
+
+      const updateCalls: Record<string, unknown>[] = []
+      function updateChain(): { eq: (...a: unknown[]) => unknown; then: Promise<{ error: unknown }>['then'] } {
+        const result = Promise.resolve({ error: options.updateError ?? null })
+        const chain = {
+          eq: vi.fn(() => chain),
+          then: result.then.bind(result),
+        }
+        return chain
+      }
+      const update = vi.fn((payload: Record<string, unknown>) => {
+        updateCalls.push(payload)
+        return updateChain()
+      })
+
+      supabase.from.mockImplementation((table: string) => {
+        if (table === 'merch_orders') return { select, update }
+        throw new Error(`unexpected table ${table}`)
+      })
+
+      const url = options.publicUrl === undefined ? 'https://cdn.example/merch-prints/user-1/order-1.png' : options.publicUrl
+      const getPublicUrl = vi.fn().mockReturnValue({ data: { publicUrl: url } })
+      supabase.storage.from.mockReturnValue({ getPublicUrl })
+
+      return { select, selectEq, maybeSingle, update, updateCalls, getPublicUrl }
+    }
+
+    function printfulOk(id: number | string = 555): Response {
+      return { ok: true, status: 200, json: () => Promise.resolve({ code: 200, result: { id } }) } as unknown as Response
+    }
+    function printfulError(status: number, message: string): Response {
+      return { ok: false, status, json: () => Promise.resolve({ error: { message } }) } as unknown as Response
+    }
+
+    beforeEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('успех: pending_payment -> paid -> Printful created -> draft_created, 200', async () => {
+      const sb = mockMerchSupabase()
+      const fetchMock = vi.fn().mockResolvedValue(printfulOk(555))
+      vi.stubGlobal('fetch', fetchMock)
+      const { POST } = await import('./route')
+
+      const res = await POST(signedRequest(merchEventBody()))
+
+      expect(res.status).toBe(200)
+      expect(await res.text()).toBe('ok')
+      // Первый update - переход в paid с адресом, второй - draft_created с printful_order_id.
+      expect(sb.updateCalls[0]).toMatchObject({ status: 'paid', ship_name: 'John Doe', ship_country: 'US' })
+      expect(sb.updateCalls.at(-1)).toMatchObject({ status: 'draft_created', printful_order_id: '555' })
+      const [url] = fetchMock.mock.calls[0] as [string]
+      expect(url).toContain('/orders?confirm=false')
+    })
+
+    it('«order already exists» (4xx с external_id в тексте) трактуется успехом', async () => {
+      const sb = mockMerchSupabase({ order: merchOrder({ status: 'paid' }) })
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(printfulError(400, 'Order with this external_id already exists')))
+      const { POST } = await import('./route')
+
+      const res = await POST(signedRequest(merchEventBody()))
+
+      expect(res.status).toBe(200)
+      expect(sb.updateCalls.at(-1)).toMatchObject({ status: 'draft_created' })
+    })
+
+    it('прочие 4xx Printful дают failed и 200 (ретрай не поможет)', async () => {
+      const sb = mockMerchSupabase({ order: merchOrder({ status: 'paid' }) })
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(printfulError(400, 'Invalid recipient country')))
+      const { POST } = await import('./route')
+
+      const res = await POST(signedRequest(merchEventBody()))
+
+      expect(res.status).toBe(200)
+      expect(sb.updateCalls.at(-1)).toMatchObject({ status: 'failed', printful_attempts: 1 })
+    })
+
+    it('5xx Printful даёт 500 (Stripe переотправит), статус остаётся не failed до потолка попыток', async () => {
+      const sb = mockMerchSupabase({ order: merchOrder({ status: 'paid', printful_attempts: 1 }) })
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(printfulError(502, 'internal error')))
+      const { POST } = await import('./route')
+
+      const res = await POST(signedRequest(merchEventBody()))
+
+      expect(res.status).toBe(500)
+      const last = sb.updateCalls.at(-1) as Record<string, unknown>
+      expect(last['printful_attempts']).toBe(2)
+      expect(last['status']).toBeUndefined()
+    })
+
+    it('5xx на пятой попытке достигает потолка: status=failed и 200, а не 500', async () => {
+      const sb = mockMerchSupabase({ order: merchOrder({ status: 'paid', printful_attempts: 4 }) })
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(printfulError(502, 'internal error')))
+      const { POST } = await import('./route')
+
+      const res = await POST(signedRequest(merchEventBody()))
+
+      expect(res.status).toBe(200)
+      expect(sb.updateCalls.at(-1)).toMatchObject({ printful_attempts: 5, status: 'failed' })
+    })
+
+    it('status=failed и attempts уже на потолке: 200 без нового похода в Printful', async () => {
+      mockMerchSupabase({ order: merchOrder({ status: 'failed', printful_attempts: 5 }) })
+      const fetchMock = vi.fn()
+      vi.stubGlobal('fetch', fetchMock)
+      const { POST } = await import('./route')
+
+      const res = await POST(signedRequest(merchEventBody()))
+
+      expect(res.status).toBe(200)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('повторная доставка события на уже доведённом заказе не создаёт второй заказ у Printful', async () => {
+      mockMerchSupabase({ order: merchOrder({ status: 'draft_created', printful_order_id: '555' }) })
+      const fetchMock = vi.fn()
+      vi.stubGlobal('fetch', fetchMock)
+      const { POST } = await import('./route')
+
+      const res = await POST(signedRequest(merchEventBody()))
+
+      expect(res.status).toBe(200)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('cancelled заказ отвечает 200 и ничего не трогает', async () => {
+      mockMerchSupabase({ order: merchOrder({ status: 'cancelled' }) })
+      const fetchMock = vi.fn()
+      vi.stubGlobal('fetch', fetchMock)
+      const { POST } = await import('./route')
+
+      const res = await POST(signedRequest(merchEventBody()))
+
+      expect(res.status).toBe(200)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('чужой user_id (подделанные metadata) отвечает 200 и не идёт в Printful', async () => {
+      mockMerchSupabase({ order: merchOrder({ user_id: 'someone-else' }) })
+      const fetchMock = vi.fn()
+      vi.stubGlobal('fetch', fetchMock)
+      const { POST } = await import('./route')
+
+      const res = await POST(signedRequest(merchEventBody()))
+
+      expect(res.status).toBe(200)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('сумма события расходится с retail_cents заказа: 200 без записи и без Printful', async () => {
+      mockMerchSupabase({ order: merchOrder({ retail_cents: 3000 }) })
+      const fetchMock = vi.fn()
+      vi.stubGlobal('fetch', fetchMock)
+      const { POST } = await import('./route')
+
+      const res = await POST(signedRequest(merchEventBody()))
+
+      expect(res.status).toBe(200)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('без адреса доставки в событии: заказ уходит в failed, 200, Printful не трогаем', async () => {
+      const sb = mockMerchSupabase()
+      const fetchMock = vi.fn()
+      vi.stubGlobal('fetch', fetchMock)
+      const { POST } = await import('./route')
+
+      const res = await POST(signedRequest(merchEventBody({ shipping_details: null, customer_details: null })))
+
+      expect(res.status).toBe(200)
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(sb.updateCalls.at(-1)).toMatchObject({ status: 'failed', last_error: 'no shipping address' })
+    })
+
+    it('merch_order_id отсутствует в metadata: 200, чтения заказа не было', async () => {
+      const sb = mockMerchSupabase()
+      const { POST } = await import('./route')
+
+      const res = await POST(
+        signedRequest(topupEventBody({ amount_total: 2199, metadata: { supabase_user_id: 'user-1', kind: 'merch' } })),
+      )
+
+      expect(res.status).toBe(200)
+      expect(sb.select).not.toHaveBeenCalled()
+    })
+
+    it('заказ не найден в базе: 200, Printful не трогаем', async () => {
+      mockMerchSupabase({ order: null })
+      const fetchMock = vi.fn()
+      vi.stubGlobal('fetch', fetchMock)
+      const { POST } = await import('./route')
+
+      const res = await POST(signedRequest(merchEventBody()))
+
+      expect(res.status).toBe(200)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('ошибка чтения заказа даёт 500: Stripe переотправит', async () => {
+      mockMerchSupabase({ readError: { message: 'connection reset' } })
+      const { POST } = await import('./route')
+
+      const res = await POST(signedRequest(merchEventBody()))
+
+      expect(res.status).toBe(500)
+    })
   })
 })

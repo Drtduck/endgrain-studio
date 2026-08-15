@@ -15,11 +15,28 @@ const FREE_STATUS: ProStatus = { pro: false, reason: 'free', plan: null, current
  * Состояния кроме 'mock'/'anonymous' подразумевают вошедшего человека - сессия
  * приезжает тем же пропсом, что и в проде (SessionProvider из корневого layout).
  */
-function renderWithAccess(state: AiAccessState, used = 0, limit: number = AI_MONTHLY_LIMIT, credits = 0) {
+// Цены-заглушки по примеру §2.6 спеки merch-orders.md: точные числа не важны, важно,
+// что они приходят пропсом с сервера, а не считаются в компоненте.
+const MERCH_PRICES = { tshirt: 2199, mug: 2199, poster: 3099, apron: 4199 }
+
+function renderWithAccess(
+  state: AiAccessState,
+  used = 0,
+  limit: number = AI_MONTHLY_LIMIT,
+  credits = 0,
+  merchEnabled = true,
+) {
   const user = state === 'anonymous' || state === 'mock' ? null : { id: 'user-1', email: 'a@b.co' }
   return render(
     <SessionProvider value={{ user, enabled: true }}>
-      <ProProvider value={{ status: FREE_STATUS, billingEnabled: true, ai: aiAccess(state, used, limit, credits) }}>
+      <ProProvider
+        value={{
+          status: FREE_STATUS,
+          billingEnabled: true,
+          ai: aiAccess(state, used, limit, credits),
+          merch: { enabled: merchEnabled, prices: MERCH_PRICES },
+        }}
+      >
         <PromoPanel />
       </ProProvider>
     </SessionProvider>,
@@ -78,6 +95,17 @@ const createSeriesResult: { current: (input: CreateSeriesInput) => CreateSeriesR
     },
   }),
 }
+
+const checkoutInput = vi.fn<(input: unknown) => void>()
+type CheckoutResult = { readonly ok: true; readonly url: string } | { readonly ok: false; readonly error: string }
+const checkoutResult: { current: CheckoutResult } = { current: { ok: true, url: 'https://checkout.stripe.com/session-1' } }
+
+vi.mock('@/app/actions/merch', () => ({
+  createMerchCheckoutAction: (input: unknown) => {
+    checkoutInput(input)
+    return Promise.resolve(checkoutResult.current)
+  },
+}))
 
 // ensureSaved() (useProjectGuard) должен успешно "сохранить" проект без похода
 // в Supabase, которого в юнит-тестах нет: иначе клик по генерации у вошедшего
@@ -163,7 +191,10 @@ describe('PromoPanel', () => {
     }
   })
 
-  it('без ключа Printful кнопки «Открыть в Printful» нет, а после ответа появляется подпись про ключ', async () => {
+  // Регресс на удаление кнопки «Открыть в Printful» (§9.1 спеки merch-orders.md):
+  // покупка идёт через нашу кассу, кабинет Printful покупателю показывать нельзя
+  // ни в каком состоянии ключей.
+  it('без ключа Printful кнопки «Открыть в Printful» нет вовсе, появляется подпись про ключ', async () => {
     render(<PromoPanel />)
     expect(screen.queryByTestId('merch-printful')).toBeNull()
     fireEvent.click(screen.getByTestId('merch-generate'))
@@ -171,12 +202,12 @@ describe('PromoPanel', () => {
     expect(screen.queryByTestId('merch-printful')).toBeNull()
   })
 
-  it('ответ с ключом Printful показывает кнопку и убирает предупреждение', async () => {
+  it('ответ с ключом Printful убирает предупреждение про ключ, кнопки «Открыть в Printful» по-прежнему нет', async () => {
     merchResult.current = { printful: true }
     render(<PromoPanel />)
     fireEvent.click(screen.getByTestId('merch-generate'))
-    await waitFor(() => expect(screen.getByTestId('merch-printful')).toBeTruthy())
-    expect(screen.getByTestId('merch-note').textContent).not.toContain('PRINTFUL_API_KEY')
+    await waitFor(() => expect(screen.getByTestId('merch-note').textContent).not.toContain('PRINTFUL_API_KEY'))
+    expect(screen.queryByTestId('merch-printful')).toBeNull()
   })
 
   it('вошедший Pro: генерация заводит серию через createPromoSeriesAction с отмеченными пресетами', async () => {
@@ -608,6 +639,113 @@ describe('PromoPanel: мокапы Printful', () => {
     expect(screen.getByTestId('merch-gate').textContent ?? '').not.toBe('')
     // Соседняя панель кадров, наоборот, остаётся открытой: promoShots в trial входит.
     expect(screen.getByTestId('promo-generate').hasAttribute('disabled')).toBe(false)
+  })
+})
+
+/**
+ * Покупка мерча (Э6 спеки merch-orders.md, §9). Кнопка «Купить» - отдельная
+ * от мокапов Printful история: видна всем, без Pro-гейта, и работает даже
+ * когда компоновка ещё локальная заглушка.
+ */
+describe('PromoPanel: покупка мерча', () => {
+  beforeEach(() => {
+    merchResult.current = { printful: false }
+    checkoutInput.mockClear()
+    checkoutResult.current = { ok: true, url: 'https://checkout.stripe.com/session-1' }
+    act(() => {
+      useStudio.getState().resetStudio()
+    })
+  })
+
+  it('MERCH_ENABLED=false: кнопок «Купить» нет вовсе ни на одном товаре', () => {
+    renderWithAccess('pro', 4, AI_MONTHLY_LIMIT, 0, false)
+    for (const id of ['tshirt', 'mug', 'poster', 'apron']) {
+      expect(screen.queryByTestId(`merch-buy-button-${id}`)).toBeNull()
+    }
+  })
+
+  it('кнопка «Купить» видна и без Pro, и без сборки мокапов (гейт AI сюда не дотягивается)', () => {
+    renderWithAccess('trial', 0, FREE_TRIAL_LIMIT, 0, true)
+    // Гейт мокапов заперт в trial (соседний тест выше), а кнопка покупки открыта всё равно.
+    expect(screen.getByTestId('merch-generate').hasAttribute('disabled')).toBe(true)
+    for (const id of ['tshirt', 'mug', 'poster', 'apron']) {
+      expect(screen.getByTestId(`merch-buy-button-${id}`).hasAttribute('disabled')).toBe(false)
+    }
+  })
+
+  it('гостю кнопка тоже видна: анонимность не прячет покупку', () => {
+    renderWithAccess('anonymous', 0, FREE_TRIAL_LIMIT, 0, true)
+    expect(screen.getByTestId('merch-buy-button-mug').hasAttribute('disabled')).toBe(false)
+  })
+
+  it('гость: клик по «Купить» уходит на сервер, ответ unauthenticated показывает приглашение войти', async () => {
+    checkoutResult.current = { ok: false, error: 'unauthenticated' }
+    render(
+      <SessionProvider value={{ user: null, enabled: true }}>
+        <ProProvider
+          value={{
+            status: FREE_STATUS,
+            billingEnabled: true,
+            ai: aiAccess('anonymous'),
+            merch: { enabled: true, prices: MERCH_PRICES },
+          }}
+        >
+          <PromoPanel />
+        </ProProvider>
+      </SessionProvider>,
+    )
+    fireEvent.click(screen.getByTestId('merch-buy-button-mug'))
+    await waitFor(() => expect(checkoutInput).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByTestId('merch-buy-error')).toBeTruthy())
+    expect(screen.getByTestId('merch-buy-error').textContent ?? '').not.toBe('')
+  })
+
+  it('клик по кружке (не футболка) отправляет заказ сразу, без модалки размера', async () => {
+    renderWithAccess('pro', 4)
+    fireEvent.click(screen.getByTestId('merch-buy-button-mug'))
+    expect(screen.queryByTestId('merch-size-dialog')).toBeNull()
+    await waitFor(() => expect(checkoutInput).toHaveBeenCalled())
+    const input = checkoutInput.mock.calls[0]?.[0] as { product?: string; size?: string }
+    expect(input.product).toBe('mug')
+    expect(input.size).toBe('one')
+  })
+
+  it('клик по футболке открывает модалку выбора размера', () => {
+    renderWithAccess('pro', 4)
+    expect(screen.queryByTestId('merch-size-dialog')).toBeNull()
+    fireEvent.click(screen.getByTestId('merch-buy-button-tshirt'))
+    expect(screen.getByTestId('merch-size-dialog')).toBeTruthy()
+    for (const size of ['s', 'm', 'l', 'xl']) {
+      expect(screen.getByTestId(`merch-size-${size}`)).toBeTruthy()
+    }
+  })
+
+  it('в модалке размера можно выбрать размер и отправить заказ с ним', async () => {
+    renderWithAccess('pro', 4)
+    fireEvent.click(screen.getByTestId('merch-buy-button-tshirt'))
+    fireEvent.click(screen.getByTestId('merch-size-l'))
+    fireEvent.click(screen.getByTestId('merch-size-checkout'))
+    await waitFor(() => expect(checkoutInput).toHaveBeenCalled())
+    const input = checkoutInput.mock.calls[0]?.[0] as { product?: string; size?: string }
+    expect(input.product).toBe('tshirt')
+    expect(input.size).toBe('l')
+  })
+
+  it('ошибка сервера (render/storage/failed) показана человеческим текстом под галереей', async () => {
+    checkoutResult.current = { ok: false, error: 'render' }
+    renderWithAccess('pro', 4)
+    fireEvent.click(screen.getByTestId('merch-buy-button-poster'))
+    await waitFor(() => expect(screen.getByTestId('merch-buy-error')).toBeTruthy())
+    const text = screen.getByTestId('merch-buy-error').textContent ?? ''
+    expect(text).not.toBe('')
+    expect(text).not.toContain('render')
+  })
+
+  it('регресс: кнопки «Открыть в Printful» нет на панели ни при каком состоянии покупки', () => {
+    renderWithAccess('pro', 4)
+    expect(screen.queryByTestId('merch-printful')).toBeNull()
+    fireEvent.click(screen.getByTestId('merch-buy-button-tshirt'))
+    expect(screen.queryByTestId('merch-printful')).toBeNull()
   })
 })
 
