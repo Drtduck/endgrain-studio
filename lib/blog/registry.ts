@@ -8,6 +8,8 @@ import { meta as shirinaPolosVtoroySkleyki } from '@/content/blog/shirina-polos-
 import { meta as shirinaPolosVtoroySkleykiEn } from '@/content/blog/shirina-polos-vtoroy-skleyki-en.mdx'
 import { meta as freeEndGrainDesignTool } from '@/content/blog/free-end-grain-design-tool.mdx'
 import { meta as freeEndGrainDesignToolRu } from '@/content/blog/free-end-grain-design-tool-ru.mdx'
+import { meta as realCostEndGrainBoard } from '@/content/blog/real-cost-end-grain-cutting-board.mdx'
+import { meta as realCostEndGrainBoardRu } from '@/content/blog/real-cost-end-grain-cutting-board-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -27,4 +29,6 @@ export const POST_METAS: readonly PostMeta[] = [
   shirinaPolosVtoroySkleykiEn,
   freeEndGrainDesignTool,
   freeEndGrainDesignToolRu,
+  realCostEndGrainBoard,
+  realCostEndGrainBoardRu,
 ]
