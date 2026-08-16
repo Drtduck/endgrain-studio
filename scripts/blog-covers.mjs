@@ -70,6 +70,18 @@ const COVERS = [
     subtitle: 'Что умеют бесплатные инструменты и где они кончаются',
     stripes: ['#3a2a20', '#e3caa1', '#a5613b'],
   },
+  {
+    slug: 'real-cost-end-grain-cutting-board',
+    title: 'The Real Cost of an End Grain Board',
+    subtitle: 'Five board feet in, two board feet out',
+    stripes: ['#a8422a', '#e3caa1', '#5b3a24'],
+  },
+  {
+    slug: 'real-cost-end-grain-cutting-board-ru',
+    title: 'Себестоимость торцевой доски',
+    subtitle: 'Пять board feet на входе, два на выходе',
+    stripes: ['#a8422a', '#e3caa1', '#5b3a24'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {

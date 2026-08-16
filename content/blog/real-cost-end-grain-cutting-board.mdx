@@ -1,0 +1,107 @@
+import { Answer } from '../../components/blog/Answer'
+
+export const meta = {
+  slug: 'real-cost-end-grain-cutting-board',
+  lang: 'en',
+  title: 'What Is the Real Cost to Make an End Grain Cutting Board?',
+  description:
+    'A line by line breakdown for a 12 x 16 in maple and walnut board: lumber, glue, abrasives, oil, power, blade wear, scrap rate and the hours nobody counts.',
+  answer:
+    'For a 12 x 16 x 1.5 in board in maple and walnut, materials land near $70 at 2026 hardwood-dealer prices, and $49 of that is the lumber itself. The number that surprises people is purchased volume: about 5 board feet go in for 2 board feet of finished board, because milling and kerf eat the rest. Add five to seven hours of shop time and the real cost of the board is closer to $220 than to the $35 you see on a marketplace listing.',
+  date: '2026-08-16',
+  updated: '2026-08-16',
+  tags: ['cost', 'planning', 'selling'],
+  cover: '/blog/real-cost-end-grain-cutting-board/cover.jpg',
+  readingMinutes: 8,
+}
+
+<Answer>{meta.answer}</Answer>
+
+Most cost threads in woodworking groups die at "about 40 bucks in wood, I guess". That estimate is usually wrong by half, and always in the same direction, because it prices the wood that ends up in the board rather than the wood you carry out of the lumber yard. An end grain board is milled twice, glued twice and flattened at least once, and every one of those passes turns paid-for hardwood into dust on the shop floor. Here is the whole bill for one specific board, with the assumptions written out so you can swap your own prices in.
+
+## What board are we costing?
+
+Everything below is one board: 305 x 406 x 38 mm (12 x 16 x 1.5 in), hard maple and black walnut in a checkerboard of 38 mm squares, built the standard way. Strips of 38 x 38 mm get glued into a panel, the panel gets crosscut into 44 mm slices, and the slices get rotated and glued again into the finished field. Kerf is 3 mm, which is what a full-kerf 250 mm blade takes.
+
+Finished volume is easy: 12 x 16 x 1.5 in is exactly 2 board feet. Purchased volume is the interesting part.
+
+| Loss | Where it happens | Volume |
+|---|---|---|
+| Rough 8/4 down to 38 mm | Jointing and planing before any layout | ~1.9 bf |
+| Rip kerf, 3 mm per strip | 11 strips means 11 rips | ~0.3 bf |
+| Crosscut kerf, 3 mm per slice | 11 slices out of the first panel | ~0.3 bf |
+| Squaring and end trim | Snipe, glue squeeze-out, out-of-square ends | ~0.4 bf |
+| Flattening after glue-up two | 44 mm slices down to 38 mm finished | included above |
+| **Board itself** | | **2.0 bf** |
+| **Bought at the yard** | | **~4.9 bf** |
+
+So roughly 5 board feet purchased for 2 board feet delivered. The 25 to 30 percent waste figure that circulates in forums counts only the cuts, and it is right as far as it goes. It leaves out the plane-down from rough 8/4, which on this board is the single biggest loss line. If you buy S4S stock instead, that loss moves to the lumber dealer and comes back to you as a higher price per board foot, not as savings.
+
+<ArticleFigure
+  src="/blog/images/real-cost-end-grain-cutting-board-1.jpg"
+  alt="A stack of rough sawn hardwood planks lying on a workshop bench"
+  caption="You pay for this pile by volume. The board keeps about two fifths of it, and the rest leaves as chips, dust and offcuts."
+  photographer="Pew Nguyen"
+  photographerUrl="https://www.pexels.com/@nguyendesigner"
+  pexelsUrl="https://www.pexels.com/photo/piled-wooden-planks-in-workshop-ready-for-crafting-37162561/"
+/>
+
+## How much does the lumber itself cost?
+
+Prices vary by region more than any other line here, so treat these as the middle of the range at a hardwood dealer in the US in 2026 rather than as a quote. Rough 8/4 hard maple runs about $6 to $9 per board foot, and 8/4 black walnut about $12 to $18. A big-box store selling surfaced boards in 1x4 form will be two to four times that per board foot, which is why the first piece of cost advice in this whole article is to find a real lumber yard before you find a pattern.
+
+Split the 4.9 bf as 60 percent maple and 40 percent walnut, price it at $7 and $14, and lumber comes to about $49. Swap walnut for cherry and it drops near $40. Swap it for a figured species and it doubles without touching the design.
+
+## Where does the rest of the money go?
+
+| Item | Assumption | Per board |
+|---|---|---|
+| Hardwood | 4.9 bf, maple and walnut mix | $49 |
+| Glue | ~90 ml of Titebond III over two glue-ups, $12 per 473 ml bottle | $2.30 |
+| Abrasives | 4 discs at 80, 120, 180, 220 grit plus drum sander belt wear | $5 |
+| Finish | 40 ml mineral oil and beeswax blend | $2 |
+| Rubber feet | Optional, 4 per board | $2 |
+| Blade and cutter wear | Glue line rip blade amortized over ~50 boards, planer knives | $2.50 |
+| Power | ~3 kWh across saw, planer, sander at $0.17 per kWh | $0.50 |
+| Scrap allowance | One board in ten fails at glue-up or cracks | $6 |
+| Packaging | Box, wrap, care card, only if you ship it | $5 |
+| **Materials total** | | **$70 to $75** |
+
+Two of those lines get skipped in almost every forum estimate. The scrap allowance is real: end grain glue-ups fail at a rate hobbyists rarely track, and a board that cracks along a glue line after the second clamp-up costs full material and full hours. The second glue-up also drinks glue in a way the first one does not, because open end grain wicks it in, so budget nearer 90 ml than the 40 ml a face grain panel of the same size would take.
+
+<NewsletterBreak locale="en" />
+
+## Do the hours belong in the number?
+
+This is where the real number lives. Rough milling, ripping strips, first glue-up, cleanup, crosscutting, second glue-up, flattening, sanding through the grits, easing edges, oiling over two or three coats. Call it five to seven hours of hands-on time for someone who has built a few, spread across three days because glue needs to cure overnight between stages.
+
+At $25 per hour, which is modest for skilled shop time, six hours is $150. Materials plus labor lands the true cost of this board at $220 to $225. If you value your time at zero, the board still cost you $70 in materials and three calendar days.
+
+This is the arithmetic behind the question that follows every cost thread: how a marketplace listing shows an "end grain" board at $35. Three explanations cover almost all of them. It is edge grain photographed to look like end grain, it is imported and resold, or the seller has never counted anything past the wood.
+
+<ArticleFigure
+  src="/blog/images/real-cost-end-grain-cutting-board-2.jpg"
+  alt="A woodworker feeding a board through a thickness planer in a workshop"
+  caption="The most expensive pass in the whole build. Every millimeter taken off here was paid for at the yard by the board foot."
+  photographer="Anna Shvets"
+  photographerUrl="https://www.pexels.com/@shvetsa"
+  pexelsUrl="https://www.pexels.com/photo/crop-carpenter-using-thicknessing-machine-to-trim-wooden-board-5711707/"
+/>
+
+## Which knobs move the cost most?
+
+Species is the loudest one, and the cheapest to turn. Going from a walnut and maple mix to cherry and maple takes roughly $9 off this board with no change to the design or the hours. Second is stock thickness: buying 8/4 that surfaces close to 44 mm instead of 8/4 that needs 12 mm planed off recovers most of that 1.9 bf milling loss, though yards rarely let you cherry-pick.
+
+Pattern geometry moves cost in a way people underestimate. Every angled cut in a chevron throws away a triangle at both ends of the strip, and waste on angled patterns runs past 40 percent instead of 25. A 3D cube pattern adds a third species and a second strip width, which usually means buying a longer board of each rather than the exact volume needed. My own rule after too many miscounts: if the pattern has any cut that is not 90 degrees, add 15 percent to the lumber line before you order.
+
+Batching helps more than any single trick. Milling stock and gluing panels for four boards at once spreads setup time across the batch, and offcuts from one board become border strips on the next. Per-board hours drop by roughly a third once you stop building one at a time.
+
+## How do you get this number for your own board?
+
+By hand it is a spreadsheet with a row per species, a kerf column and a waste multiplier you have to remember to apply. That is doable once. It becomes tedious the third time you change a square size and have to redo every downstream cell.
+
+[Endgrain Studio](/?tab=editor) does this from the pattern itself. You lay out the squares, set your kerf and stock thickness, and the studio returns strip widths and counts, the crosscut plan, material volume by species with waste already counted, and a cost estimate driven by the prices you enter for your own lumber yard. The whole thing prints as a PDF you take to the shop, and the project is saved, so a repeat order is a reprint rather than a fresh evening of arithmetic.
+
+## The short version
+
+The honest cost of one 12 x 16 in end grain board in maple and walnut is about $70 in materials and six hours of shop time, and the reason it is not $40 is that you buy 5 board feet to deliver 2. Price your own board by working out purchased volume first, because that single number carries more error than every other line combined. If you want to see exactly where those cuts go, the walkthrough on [kerf and allowances](/blog/kerf-i-pripuski-en) traces 3 mm per cut through a full lumber order.
