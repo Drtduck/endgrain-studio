@@ -60,7 +60,7 @@ test('переход по карточке ведёт на статью с H1, �
 }) => {
   await page.goto('/blog')
   await page.getByTestId('blog-post-card').first().locator('h2 a').click()
-  await expect(page).toHaveURL(/\/blog\/[a-z-]+$/)
+  await expect(page).toHaveURL(/\/blog\/[a-z0-9-]+$/)
 
   await expect(page.getByRole('heading', { level: 1 })).not.toBeEmpty()
   await expect(page.getByTestId('blog-answer')).toBeVisible()
