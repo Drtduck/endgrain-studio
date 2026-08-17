@@ -82,6 +82,18 @@ const COVERS = [
     subtitle: 'Пять board feet на входе, два на выходе',
     stripes: ['#a8422a', '#e3caa1', '#5b3a24'],
   },
+  {
+    slug: 'checkerboard-3d-cube-strip-widths',
+    title: 'Checkerboard, Brick and 3D Cube Math',
+    subtitle: 'Strip widths that come out even',
+    stripes: ['#3a2a20', '#e3caa1', '#5b3a24', '#a5613b'],
+  },
+  {
+    slug: 'checkerboard-3d-cube-strip-widths-ru',
+    title: 'Шахматка, кирпичик и 3D-куб',
+    subtitle: 'Ширины полос, которые сходятся нацело',
+    stripes: ['#3a2a20', '#e3caa1', '#5b3a24', '#a5613b'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {

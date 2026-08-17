@@ -10,6 +10,8 @@ import { meta as freeEndGrainDesignTool } from '@/content/blog/free-end-grain-de
 import { meta as freeEndGrainDesignToolRu } from '@/content/blog/free-end-grain-design-tool-ru.mdx'
 import { meta as realCostEndGrainBoard } from '@/content/blog/real-cost-end-grain-cutting-board.mdx'
 import { meta as realCostEndGrainBoardRu } from '@/content/blog/real-cost-end-grain-cutting-board-ru.mdx'
+import { meta as checkerboard3dCubeStripWidths } from '@/content/blog/checkerboard-3d-cube-strip-widths.mdx'
+import { meta as checkerboard3dCubeStripWidthsRu } from '@/content/blog/checkerboard-3d-cube-strip-widths-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -31,4 +33,6 @@ export const POST_METAS: readonly PostMeta[] = [
   freeEndGrainDesignToolRu,
   realCostEndGrainBoard,
   realCostEndGrainBoardRu,
+  checkerboard3dCubeStripWidths,
+  checkerboard3dCubeStripWidthsRu,
 ]
