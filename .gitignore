@@ -30,3 +30,6 @@ next-env.d.ts
 /blob-report/
 /playwright/.cache/
 /.playwright-mcp/
+
+# временные кандидаты фото для блога
+.tmp/
