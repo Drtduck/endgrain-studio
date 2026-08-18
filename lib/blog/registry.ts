@@ -12,6 +12,8 @@ import { meta as realCostEndGrainBoard } from '@/content/blog/real-cost-end-grai
 import { meta as realCostEndGrainBoardRu } from '@/content/blog/real-cost-end-grain-cutting-board-ru.mdx'
 import { meta as checkerboard3dCubeStripWidths } from '@/content/blog/checkerboard-3d-cube-strip-widths.mdx'
 import { meta as checkerboard3dCubeStripWidthsRu } from '@/content/blog/checkerboard-3d-cube-strip-widths-ru.mdx'
+import { meta as whyEndGrainBoardWarped } from '@/content/blog/why-end-grain-board-warped.mdx'
+import { meta as whyEndGrainBoardWarpedRu } from '@/content/blog/why-end-grain-board-warped-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -35,4 +37,6 @@ export const POST_METAS: readonly PostMeta[] = [
   realCostEndGrainBoardRu,
   checkerboard3dCubeStripWidths,
   checkerboard3dCubeStripWidthsRu,
+  whyEndGrainBoardWarped,
+  whyEndGrainBoardWarpedRu,
 ]

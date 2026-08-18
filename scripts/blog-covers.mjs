@@ -94,6 +94,18 @@ const COVERS = [
     subtitle: 'Ширины полос, которые сходятся нацело',
     stripes: ['#3a2a20', '#e3caa1', '#5b3a24', '#a5613b'],
   },
+  {
+    slug: 'why-end-grain-board-warped',
+    title: 'Why the Board Cupped After Glue-Up',
+    subtitle: 'Moisture content decides the shape',
+    stripes: ['#5b3a24', '#e3caa1', '#a8422a'],
+  },
+  {
+    slug: 'why-end-grain-board-warped-ru',
+    title: 'Почему доску повело после склейки',
+    subtitle: 'Форму доски решает влажность',
+    stripes: ['#5b3a24', '#e3caa1', '#a8422a'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {
