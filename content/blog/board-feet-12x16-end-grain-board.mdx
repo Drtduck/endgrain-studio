@@ -1,0 +1,116 @@
+import { Answer } from '../../components/blog/Answer'
+
+export const meta = {
+  slug: 'board-feet-12x16-end-grain-board',
+  lang: 'en',
+  title: 'How Much Wood (Board Feet) Do I Need for a 12x16 End Grain Board?',
+  description:
+    'A 12x16x1.5 inch end grain board holds 2 board feet of wood and takes about 5 board feet of rough 8/4 to build. Here is where every lost inch goes.',
+  answer:
+    'A finished 12 by 16 inch end grain board at 1.5 inches thick contains 2.0 board feet of wood, and you should buy about 5 board feet of rough 8/4 hardwood to build it. The 2.5x factor is not padding: surfacing 2 inch rough stock down to 1.5 inches costs 25 percent before you make a single cut, saw kerf takes another 8 percent, and trimming the panel after each glue-up takes roughly 20 percent more. At typical 2026 lumberyard prices that is $45 to $55 in maple and walnut for one board.',
+  date: '2026-08-19',
+  updated: '2026-08-19',
+  tags: ['material', 'board feet', 'waste'],
+  cover: '/blog/board-feet-12x16-end-grain-board/cover.jpg',
+  readingMinutes: 8,
+}
+
+<Answer>{meta.answer}</Answer>
+
+The board foot question comes up at the lumberyard, usually with a cart already loaded and a phone calculator open. The number in the finished board is easy. The number you have to buy is roughly two and a half times bigger, and every woodworker who guessed once has driven back for one more piece of walnut.
+
+## What is a board foot and how do I calculate it?
+
+A board foot is 144 cubic inches of lumber: one inch thick, twelve inches wide, twelve inches long. The formula:
+
+```
+board feet = thickness (in) x width (in) x length (in) / 144
+```
+
+Our target board is 12 x 16 inches (305 x 406 mm) at 1.5 inches thick (38 mm). That gives 1.5 x 12 x 16 / 144 = 2.0 board feet in the finished piece.
+
+Two facts about how yards charge that trip people up. First, thickness is billed at the rough dimension, so 8/4 stock is 2 inches for pricing even though it dresses to 1.75. Second, rough boards are usually measured at their narrowest usable width, and many yards round to the next half inch. Between those two, the invoice runs ahead of the tape measure before you have made a cut.
+
+<ArticleFigure
+  src="/blog/images/board-feet-12x16-end-grain-board-1.jpg"
+  alt="Stacked hardwood billets in a warehouse with board footage written on the ends in chalk"
+  caption="Yard stock with the tally written on the end. That number is rough thickness and rough width, not what will be left after you mill it."
+  photographer="Nishant Aneja"
+  photographerUrl="https://www.pexels.com/@nishantaneja"
+  pexelsUrl="https://www.pexels.com/photo/wooden-planks-marked-with-pen-12142000/"
+/>
+
+## Why does a 2 board foot board need 5 board feet of lumber?
+
+Because an end grain board is built twice, and each stage throws material away. Work the geometry backwards from the finished piece with 1.5 inch squares on the face.
+
+The final board is 12 inches wide, which comes from 9 crosscut slices at 1.5 inches each (13.5 inches glued, trimmed back to 12). It is 16 inches long, which comes from the width of the first panel, so that panel needs 11 strips at 1.5 inches (16.5 inches, trimmed to 16). Each slice is crosscut 1.75 inches wide so there is 0.25 inch to lose while flattening the final board back to 1.5.
+
+That means the first glue-up panel has to give up 9 slices at 1.75 inches, plus 8 saw kerfs at 1/8 inch, plus an inch of end trim: about 18 inches of panel length. So the strip stock is 11 pieces of 1.5 x 1.5 inch square, 18 inches long.
+
+Rip those from 8/4 rough at a 1/8 inch kerf and you are buying 11 x 1.625 x 2 x 18 inches of billed lumber, which is 4.5 board feet. Add a margin for a knot, a checked end or a board that turns out to be cupped and you are at 5.
+
+## Where does the other 55 percent go?
+
+Every step below is unavoidable. Knowing the size of each one is what stops you from arguing with the total.
+
+| Step | Loss | Why |
+|---|---|---|
+| Surfacing 8/4 rough to 1.5 in | 25% | You pay for 2 inches, you keep 1.5 |
+| Ripping strips, 1/8 in kerf | 8% | One kerf per strip at 1.5 in pitch |
+| Panel end trim and crosscut kerfs | 12% | 18 in of panel yields 15.75 in of slices |
+| Trimming the second glue-up | 12% | 13.5 in wide glued, 12 in kept |
+| Flattening slices 1.75 to 1.5 in | 14% | The allowance that makes the board flat |
+
+Multiply the survivors rather than adding the losses: 0.75 x 0.92 x 0.88 x 0.89 x 0.86 lands near 45 percent yield. Two board feet of finished board divided by 0.45 is 4.4, and the rest is the defect margin.
+
+The single biggest line is the one that happens before any woodworking: 8/4 rough is billed at 2 inches and lands at 1.5 after you flatten and thickness it. If your jointer takes a heavy first pass or the board arrived with a bow, it is worse.
+
+## Should I buy 8/4 or 4/4?
+
+Buy 8/4 for this board. A 1.5 inch square face is the classic end grain look, and getting a 1.5 inch square out of 4/4 stock means gluing two 0.75 inch pieces together first, which adds a whole extra glue-up and a glue line running through the middle of every square.
+
+The board foot arithmetic barely changes, which surprises people: 4/4 is billed at 1 inch and dresses to 0.75, the same 25 percent loss. What changes is the number of glue lines and the hours. A 12x16 board from 0.75 inch strips has twice as many strips in the first panel, so 22 joints instead of 11, and you clamp twice.
+
+Where 4/4 wins is a brick pattern with 0.75 x 1.5 inch cells, where the thinner stock is the design and not a workaround. If that is the pattern, buy 4/4 and skip the lamination.
+
+<ArticleFigure
+  src="/blog/images/board-feet-12x16-end-grain-board-2.jpg"
+  alt="A hand measuring the width of milled hardwood boards with a tape measure"
+  caption="Measure the milled stock, not the rough board, when you want to know what is actually left to cut strips from."
+  photographer="Julio Muebles"
+  photographerUrl="https://www.pexels.com/@julio-muebles-3330448"
+  pexelsUrl="https://www.pexels.com/photo/a-person-measuring-a-wood-plank-4980787/"
+/>
+
+<NewsletterBreak locale="en" />
+
+## What does 5 board feet cost?
+
+Hardwood pricing moves by region and by whether you are at a real lumberyard or a big box store, so treat these as the shape of the bill rather than a quote. In mid 2026 at a yard selling rough 8/4, hard maple runs around $6 to $9 per board foot and black walnut around $12 to $16.
+
+| Species mix | Board feet | Price/bf | Cost |
+|---|---|---|---|
+| Hard maple | 3.0 | $7 | $21 |
+| Black walnut | 2.0 | $13 | $26 |
+| Total | 5.0 | | $47 |
+
+Two adjustments worth making before you take that number seriously. Big box 1x hardwood is sold by the linear foot at prices that work out to $12 to $18 per board foot for poplar and oak, so the same board costs double. And if you are buying for one board rather than a batch, you will not use a full board's width, so the practical purchase is often 6 board feet with a leftover piece that becomes the next board's accent strip.
+
+## Can I skip the arithmetic?
+
+The math above took four paragraphs because I worked it backwards from the finished piece. That is the right direction, and it is also the part that goes wrong when you change the pattern, the square size or the kerf on your saw.
+
+[Endgrain Studio](/?tab=editor) does that pass automatically: you enter the finished size, the thickness and the pattern, and it returns the strip list, the panel length, the number of slices, and the board feet of rough stock at the thickness you plan to buy, with kerf and flattening allowance already in the numbers. The material sheet prints with the cut list, so the piece of paper you take to the yard has the species split on it instead of one total.
+
+## What if the yard sells random widths?
+
+Most hardwood yards sell rough boards in random widths, so you will not find a board that is exactly the width you need. Work in strips instead of area. An 8/4 board that is 7 inches wide and 8 feet long gives you four 1.5 inch strips across the width with 0.5 inch left over, and each 18 inch length of that board gives you four of the eleven strips you need. Three cuts across the length of a single 8 foot board covers the whole project with room left.
+
+That is the practical version of the answer: one 8/4 board, 6 to 7 inches wide and 6 to 8 feet long, in each of two species, and you can build a 12x16 board plus most of a second one. If you buy exactly 5 board feet in short offcuts you will be right on paper and short in the shop, because offcuts do not give you full length strips.
+
+## What number should I actually write down?
+
+Multiply the finished board volume by 2.5 and buy that in rough 8/4. For the 12x16 at 1.5 inches: 2.0 board feet finished, 5 board feet purchased. For a 9x12 at 1.25 inches: 0.94 finished, so buy 2.5. For an 18x24 at 1.75 inches: 5.25 finished, buy 13.
+
+I would push the factor to 2.75 for a first end grain board and to 3.0 for a chevron or any pattern with angled cuts, where the offcuts at the ends of each row are triangles you cannot reuse. The extra board foot costs about $10 and it is cheaper than a second trip.

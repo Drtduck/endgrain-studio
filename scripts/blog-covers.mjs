@@ -106,6 +106,18 @@ const COVERS = [
     subtitle: 'Форму доски решает влажность',
     stripes: ['#5b3a24', '#e3caa1', '#a8422a'],
   },
+  {
+    slug: 'board-feet-12x16-end-grain-board',
+    title: 'Board Feet for a 12x16 Board',
+    subtitle: 'Two in the board, five on the invoice',
+    stripes: ['#e3caa1', '#5b3a24', '#a5613b'],
+  },
+  {
+    slug: 'board-feet-12x16-end-grain-board-ru',
+    title: 'Сколько дерева на доску 305х406',
+    subtitle: 'Два board feet в доске, пять в чеке',
+    stripes: ['#e3caa1', '#5b3a24', '#a5613b'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {

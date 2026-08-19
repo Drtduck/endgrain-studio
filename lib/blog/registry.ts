@@ -14,6 +14,8 @@ import { meta as checkerboard3dCubeStripWidths } from '@/content/blog/checkerboa
 import { meta as checkerboard3dCubeStripWidthsRu } from '@/content/blog/checkerboard-3d-cube-strip-widths-ru.mdx'
 import { meta as whyEndGrainBoardWarped } from '@/content/blog/why-end-grain-board-warped.mdx'
 import { meta as whyEndGrainBoardWarpedRu } from '@/content/blog/why-end-grain-board-warped-ru.mdx'
+import { meta as boardFeet12x16 } from '@/content/blog/board-feet-12x16-end-grain-board.mdx'
+import { meta as boardFeet12x16Ru } from '@/content/blog/board-feet-12x16-end-grain-board-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -39,4 +41,6 @@ export const POST_METAS: readonly PostMeta[] = [
   checkerboard3dCubeStripWidthsRu,
   whyEndGrainBoardWarped,
   whyEndGrainBoardWarpedRu,
+  boardFeet12x16,
+  boardFeet12x16Ru,
 ]
