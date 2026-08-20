@@ -118,6 +118,18 @@ const COVERS = [
     subtitle: 'Два board feet в доске, пять в чеке',
     stripes: ['#e3caa1', '#5b3a24', '#a5613b'],
   },
+  {
+    slug: 'how-much-to-charge-end-grain-board',
+    title: 'What to Charge for an End Grain Board',
+    subtitle: 'Cost first, margin second, fees third',
+    stripes: ['#a8422a', '#5b3a24', '#e3caa1'],
+  },
+  {
+    slug: 'how-much-to-charge-end-grain-board-ru',
+    title: 'Сколько просить за торцевую доску',
+    subtitle: 'Сначала себестоимость, потом наценка, потом комиссия',
+    stripes: ['#a8422a', '#5b3a24', '#e3caa1'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {
