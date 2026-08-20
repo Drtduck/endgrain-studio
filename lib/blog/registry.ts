@@ -16,6 +16,8 @@ import { meta as whyEndGrainBoardWarped } from '@/content/blog/why-end-grain-boa
 import { meta as whyEndGrainBoardWarpedRu } from '@/content/blog/why-end-grain-board-warped-ru.mdx'
 import { meta as boardFeet12x16 } from '@/content/blog/board-feet-12x16-end-grain-board.mdx'
 import { meta as boardFeet12x16Ru } from '@/content/blog/board-feet-12x16-end-grain-board-ru.mdx'
+import { meta as howMuchToCharge } from '@/content/blog/how-much-to-charge-end-grain-board.mdx'
+import { meta as howMuchToChargeRu } from '@/content/blog/how-much-to-charge-end-grain-board-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -43,4 +45,6 @@ export const POST_METAS: readonly PostMeta[] = [
   whyEndGrainBoardWarpedRu,
   boardFeet12x16,
   boardFeet12x16Ru,
+  howMuchToCharge,
+  howMuchToChargeRu,
 ]
