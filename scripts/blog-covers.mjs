@@ -130,6 +130,18 @@ const COVERS = [
     subtitle: 'Сначала себестоимость, потом наценка, потом комиссия',
     stripes: ['#a8422a', '#5b3a24', '#e3caa1'],
   },
+  {
+    slug: 'repeat-order-same-pattern',
+    title: 'Repeating a Pattern on Order',
+    subtitle: 'Six numbers that make the second board match',
+    stripes: ['#5b3a24', '#e3caa1', '#a5613b'],
+  },
+  {
+    slug: 'repeat-order-same-pattern-ru',
+    title: 'Повтор узора под заказ',
+    subtitle: 'Шесть чисел, чтобы вторая доска совпала',
+    stripes: ['#5b3a24', '#e3caa1', '#a5613b'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {

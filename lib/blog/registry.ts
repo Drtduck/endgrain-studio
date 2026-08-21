@@ -18,6 +18,8 @@ import { meta as boardFeet12x16 } from '@/content/blog/board-feet-12x16-end-grai
 import { meta as boardFeet12x16Ru } from '@/content/blog/board-feet-12x16-end-grain-board-ru.mdx'
 import { meta as howMuchToCharge } from '@/content/blog/how-much-to-charge-end-grain-board.mdx'
 import { meta as howMuchToChargeRu } from '@/content/blog/how-much-to-charge-end-grain-board-ru.mdx'
+import { meta as repeatOrderSamePattern } from '@/content/blog/repeat-order-same-pattern.mdx'
+import { meta as repeatOrderSamePatternRu } from '@/content/blog/repeat-order-same-pattern-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -47,4 +49,6 @@ export const POST_METAS: readonly PostMeta[] = [
   boardFeet12x16Ru,
   howMuchToCharge,
   howMuchToChargeRu,
+  repeatOrderSamePattern,
+  repeatOrderSamePatternRu,
 ]
