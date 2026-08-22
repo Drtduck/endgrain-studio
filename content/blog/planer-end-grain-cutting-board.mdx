@@ -1,0 +1,106 @@
+import { Answer } from '../../components/blog/Answer'
+
+export const meta = {
+  slug: 'planer-end-grain-cutting-board',
+  lang: 'en',
+  title: 'Can I Run an End Grain Cutting Board Through a Thickness Planer?',
+  description:
+    'The honest answer to the oldest argument in cutting board forums: what the knives do to end grain, when a planer pass survives, and what to use instead.',
+  answer:
+    'You can, and plenty of people do it for years without incident, but the failure mode is worse than tearout: an end grain panel can blow apart in the machine and throw pieces at you. If you do it, chamfer all four edges, glue long grain sacrificial strips to the exit end, take passes of 0.4 mm or less, and never do it on a board that has any doubt about its glue lines. A drum sander or a router sled does the same job with no chance of the board exploding, which is why most production shops flatten end grain that way.',
+  date: '2026-08-22',
+  updated: '2026-08-22',
+  tags: ['flattening', 'tools', 'safety'],
+  cover: '/blog/planer-end-grain-cutting-board/cover.jpg',
+  readingMinutes: 8,
+}
+
+<Answer>{meta.answer}</Answer>
+
+Ask this in any woodworking forum and you get two answers within an hour, both stated as settled fact. One person says never, the machine will destroy the board and possibly you. Another says they have run four hundred boards through a lunchbox planer and never lost one. Both are telling the truth, and the gap between them is entirely about technique.
+
+## What do the knives actually do to end grain?
+
+They hit the fibers on the cut end rather than along their length, and wood has almost no strength in that direction.
+
+Planing long grain works because the knife lifts a shaving that stays attached to the board until the chipbreaker snaps it off. On end grain there is nothing holding the fibers to each other sideways. The knife arrives at 10,000 rpm and each cut is a small splitting action rather than a slicing one. Most of the time the fibers give up quietly and you get a slightly fuzzy surface. At the exit edge, where there is no wood left in front to support them, they tear out in chunks.
+
+The chunk is the whole problem. A 6 mm corner blowout on a 38 mm thick board is not a sanding fix, it is a shorter board. And if the tearout starts at a glue line rather than at the edge, the machine can find the seam, lift a whole strip, and jam it into the cutterhead. That is the moment a board becomes a projectile.
+
+<ArticleFigure
+  src="/blog/images/planer-end-grain-cutting-board-1.jpg"
+  alt="Woodworker feeding a wide board into a benchtop thickness planer in a daylit workshop"
+  caption="A benchtop planer taking a long grain board. The same machine handed an end grain panel with square edges is where the argument starts."
+  photographer="Ono Kosuki"
+  photographerUrl="https://www.pexels.com/@ono-kosuki"
+  pexelsUrl="https://www.pexels.com/photo/crop-artisan-flattening-lumber-on-planer-in-workroom-5974016/"
+/>
+
+## Is a helical head safer than straight knives?
+
+Meaningfully, yes, and it does not make the operation safe.
+
+A helical or spiral cutterhead uses dozens of small carbide inserts set at a shear angle, so each one takes a narrow bite and slices across the fibers instead of chopping straight down. Tearout drops noticeably and the surface comes off the machine closer to sanded. What does not change is the force applied to the trailing edge, or the fact that the feed rollers are pressing several hundred pounds onto a panel made of short blocks held together with glue.
+
+| Setup | Typical result on end grain | Real risk |
+|---|---|---|
+| Straight knife lunchbox planer, 1.5 mm pass | Heavy exit tearout, torn corners | High, board can come apart |
+| Straight knife, 0.4 mm pass with backer strips | Clean enough to sand from 80 grit | Moderate |
+| Helical head, 0.4 mm pass with backer strips | Near sanded surface, minor fuzz | Moderate, still panel-dependent |
+| Drum sander, 0.1 mm pass, 80 grit | Flat, ready for 120 grit | Low |
+| Router sled, 3 mm bit overlap | Flat with visible tool marks | Low |
+
+## What has to be true before I feed it in?
+
+Four conditions, and skipping any one of them is where the horror stories come from.
+
+The glue has to be fully cured. Titebond III reaches handling strength in about an hour but full cure at 24 hours, and a panel planed at hour six has joints that will open under roller pressure. Wait the full day.
+
+Every edge needs a chamfer. Break all four edges of the panel with a block plane or a router at 45 degrees, roughly 2 to 3 mm. This removes the unsupported corner that would otherwise be the first thing to tear.
+
+The exit end needs backing. Glue a strip of long grain scrap, 20 mm or so thick, to the trailing edge of the panel with a couple of dabs of hot glue or a clamped caul. The knives blow out into the sacrificial strip instead of your board. This single step is the difference between the people who say it works and the people who say it never does.
+
+And the panel has to be genuinely flat enough to enter. If it rocks on the bed, the roller pressure flexes it, the joint at the high point takes the load, and that is where it splits.
+
+<NewsletterBreak locale="en" />
+
+## How light does the pass need to be?
+
+Under half a millimetre, and lighter is better than faster.
+
+On a benchtop machine that means the smallest increment the depth crank will give you, usually a quarter turn. Depth per pass around 0.2 to 0.4 mm on end grain against 1.5 to 2 mm you would happily take on maple long grain. Removing 3 mm of thickness therefore means eight to twelve passes rather than two, so the operation takes fifteen minutes rather than one.
+
+Feed speed matters too if your machine has two. The slower setting, around 96 feet per minute on a DeWalt 735 against 179 on the fast setting, puts more knife cuts into every millimetre of travel and leaves less for each one to remove. Slow speed, light pass, and a shop vac on the port because end grain produces dust rather than shavings and a clogged chute stalls the feed.
+
+My own position after watching a walnut and maple panel come apart in a friend's planer: I will run an end grain board through a helical head with backer strips when the alternative is an hour on a router sled, and I will not do it on a straight knife machine at all. The surface quality difference is small. The consequence distribution is not.
+
+<ArticleFigure
+  src="/blog/images/planer-end-grain-cutting-board-2.jpg"
+  alt="Hands using a hand plane on a striped glued-up board surrounded by chisels and shavings"
+  caption="A low angle block plane with a freshly honed iron handles end grain fine. It is slow, and on a 300 x 400 mm panel it is an evening rather than a coffee break."
+  photographer="Daniel Reche"
+  photographerUrl="https://www.pexels.com/@daniel-reche-718241"
+  pexelsUrl="https://www.pexels.com/photo/a-person-using-a-wood-planer-7109995/"
+/>
+
+## So what should I flatten it with instead?
+
+A drum sander if you have one, a router sled if you do not.
+
+A drum sander removes 0.1 mm per pass with abrasive rather than impact, so there is no splitting force and nothing to catch a glue line. On a 300 x 400 mm board at 80 grit it takes maybe fifteen passes and twenty minutes to go from glue squeeze-out to flat. That is the reason nearly every shop selling boards regularly owns one.
+
+A router sled costs the price of a straight bit and some plywood. Two rails, a carriage carrying the router, a 25 mm surfacing bit, and you take 1 mm passes across the panel in overlapping rows. Forty minutes per side for a 300 x 400 mm board, plus sanding from 80 grit to knock down the ridges. It handles panels wider than any planer you own, which is the other reason to build one.
+
+Hand tools work for a single board. A low angle jack plane with a sharp iron and a light set cuts end grain cleanly, and a scrub-and-smooth sequence flattens a small board in an evening. It stops being reasonable somewhere around the third board.
+
+## Where does planning the board fit into this?
+
+Before any of it, because the flattening allowance is a number you decide at the saw.
+
+The thickness you crosscut at is the finished thickness plus whatever you plan to remove flattening, and the two methods want different allowances. Drum sanding a well-clamped panel costs about 1.5 mm total across both faces. A router sled on a panel with any cup in it needs 3 mm or more, because you are cutting down to the lowest point of the low face. Guess low and you end up with a 32 mm board when you promised 38.
+
+[Endgrain Studio](/?tab=editor) carries that allowance through the whole chain: set the finished thickness and the flattening method, and the crosscut list comes out at the right thickness, the board foot total accounts for it, and the printed instruction sheet says what to cut rather than what to end up with. The [strip width article](/blog/shirina-polos-vtoroy-skleyki) covers the same allowance from the second glue-up side, where it decides strip width rather than crosscut thickness.
+
+## The short version
+
+A thickness planer will flatten an end grain board, and the reason experienced people still say no is that the failure is sudden rather than gradual. If you do it, wait the full 24 hours for cure, chamfer all four edges, glue a long grain sacrificial strip to the exit end, take 0.4 mm or less per pass at the slow feed, and prefer a helical head. If you plan to make boards regularly, a drum sander pays for itself in ruined panels avoided, and a router sled costs a weekend and a straight bit. Whichever you pick, decide it before you crosscut, because the allowance you leave depends on it.

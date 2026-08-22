@@ -20,6 +20,8 @@ import { meta as howMuchToCharge } from '@/content/blog/how-much-to-charge-end-g
 import { meta as howMuchToChargeRu } from '@/content/blog/how-much-to-charge-end-grain-board-ru.mdx'
 import { meta as repeatOrderSamePattern } from '@/content/blog/repeat-order-same-pattern.mdx'
 import { meta as repeatOrderSamePatternRu } from '@/content/blog/repeat-order-same-pattern-ru.mdx'
+import { meta as planerEndGrainBoard } from '@/content/blog/planer-end-grain-cutting-board.mdx'
+import { meta as planerEndGrainBoardRu } from '@/content/blog/planer-end-grain-cutting-board-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -51,4 +53,6 @@ export const POST_METAS: readonly PostMeta[] = [
   howMuchToChargeRu,
   repeatOrderSamePattern,
   repeatOrderSamePatternRu,
+  planerEndGrainBoard,
+  planerEndGrainBoardRu,
 ]
