@@ -142,6 +142,18 @@ const COVERS = [
     subtitle: 'Шесть чисел, чтобы вторая доска совпала',
     stripes: ['#5b3a24', '#e3caa1', '#a5613b'],
   },
+  {
+    slug: 'planer-end-grain-cutting-board',
+    title: 'End Grain Through a Planer',
+    subtitle: 'It works until the board comes apart',
+    stripes: ['#3a2a20', '#a8422a', '#e3caa1'],
+  },
+  {
+    slug: 'planer-end-grain-cutting-board-ru',
+    title: 'Торцевая доска и рейсмус',
+    subtitle: 'Работает, пока щит не развалился',
+    stripes: ['#3a2a20', '#a8422a', '#e3caa1'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {
