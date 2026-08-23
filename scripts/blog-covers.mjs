@@ -149,6 +149,18 @@ const COVERS = [
     stripes: ['#3a2a20', '#a8422a', '#e3caa1'],
   },
   {
+    slug: 'steps-to-make-end-grain-cutting-board',
+    title: 'Making an End Grain Board',
+    subtitle: 'Nine steps, two of them are waiting',
+    stripes: ['#e3caa1', '#5b3a24', '#a5613b'],
+  },
+  {
+    slug: 'steps-to-make-end-grain-cutting-board-ru',
+    title: 'Торцевая доска от и до',
+    subtitle: 'Девять шагов, два из них - ожидание',
+    stripes: ['#e3caa1', '#5b3a24', '#a5613b'],
+  },
+  {
     slug: 'planer-end-grain-cutting-board-ru',
     title: 'Торцевая доска и рейсмус',
     subtitle: 'Работает, пока щит не развалился',

@@ -23,7 +23,7 @@
 - done how-much-to-charge-end-grain-board | P1 | How much should I charge for an end grain cutting board? | себестоимость-и-цена | Цена выводится из реальной себестоимости и часов, а не копируется с чужого Etsy-листинга; калькулятор студии даёт цифру, от которой можно оттолкнуться. [ES!]
 - done repeat-order-same-pattern | P1 | How do I reproduce the exact same pattern for a repeat order? | повторяемость-и-производство | Без сохранённой схемы повторить узор один в один почти невозможно; сохранённые проекты Endgrain Studio решают это буквально, конкурентов с этой функцией нет. [ES!]
 - done planer-end-grain-cutting-board | P1 | Can I run an end grain cutting board through a thickness planer? | шлифовка-и-выравнивание | Честный разбор физики (нож вырывает волокно вертикально) и вечного спора "никогда" против "тонкими проходами делаю сотнями"; вечнозелёная тема с высоким трафиком по обеим аудиториям. [ES]
-- todo | P1 | What are the steps to make an end grain cutting board, start to finish? | pillar-гайд | Полный пошаговый гайд как основной входной запрос ниши, с воронкой на планирование узора и распила через студию на этапе "спроектируй перед тем, как включить пилу". [ES]
+- done steps-to-make-end-grain-cutting-board | P1 | What are the steps to make an end grain cutting board, start to finish? | pillar-гайд | Полный пошаговый гайд как основной входной запрос ниши, с воронкой на планирование узора и распила через студию на этапе "спроектируй перед тем, как включить пилу". [ES]
 
 ## Остальной бэклог (P1)
 

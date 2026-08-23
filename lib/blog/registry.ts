@@ -22,6 +22,8 @@ import { meta as repeatOrderSamePattern } from '@/content/blog/repeat-order-same
 import { meta as repeatOrderSamePatternRu } from '@/content/blog/repeat-order-same-pattern-ru.mdx'
 import { meta as planerEndGrainBoard } from '@/content/blog/planer-end-grain-cutting-board.mdx'
 import { meta as planerEndGrainBoardRu } from '@/content/blog/planer-end-grain-cutting-board-ru.mdx'
+import { meta as stepsToMakeEndGrainBoard } from '@/content/blog/steps-to-make-end-grain-cutting-board.mdx'
+import { meta as stepsToMakeEndGrainBoardRu } from '@/content/blog/steps-to-make-end-grain-cutting-board-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -55,4 +57,6 @@ export const POST_METAS: readonly PostMeta[] = [
   repeatOrderSamePatternRu,
   planerEndGrainBoard,
   planerEndGrainBoardRu,
+  stepsToMakeEndGrainBoard,
+  stepsToMakeEndGrainBoardRu,
 ]
