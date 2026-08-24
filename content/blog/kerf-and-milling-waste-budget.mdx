@@ -1,0 +1,109 @@
+import { Answer } from '../../components/blog/Answer'
+
+export const meta = {
+  slug: 'kerf-and-milling-waste-budget',
+  lang: 'en',
+  title: 'How Much Waste Should I Budget for Kerf and Milling?',
+  description:
+    'Budget 55 percent waste on an end grain board: kerf takes 12 to 15 percent, milling and trimming take the rest. Here is the number behind every step.',
+  answer:
+    'Budget about 55 percent waste when you buy rough hardwood for an end grain cutting board, which means buying roughly 2.3 times the volume of the finished piece. Saw kerf is the smaller half of that: 12 to 15 percent across the rips and crosscuts on a typical 38 mm (1.5 inch) grid. Milling is the bigger half: surfacing 8/4 rough down to net thickness costs 25 percent on its own, and flattening the second glue-up costs another 15 percent. Adding the losses is wrong; multiply the yields instead.',
+  date: '2026-08-24',
+  updated: '2026-08-24',
+  tags: ['waste', 'kerf', 'material'],
+  cover: '/blog/kerf-and-milling-waste-budget/cover.jpg',
+  readingMinutes: 8,
+}
+
+<Answer>{meta.answer}</Answer>
+
+The waste question usually arrives after the first board, when the receipt from the yard does not match the pile of offcuts under the bench. Somebody on a forum said 25 percent. The bin says otherwise. Both are right about different things, and the gap between them is the reason people run out of walnut halfway through a glue-up.
+
+## What counts as waste here?
+
+Waste is everything that leaves the volume you paid for and does not end up in the finished board. That includes sawdust from the kerf, shavings from the planer, the trimmed ends of both glue-ups, and the board with the checked end that never made it into the pattern.
+
+The distinction that matters: kerf is what the blade eats, milling is what the cutterhead eats. People argue about kerf because it is easy to picture, and they forget milling because it happens in one boring pass at the start. Milling is the larger number by a wide margin.
+
+## How much does saw kerf actually take?
+
+A kerf takes a fixed width out of every cut, so its share of the material depends entirely on how close together the cuts are. On a 38 mm (1.5 inch) strip with a 3.2 mm (1/8 inch) full kerf blade, each strip costs you 41.2 mm of stock to get 38 mm of wood, which is 7.8 percent gone at the rip stage.
+
+| Strip width | Loss at 3.2 mm kerf | Loss at 2.4 mm kerf |
+|---|---|---|
+| 25 mm (1 in) | 11.3% | 8.8% |
+| 38 mm (1.5 in) | 7.8% | 5.9% |
+| 51 mm (2 in) | 5.9% | 4.5% |
+
+<ArticleFigure
+  src="/blog/images/kerf-and-milling-waste-budget-1.jpg"
+  alt="Hands feeding a solid wood board across a table saw blade with the kerf visible in the cut"
+  caption="Every pass leaves a slot as wide as the blade body plus the carbide teeth. Measure it once with calipers and stop guessing at 1/8 inch."
+  photographer="Ismael Campos Carrillo"
+  photographerUrl="https://www.pexels.com/@ismaelcampos"
+  pexelsUrl="https://www.pexels.com/photo/hands-of-carpenter-cutting-wood-with-saw-16496901/"
+/>
+
+Then the same blade goes through the first panel again during the crosscut stage. A 305 x 406 mm (12 x 16 inch) board with a 38 mm grid needs 9 slices, so 8 kerfs at 3.2 mm plus about 25 mm of end trim, which is roughly 12 percent of the panel length.
+
+Add the two stages and kerf runs 12 to 15 percent of your purchased volume on a fine pattern, closer to 10 percent on a coarse one. That is real, and it is still not where most of your lumber goes.
+
+## Where does the milling loss come from?
+
+Three places, and none of them are optional.
+
+First, the yard sells you 8/4 rough at 51 mm and you keep 38 mm after jointing and thicknessing. That is 25 percent before the blade spins once. If the board arrived with a bow you will take more, which is why a cupped bargain board is rarely a bargain.
+
+Second, the crosscut slices come off at 44.5 mm (1.75 inch) so there is 6.5 mm of allowance to remove when you flatten the second glue-up back to 38 mm. That is 15 percent, and skipping it is how boards come out of the sander with a low corner.
+
+Third, both glue-ups get trimmed. The first panel loses its ragged ends, the second loses its edges, and together that is 10 to 12 percent depending on how carefully you aligned the slices before the clamps went on.
+
+| Loss step | Share taken | Fixed or variable |
+|---|---|---|
+| Surfacing 51 mm rough to 38 mm | 25% | Fixed by stock thickness |
+| Rip kerf, 38 mm strips | 8% | Varies with strip width |
+| Crosscut kerf and panel end trim | 12% | Varies with slice count |
+| Trimming the second glue-up | 12% | Varies with your clamping |
+| Flattening 44.5 mm slices to 38 mm | 15% | Fixed by your flattening method |
+| Defects, snipe, one bad strip | 8% | Varies with lumber grade |
+
+Multiply the survivors rather than adding the losses: 0.75 x 0.92 x 0.88 x 0.88 x 0.85 x 0.92 gives 42 percent yield. Round it to 45 percent and you are buying about 2.3 times the finished volume.
+
+## Why does everyone quote 25 percent?
+
+Because 25 percent is a real number for face grain work, where you buy dressed stock, rip a few strips, glue once, and sand. Nobody is wrong about that. An end grain board is built twice and flattened twice, so every loss category fires twice, and the folk number lands at half of the truth.
+
+<NewsletterBreak locale="en" />
+
+## Is a thin kerf blade worth it?
+
+For material, barely. Going from 3.2 mm to 2.4 mm on 38 mm strips saves 1.9 percent of the total, which on a 5 board foot purchase is under a dollar of hardwood.
+
+I stay with a full kerf blade for end grain work anyway, and the reason is not sentiment. A thin plate deflects when you crosscut a 44 mm thick glued panel, and a slice that comes off 0.5 mm out of square shows as a visible step in the finished checkerboard. You then remove that step during flattening, which costs more material than the kerf ever saved. If your saw is underpowered enough that a full kerf blade bogs down in maple, take shallower passes rather than a thinner blade.
+
+<ArticleFigure
+  src="/blog/images/kerf-and-milling-waste-budget-2.jpg"
+  alt="Woodworker feeding a hardwood board through a benchtop thickness planer with shavings piled at the outfeed"
+  caption="The single largest waste line in the whole project: 51 mm of billed thickness going in, 38 mm coming out."
+  photographer="Ono  Kosuki"
+  photographerUrl="https://www.pexels.com/@ono-kosuki"
+  pexelsUrl="https://www.pexels.com/photo/crop-artisan-flattening-lumber-on-planer-in-workroom-5974016/"
+/>
+
+## How do I turn a percentage into a purchase?
+
+Work backwards from the finished volume, then divide by the yield. A 305 x 406 x 38 mm board is 4.7 litres, which is 2.0 board feet. At 45 percent yield you buy 4.4 board feet, and you round up to 5 because lumber comes in whole boards.
+
+That is the arithmetic for one simple grid. Change the square size, the kerf, the flattening allowance or the pattern and every line in the table moves. [Endgrain Studio](/?tab=editor) runs that pass from the pattern itself: you set the finished size, the thickness, your actual blade kerf and the flattening allowance, and it returns the strip list, the panel length, the rough volume to buy and the waste percentage for that specific design. The material sheet prints with the cut list, so the number you carry to the yard came from your saw and not from a forum thread.
+
+## Does batching change the number?
+
+Yes, and it is the one lever that actually moves waste. Most of the trim loss is per panel, not per board: the ragged ends of a first glue-up cost the same 25 mm whether the panel yields 9 slices or 27.
+
+Build three boards from one long panel and yield goes from about 45 percent to somewhere near 55 percent, because end trim and defect margin get spread across three boards instead of one. Species offcuts help too, since the 40 mm strip left over from a walnut rip becomes an accent in the next board rather than firewood.
+
+## What number goes on the shopping list?
+
+Multiply the finished volume by 2.3 for a single board with a 38 mm grid, and by 2.5 if this is your first end grain board or the pattern has angled cuts that leave unusable triangles at the row ends.
+
+For fine patterns with cells under 25 mm, go to 2.7. The kerf percentage climbs as the cells shrink, and the number of parts climbs with it, so the chance of scrapping one strip goes up at exactly the moment each strip matters more. An extra board foot of maple costs about seven dollars, which is less than the fuel for the second trip to the yard.

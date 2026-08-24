@@ -166,6 +166,18 @@ const COVERS = [
     subtitle: 'Работает, пока щит не развалился',
     stripes: ['#3a2a20', '#a8422a', '#e3caa1'],
   },
+  {
+    slug: 'kerf-and-milling-waste-budget',
+    title: 'Kerf and Milling Waste',
+    subtitle: 'Budget 55 percent, not 25',
+    stripes: ['#a8422a', '#e3caa1', '#5b3a24'],
+  },
+  {
+    slug: 'kerf-and-milling-waste-budget-ru',
+    title: 'Отходы на пропил и строжку',
+    subtitle: 'Закладывать 55 процентов, а не 25',
+    stripes: ['#a8422a', '#e3caa1', '#5b3a24'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {
