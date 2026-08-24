@@ -24,6 +24,8 @@ import { meta as planerEndGrainBoard } from '@/content/blog/planer-end-grain-cut
 import { meta as planerEndGrainBoardRu } from '@/content/blog/planer-end-grain-cutting-board-ru.mdx'
 import { meta as stepsToMakeEndGrainBoard } from '@/content/blog/steps-to-make-end-grain-cutting-board.mdx'
 import { meta as stepsToMakeEndGrainBoardRu } from '@/content/blog/steps-to-make-end-grain-cutting-board-ru.mdx'
+import { meta as kerfMillingWaste } from '@/content/blog/kerf-and-milling-waste-budget.mdx'
+import { meta as kerfMillingWasteRu } from '@/content/blog/kerf-and-milling-waste-budget-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -59,4 +61,6 @@ export const POST_METAS: readonly PostMeta[] = [
   planerEndGrainBoardRu,
   stepsToMakeEndGrainBoard,
   stepsToMakeEndGrainBoardRu,
+  kerfMillingWaste,
+  kerfMillingWasteRu,
 ]
