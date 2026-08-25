@@ -178,6 +178,18 @@ const COVERS = [
     subtitle: 'Закладывать 55 процентов, а не 25',
     stripes: ['#a8422a', '#e3caa1', '#5b3a24'],
   },
+  {
+    slug: 'board-cracked-along-glue-line',
+    title: 'Cracked Along the Glue Line',
+    subtitle: 'Starved joint, clamps, or wood movement',
+    stripes: ['#5b3a24', '#e3caa1', '#a8422a'],
+  },
+  {
+    slug: 'board-cracked-along-glue-line-ru',
+    title: 'Трещина по шву склейки',
+    subtitle: 'Голодный шов, зажим или движение древесины',
+    stripes: ['#5b3a24', '#e3caa1', '#a8422a'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {
