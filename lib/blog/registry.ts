@@ -26,6 +26,8 @@ import { meta as stepsToMakeEndGrainBoard } from '@/content/blog/steps-to-make-e
 import { meta as stepsToMakeEndGrainBoardRu } from '@/content/blog/steps-to-make-end-grain-cutting-board-ru.mdx'
 import { meta as kerfMillingWaste } from '@/content/blog/kerf-and-milling-waste-budget.mdx'
 import { meta as kerfMillingWasteRu } from '@/content/blog/kerf-and-milling-waste-budget-ru.mdx'
+import { meta as boardCrackedGlueLine } from '@/content/blog/board-cracked-along-glue-line.mdx'
+import { meta as boardCrackedGlueLineRu } from '@/content/blog/board-cracked-along-glue-line-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -63,4 +65,6 @@ export const POST_METAS: readonly PostMeta[] = [
   stepsToMakeEndGrainBoardRu,
   kerfMillingWaste,
   kerfMillingWasteRu,
+  boardCrackedGlueLine,
+  boardCrackedGlueLineRu,
 ]
