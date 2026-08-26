@@ -190,6 +190,18 @@ const COVERS = [
     subtitle: 'Голодный шов, зажим или движение древесины',
     stripes: ['#5b3a24', '#e3caa1', '#a8422a'],
   },
+  {
+    slug: 'losing-money-etsy-fees',
+    title: 'Losing Money After Etsy Fees?',
+    subtitle: 'One $300 board through the whole fee stack',
+    stripes: ['#3a2a20', '#a8422a', '#e3caa1'],
+  },
+  {
+    slug: 'losing-money-etsy-fees-ru',
+    title: 'Минус после комиссий Etsy',
+    subtitle: 'Доска за $300 через весь стек сборов',
+    stripes: ['#3a2a20', '#a8422a', '#e3caa1'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {

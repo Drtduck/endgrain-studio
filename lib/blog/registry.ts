@@ -28,6 +28,8 @@ import { meta as kerfMillingWaste } from '@/content/blog/kerf-and-milling-waste-
 import { meta as kerfMillingWasteRu } from '@/content/blog/kerf-and-milling-waste-budget-ru.mdx'
 import { meta as boardCrackedGlueLine } from '@/content/blog/board-cracked-along-glue-line.mdx'
 import { meta as boardCrackedGlueLineRu } from '@/content/blog/board-cracked-along-glue-line-ru.mdx'
+import { meta as losingMoneyEtsyFees } from '@/content/blog/losing-money-etsy-fees.mdx'
+import { meta as losingMoneyEtsyFeesRu } from '@/content/blog/losing-money-etsy-fees-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -67,4 +69,6 @@ export const POST_METAS: readonly PostMeta[] = [
   kerfMillingWasteRu,
   boardCrackedGlueLine,
   boardCrackedGlueLineRu,
+  losingMoneyEtsyFees,
+  losingMoneyEtsyFeesRu,
 ]
