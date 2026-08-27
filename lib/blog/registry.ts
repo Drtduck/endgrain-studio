@@ -30,6 +30,8 @@ import { meta as boardCrackedGlueLine } from '@/content/blog/board-cracked-along
 import { meta as boardCrackedGlueLineRu } from '@/content/blog/board-cracked-along-glue-line-ru.mdx'
 import { meta as losingMoneyEtsyFees } from '@/content/blog/losing-money-etsy-fees.mdx'
 import { meta as losingMoneyEtsyFeesRu } from '@/content/blog/losing-money-etsy-fees-ru.mdx'
+import { meta as chevronBoardAngle } from '@/content/blog/chevron-end-grain-board-angle.mdx'
+import { meta as chevronBoardAngleRu } from '@/content/blog/chevron-end-grain-board-angle-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -71,4 +73,6 @@ export const POST_METAS: readonly PostMeta[] = [
   boardCrackedGlueLineRu,
   losingMoneyEtsyFees,
   losingMoneyEtsyFeesRu,
+  chevronBoardAngle,
+  chevronBoardAngleRu,
 ]

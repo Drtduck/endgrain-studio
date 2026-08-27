@@ -202,6 +202,18 @@ const COVERS = [
     subtitle: 'Доска за $300 через весь стек сборов',
     stripes: ['#3a2a20', '#a8422a', '#e3caa1'],
   },
+  {
+    slug: 'chevron-end-grain-board-angle',
+    title: 'What Angle for a Chevron?',
+    subtitle: 'Miter setting, staircase cells and the waste',
+    stripes: ['#e3caa1', '#5b3a24', '#a8422a'],
+  },
+  {
+    slug: 'chevron-end-grain-board-angle-ru',
+    title: 'Под каким углом шеврон',
+    subtitle: 'Ус, лесенка из клеток и цена угла',
+    stripes: ['#e3caa1', '#5b3a24', '#a8422a'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {
