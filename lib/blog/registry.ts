@@ -32,6 +32,8 @@ import { meta as losingMoneyEtsyFees } from '@/content/blog/losing-money-etsy-fe
 import { meta as losingMoneyEtsyFeesRu } from '@/content/blog/losing-money-etsy-fees-ru.mdx'
 import { meta as chevronBoardAngle } from '@/content/blog/chevron-end-grain-board-angle.mdx'
 import { meta as chevronBoardAngleRu } from '@/content/blog/chevron-end-grain-board-angle-ru.mdx'
+import { meta as overTightenClamps } from '@/content/blog/over-tighten-clamps-starve-glue-joint.mdx'
+import { meta as overTightenClampsRu } from '@/content/blog/over-tighten-clamps-starve-glue-joint-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -75,4 +77,6 @@ export const POST_METAS: readonly PostMeta[] = [
   losingMoneyEtsyFeesRu,
   chevronBoardAngle,
   chevronBoardAngleRu,
+  overTightenClamps,
+  overTightenClampsRu,
 ]

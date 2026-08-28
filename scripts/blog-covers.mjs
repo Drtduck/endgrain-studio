@@ -214,6 +214,18 @@ const COVERS = [
     subtitle: 'Ус, лесенка из клеток и цена угла',
     stripes: ['#e3caa1', '#5b3a24', '#a8422a'],
   },
+  {
+    slug: 'over-tighten-clamps-starve-glue-joint',
+    title: 'Can You Starve a Glue Joint?',
+    subtitle: 'What clamps really deliver, in psi',
+    stripes: ['#5b3a24', '#e3caa1', '#a5613b'],
+  },
+  {
+    slug: 'over-tighten-clamps-starve-glue-joint-ru',
+    title: 'Голодный шов и струбцины',
+    subtitle: 'Сколько давления даёт рука на рукоятке',
+    stripes: ['#5b3a24', '#e3caa1', '#a5613b'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {
