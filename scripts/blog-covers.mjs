@@ -226,6 +226,18 @@ const COVERS = [
     subtitle: 'Сколько давления даёт рука на рукоятке',
     stripes: ['#5b3a24', '#e3caa1', '#a5613b'],
   },
+  {
+    slug: 'glue-joints-fail-second-glue-up',
+    title: 'Second Glue-Up Failures',
+    subtitle: 'Four causes you can read off the broken joint',
+    stripes: ['#a8422a', '#e3caa1', '#3a2a20'],
+  },
+  {
+    slug: 'glue-joints-fail-second-glue-up-ru',
+    title: 'Швы второй склейки',
+    subtitle: 'Четыре причины, которые видно на изломе',
+    stripes: ['#a8422a', '#e3caa1', '#3a2a20'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {
