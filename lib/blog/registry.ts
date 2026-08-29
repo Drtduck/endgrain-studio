@@ -34,6 +34,8 @@ import { meta as chevronBoardAngle } from '@/content/blog/chevron-end-grain-boar
 import { meta as chevronBoardAngleRu } from '@/content/blog/chevron-end-grain-board-angle-ru.mdx'
 import { meta as overTightenClamps } from '@/content/blog/over-tighten-clamps-starve-glue-joint.mdx'
 import { meta as overTightenClampsRu } from '@/content/blog/over-tighten-clamps-starve-glue-joint-ru.mdx'
+import { meta as glueJointsFailSecond } from '@/content/blog/glue-joints-fail-second-glue-up.mdx'
+import { meta as glueJointsFailSecondRu } from '@/content/blog/glue-joints-fail-second-glue-up-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -79,4 +81,6 @@ export const POST_METAS: readonly PostMeta[] = [
   chevronBoardAngleRu,
   overTightenClamps,
   overTightenClampsRu,
+  glueJointsFailSecond,
+  glueJointsFailSecondRu,
 ]
