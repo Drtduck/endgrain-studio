@@ -36,6 +36,8 @@ import { meta as overTightenClamps } from '@/content/blog/over-tighten-clamps-st
 import { meta as overTightenClampsRu } from '@/content/blog/over-tighten-clamps-starve-glue-joint-ru.mdx'
 import { meta as glueJointsFailSecond } from '@/content/blog/glue-joints-fail-second-glue-up.mdx'
 import { meta as glueJointsFailSecondRu } from '@/content/blog/glue-joints-fail-second-glue-up-ru.mdx'
+import { meta as careCardCuttingBoard } from '@/content/blog/care-card-cutting-board.mdx'
+import { meta as careCardCuttingBoardRu } from '@/content/blog/care-card-cutting-board-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -83,4 +85,6 @@ export const POST_METAS: readonly PostMeta[] = [
   overTightenClampsRu,
   glueJointsFailSecond,
   glueJointsFailSecondRu,
+  careCardCuttingBoard,
+  careCardCuttingBoardRu,
 ]
