@@ -238,6 +238,18 @@ const COVERS = [
     subtitle: 'Четыре причины, которые видно на изломе',
     stripes: ['#a8422a', '#e3caa1', '#3a2a20'],
   },
+  {
+    slug: 'care-card-cutting-board',
+    title: 'The Care Card',
+    subtitle: 'Six lines that keep the board flat',
+    stripes: ['#e3caa1', '#5b3a24', '#a5613b'],
+  },
+  {
+    slug: 'care-card-cutting-board-ru',
+    title: 'Памятка по уходу',
+    subtitle: 'Шесть строк, которые держат доску плоской',
+    stripes: ['#e3caa1', '#5b3a24', '#a5613b'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {
