@@ -250,6 +250,18 @@ const COVERS = [
     subtitle: 'Шесть строк, которые держат доску плоской',
     stripes: ['#e3caa1', '#5b3a24', '#a5613b'],
   },
+  {
+    slug: 'end-grain-vs-edge-grain',
+    title: 'End Grain vs Edge Grain',
+    subtitle: 'Which one to build, and what it costs you',
+    stripes: ['#a8422a', '#e3caa1', '#5b3a24'],
+  },
+  {
+    slug: 'end-grain-vs-edge-grain-ru',
+    title: 'Торцевая или продольная',
+    subtitle: 'Какую делать и во что она обходится',
+    stripes: ['#a8422a', '#e3caa1', '#5b3a24'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {
