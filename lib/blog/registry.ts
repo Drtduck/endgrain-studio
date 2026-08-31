@@ -38,6 +38,8 @@ import { meta as glueJointsFailSecond } from '@/content/blog/glue-joints-fail-se
 import { meta as glueJointsFailSecondRu } from '@/content/blog/glue-joints-fail-second-glue-up-ru.mdx'
 import { meta as careCardCuttingBoard } from '@/content/blog/care-card-cutting-board.mdx'
 import { meta as careCardCuttingBoardRu } from '@/content/blog/care-card-cutting-board-ru.mdx'
+import { meta as endGrainVsEdgeGrain } from '@/content/blog/end-grain-vs-edge-grain.mdx'
+import { meta as endGrainVsEdgeGrainRu } from '@/content/blog/end-grain-vs-edge-grain-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -87,4 +89,6 @@ export const POST_METAS: readonly PostMeta[] = [
   glueJointsFailSecondRu,
   careCardCuttingBoard,
   careCardCuttingBoardRu,
+  endGrainVsEdgeGrain,
+  endGrainVsEdgeGrainRu,
 ]
