@@ -35,7 +35,7 @@
 - done glue-joints-fail-second-glue-up | P1 | Why did my glue joints fail on the second glue-up? | клей-и-склейка | Разбор четырёх причин (перезажим, кривая поверхность, старый клей, грязный торец) с диагностикой по внешнему виду шва. [ES]
 - done care-card-cutting-board | P1 | What care card / instructions should I include when I gift or sell the board? | sale-prep-и-уход | Готовый текст памятки по уходу (масло, мойка, аллергены), который никто в нише не даёт целиком; sale-prep карточка студии генерирует его из параметров проекта. [ES!]
 - done end-grain-vs-edge-grain | P1 | End grain vs edge grain: which should I make and why? | pillar-гайд | Таблица различий по износу ножа, цене, сложности и отходу материала - вечнозелёный сравнительный запрос с воронкой на первый проект в студии. [ES]
-- todo | P1 | 7 ways your end grain glue-up fails, and how to prevent each | постмортем-компиляция | Компиляция самых частых причин брака в формате списка с разбором каждой; самая горячая эмоциональная точка ниши по наблюдениям обоих ресерчей, хороший линкбейт. [ES]
+- done seven-glue-up-failures | P1 | 7 ways your end grain glue-up fails, and how to prevent each | постмортем-компиляция | Компиляция самых частых причин брака в формате списка с разбором каждой; самая горячая эмоциональная точка ниши по наблюдениям обоих ресерчей, хороший линкбейт. [ES]
 - todo | P1 | How do I safely crosscut a wide glued-up panel on a table saw sled? | раскрой-и-геометрия | Панель после первой склейки становится длиннее ширины стандартного sled - разбор безопасного реза с стоп-блоком и размерами sled под конкретную панель. [ES]
 
 ## P2
