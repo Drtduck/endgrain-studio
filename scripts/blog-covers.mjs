@@ -262,6 +262,18 @@ const COVERS = [
     subtitle: 'Какую делать и во что она обходится',
     stripes: ['#a8422a', '#e3caa1', '#5b3a24'],
   },
+  {
+    slug: 'seven-glue-up-failures',
+    title: '7 Ways a Glue-Up Fails',
+    subtitle: 'And how to prevent each one',
+    stripes: ['#3a2a20', '#e3caa1', '#a8422a'],
+  },
+  {
+    slug: 'seven-glue-up-failures-ru',
+    title: '7 способов запороть склейку',
+    subtitle: 'И как не сделать ни одного',
+    stripes: ['#3a2a20', '#e3caa1', '#a8422a'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {

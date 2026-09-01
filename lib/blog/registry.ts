@@ -40,6 +40,8 @@ import { meta as careCardCuttingBoard } from '@/content/blog/care-card-cutting-b
 import { meta as careCardCuttingBoardRu } from '@/content/blog/care-card-cutting-board-ru.mdx'
 import { meta as endGrainVsEdgeGrain } from '@/content/blog/end-grain-vs-edge-grain.mdx'
 import { meta as endGrainVsEdgeGrainRu } from '@/content/blog/end-grain-vs-edge-grain-ru.mdx'
+import { meta as sevenGlueUpFailures } from '@/content/blog/seven-glue-up-failures.mdx'
+import { meta as sevenGlueUpFailuresRu } from '@/content/blog/seven-glue-up-failures-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -91,4 +93,6 @@ export const POST_METAS: readonly PostMeta[] = [
   careCardCuttingBoardRu,
   endGrainVsEdgeGrain,
   endGrainVsEdgeGrainRu,
+  sevenGlueUpFailures,
+  sevenGlueUpFailuresRu,
 ]
