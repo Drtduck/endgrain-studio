@@ -36,7 +36,7 @@
 - done care-card-cutting-board | P1 | What care card / instructions should I include when I gift or sell the board? | sale-prep-и-уход | Готовый текст памятки по уходу (масло, мойка, аллергены), который никто в нише не даёт целиком; sale-prep карточка студии генерирует его из параметров проекта. [ES!]
 - done end-grain-vs-edge-grain | P1 | End grain vs edge grain: which should I make and why? | pillar-гайд | Таблица различий по износу ножа, цене, сложности и отходу материала - вечнозелёный сравнительный запрос с воронкой на первый проект в студии. [ES]
 - done seven-glue-up-failures | P1 | 7 ways your end grain glue-up fails, and how to prevent each | постмортем-компиляция | Компиляция самых частых причин брака в формате списка с разбором каждой; самая горячая эмоциональная точка ниши по наблюдениям обоих ресерчей, хороший линкбейт. [ES]
-- todo | P1 | How do I safely crosscut a wide glued-up panel on a table saw sled? | раскрой-и-геометрия | Панель после первой склейки становится длиннее ширины стандартного sled - разбор безопасного реза с стоп-блоком и размерами sled под конкретную панель. [ES]
+- done crosscut-wide-panel-table-saw-sled | P1 | How do I safely crosscut a wide glued-up panel on a table saw sled? | раскрой-и-геометрия | Панель после первой склейки становится длиннее ширины стандартного sled - разбор безопасного реза с стоп-блоком и размерами sled под конкретную панель. [ES]
 
 ## P2
 
@@ -100,4 +100,4 @@
 
 ## Итого
 
-6 закрытых тем + 65 тем в статусе todo (7 в плане на две недели + 10 P1 + 28 P2 + 20 P3) = 71 тема.
+23 закрытые темы + 48 тем в статусе todo (28 P2 + 20 P3) = 71 тема.

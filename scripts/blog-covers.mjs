@@ -274,6 +274,18 @@ const COVERS = [
     subtitle: 'И как не сделать ни одного',
     stripes: ['#3a2a20', '#e3caa1', '#a8422a'],
   },
+  {
+    slug: 'crosscut-wide-panel-table-saw-sled',
+    title: 'Crosscutting a Wide Panel',
+    subtitle: 'Sled capacity decides the first glue-up',
+    stripes: ['#a5613b', '#3a2a20', '#e3caa1'],
+  },
+  {
+    slug: 'crosscut-wide-panel-table-saw-sled-ru',
+    title: 'Широкий щит на каретке',
+    subtitle: 'Вылет каретки решается до склейки',
+    stripes: ['#a5613b', '#3a2a20', '#e3caa1'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {
