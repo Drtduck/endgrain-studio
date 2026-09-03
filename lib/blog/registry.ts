@@ -44,6 +44,8 @@ import { meta as sevenGlueUpFailures } from '@/content/blog/seven-glue-up-failur
 import { meta as sevenGlueUpFailuresRu } from '@/content/blog/seven-glue-up-failures-ru.mdx'
 import { meta as crosscutWidePanel } from '@/content/blog/crosscut-wide-panel-table-saw-sled.mdx'
 import { meta as crosscutWidePanelRu } from '@/content/blog/crosscut-wide-panel-table-saw-sled-ru.mdx'
+import { meta as whyBoardsExpensive } from '@/content/blog/why-end-grain-boards-expensive.mdx'
+import { meta as whyBoardsExpensiveRu } from '@/content/blog/why-end-grain-boards-expensive-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -99,4 +101,6 @@ export const POST_METAS: readonly PostMeta[] = [
   sevenGlueUpFailuresRu,
   crosscutWidePanel,
   crosscutWidePanelRu,
+  whyBoardsExpensive,
+  whyBoardsExpensiveRu,
 ]
