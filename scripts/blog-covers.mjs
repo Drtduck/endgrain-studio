@@ -286,6 +286,18 @@ const COVERS = [
     subtitle: 'Вылет каретки решается до склейки',
     stripes: ['#a5613b', '#3a2a20', '#e3caa1'],
   },
+  {
+    slug: 'why-end-grain-boards-expensive',
+    title: 'Why End Grain Boards Cost So Much',
+    subtitle: 'Two glue-ups and a third of the lumber gone',
+    stripes: ['#3a2a20', '#e3caa1', '#a8422a'],
+  },
+  {
+    slug: 'why-end-grain-boards-expensive-ru',
+    title: 'Почему торцевая доска дорогая',
+    subtitle: 'Две склейки и треть материала в отход',
+    stripes: ['#3a2a20', '#e3caa1', '#a8422a'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {
