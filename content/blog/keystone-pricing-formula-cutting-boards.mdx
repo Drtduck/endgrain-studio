@@ -1,0 +1,117 @@
+import { Answer } from '../../components/blog/Answer'
+
+export const meta = {
+  slug: 'keystone-pricing-formula-cutting-boards',
+  lang: 'en',
+  title: 'Materials + labor x2 = wholesale, x4 = retail: does this formula work for cutting boards?',
+  description:
+    'The craft pricing formula was built for material-heavy products. On an end grain board labor is 70% of cost, and the wholesale number it gives you lands under your own cost.',
+  answer:
+    'The formula is not wrong arithmetic, it is the wrong shape for this product. It was written for craft goods where materials dominate and labor is minutes, so doubling the total leaves room for both. An end grain cutting board inverts that ratio: for a 300x400x38 mm walnut and maple board, materials run about $55 and 5 hours of hands-on work at $25 runs $125, so labor is roughly 70% of the base. Most makers also plug in the wrong inputs, pricing lumber by finished volume instead of purchased volume and counting 2.5 hours instead of 5. Run those guessed numbers and x2 wholesale gives $176, which is below the real $180 the board cost to build. The retail multiplier is safer only because it overshoots. Price from measured cost and a target margin instead, and use the formula as a sanity check.',
+  date: '2026-09-04',
+  updated: '2026-09-04',
+  tags: ['pricing', 'wholesale', 'selling'],
+  cover: '/blog/keystone-pricing-formula-cutting-boards/cover.jpg',
+  readingMinutes: 8,
+}
+
+<Answer>{meta.answer}</Answer>
+
+Every craft forum has this formula pinned somewhere. Add up your materials, add up your labor, double it for wholesale, double it again for retail. It fits on a sticky note above the bench, which is most of why it spread.
+
+It also quietly assumes something about the product it is pricing. The formula came out of jewelry, candles, soap and pottery, where a $9 bag of silver clay becomes a $60 pendant in forty minutes. Materials are the big number, labor is small, and doubling the total leaves a healthy cushion. An end grain cutting board is the opposite animal, and running it through the same sticky note produces two different wrong answers depending on how carefully you fill in the inputs.
+
+## Where did this formula come from, and what was it built for?
+
+The keystone convention is a retail markup rule: a store buys at wholesale and sells at double. The craft version bolted a second doubling on the front so that the maker gets a wholesale price too. Both doublings exist to absorb overhead, breakage, unsold stock and the shop's own margin.
+
+That works when materials and labor are roughly balanced or materials lead. Silver, resin, beads and blank mugs behave that way. Hardwood does not, because the expensive part of a cutting board is not the plank. It is the two glue-ups, the crosscut cycle between them and the hour of sanding that no machine under $1,500 shortens.
+
+## What happens when I run a real end grain board through it?
+
+Take the board most people are actually selling: 300x400x38 mm (12x16x1.5 in), hard maple and walnut, checkerboard. Below are the same inputs filled in twice. The left column is what makers typically plug in from memory. The right column is what the board really consumes, at US hardwood dealer prices in 2026.
+
+| Input | Typical guess | Measured |
+| --- | --- | --- |
+| Lumber | $26 (3.1 bf, finished volume) | $38 (4.5 bf purchased, 30% waste) |
+| Titebond III, two glue-ups | not counted | $2 |
+| Abrasives, 80 to 220 grit | not counted | $6 |
+| Mineral oil and wax | not counted | $4 |
+| Box, corner protection, care card | not counted | $5 |
+| Hands-on hours | 2.5 | 5.0 |
+| Labor at $25/hr | $62 | $125 |
+| Base: materials + labor | $88 | $180 |
+| x2 wholesale | $176 | $360 |
+| x4 retail | $352 | $720 |
+
+The gap between $88 and $180 is not sloppiness about pennies. It is two specific omissions: the third of the lumber that leaves as kerf and shavings, and the two and a half hours spent milling stock square, flattening the second glue-up and sanding through four grits.
+
+<ArticleFigure
+  src="/blog/images/keystone-pricing-formula-cutting-boards-1.jpg"
+  alt="A woodworker in a plaid shirt writing figures in a notebook at a bench with layout tools"
+  caption="The formula is only as honest as the two numbers you write down before you multiply anything."
+  photographer="Tima Miroshnichenko"
+  photographerUrl="https://www.pexels.com/@tima-miroshnichenko"
+  pexelsUrl="https://www.pexels.com/photo/man-in-plaid-shirt-writing-on-a-notebook-6790824/"
+/>
+
+## Why does the wholesale number land below my actual cost?
+
+Look at the left column again. Guessed base $88, doubled to $176. The board cost $180 to build. Sell it to a shop at the formula price and you are $4 down before you tape the box shut, and shipping a 2.4 kg board across two US zones adds $18 to $24 more.
+
+This is the failure that hurts, because wholesale is where volume lives. A gallery that likes your work orders six boards. You quote from the sticky note, they accept immediately, and you spend a month building a batch that pays you back less than the lumber and your hours went in. Then you conclude that wholesale does not work for woodworking, when what did not work was the input.
+
+The reason the error concentrates on the wholesale side is structural. In a material-heavy craft, a 40% undercount of labor moves the base a little. Here labor is 69% of the honest base, so undercounting hours cuts the base almost in half, and the single doubling has nothing left to absorb it.
+
+<NewsletterBreak locale="en" />
+
+## Is the retail multiplier any safer?
+
+Somewhat, and for a bad reason. Guessed inputs at x4 give $352, which is above what the board actually cost and inside the range a direct customer will pay for a walnut and maple board. The formula looks like it works, so makers keep it.
+
+What is happening is that two errors are cancelling. The undercount roughly halves the base, and the extra doubling roughly doubles it back. That balance holds for this size in these species with these hours, and it stops holding the moment anything changes. Switch to a 3D cube pattern, where angled cuts push waste past 40%, and the material undercount grows while the multiplier stays fixed. Batch six boards at once and your per-board hours drop by a third, so the same multiplier now overprices you against the maker next to you at the fair.
+
+Run the measured column at x4 and you get $720, which nobody pays for a 12x16 board. The honest inputs break the formula outright.
+
+## What should I price from instead?
+
+Build the number up, do not multiply it. Cost first, margin second, and check the answer against the market.
+
+| Step | For this board |
+| --- | --- |
+| Materials, including waste and consumables | $55 |
+| Hours x your real rate | 5.0 x $25 = $125 |
+| Shop cost | $180 |
+| Retail at a 40% gross margin: cost / 0.6 | $300 |
+| Platform fees at 12% (Etsy with offsite ads) | add $36 |
+| Listed retail | $336 |
+| Wholesale at half of retail before fees | $150, refuse below $216 |
+
+That last line is the one worth arguing about. Half of retail is the convention a shop will expect, and for this board that lands under cost, which means the honest answer is that a 300x400 mm end grain board in walnut is not a wholesale product at typical shop terms. Either the board gets simpler, the batch gets bigger, or you sell it direct. Pretending a multiplier fixes that is how people end up doing free work for a boutique.
+
+<ArticleFigure
+  src="/blog/images/keystone-pricing-formula-cutting-boards-2.jpg"
+  alt="A woodworker checking a phone in a bright workshop next to a miter saw and stacked stock"
+  caption="Checking a competitor's listing tells you what the market pays. It does not tell you what your own board cost."
+  photographer="cottonbro studio"
+  photographerUrl="https://www.pexels.com/@cottonbro"
+  pexelsUrl="https://www.pexels.com/photo/man-working-and-carpentry-7480728/"
+/>
+
+## Does the formula ever fit a board?
+
+Yes, in one case: a simple edge grain board made in batches. One glue-up, no crosscut cycle, waste around 12% instead of 30%, and 90 minutes of hands-on time when you mill six at once. Materials $22, labor $37, base $59. Wholesale $118 and retail $236 both sit in defensible territory, and the ratio between materials and labor is close enough to the craft goods the formula was written for.
+
+That is the tell. The formula works where labor is under half the base. Check that one ratio before trusting any multiplier, and you will know in ten seconds whether the sticky note applies to what you are making.
+
+## How do I get the inputs right without guessing?
+
+The measured column above is the whole job. Purchased board feet rather than finished volume, real kerf at your blade thickness, and hours you actually timed instead of remembered.
+
+[Endgrain Studio](/?tab=editor) produces the first half of that from the pattern itself. Draw the board, set your kerf and your lumber prices, and it returns the cut list, the first glue-up panel size, total board feet including waste, and a cost figure per board. When you switch from a checkerboard to a chevron, the waste percentage and the material line move on their own, which is precisely the thing a fixed multiplier cannot do. The hours you still have to time yourself, once, with a phone timer on the bench. Do it on three boards and you will never need to guess again.
+
+## What is the rule I would actually use?
+
+Price retail from measured cost at a 40 to 45% gross margin, treat the x4 number as an upper sanity bound rather than a target, and quote wholesale only after you have checked that half your retail still clears cost by 20%. If it does not, the answer is not a lower rate for your hours. It is a simpler board, a bigger batch, or a polite no to that order.
+
+The sticky note is not useless. It is a fast smell test: if your considered price is wildly outside the range the formula suggests, one of your inputs is wrong and it is worth finding out which. Treat it as a check on your arithmetic and let the cost sheet set the price.

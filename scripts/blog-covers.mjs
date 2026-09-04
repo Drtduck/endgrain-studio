@@ -298,6 +298,18 @@ const COVERS = [
     subtitle: 'Две склейки и треть материала в отход',
     stripes: ['#3a2a20', '#e3caa1', '#a8422a'],
   },
+  {
+    slug: 'keystone-pricing-formula-cutting-boards',
+    title: 'Does the x2 / x4 Formula Work?',
+    subtitle: 'Craft pricing math on a labor-heavy board',
+    stripes: ['#a5613b', '#3a2a20', '#e3caa1'],
+  },
+  {
+    slug: 'keystone-pricing-formula-cutting-boards-ru',
+    title: 'Формула x2 и x4 для доски',
+    subtitle: 'Ремесленный расчёт цены там, где ведёт труд',
+    stripes: ['#a5613b', '#3a2a20', '#e3caa1'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {
