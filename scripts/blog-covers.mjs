@@ -310,6 +310,18 @@ const COVERS = [
     subtitle: 'Ремесленный расчёт цены там, где ведёт труд',
     stripes: ['#a5613b', '#3a2a20', '#e3caa1'],
   },
+  {
+    slug: 'etsy-competitors-35-dollar-boards',
+    title: 'The $35 End Grain Board',
+    subtitle: 'Three things that word covers, and how to spot each',
+    stripes: ['#e3caa1', '#a8422a', '#3a2a20'],
+  },
+  {
+    slug: 'etsy-competitors-35-dollar-boards-ru',
+    title: 'Торцевая доска за $35',
+    subtitle: 'Три товара под одним словом и как их отличить',
+    stripes: ['#e3caa1', '#a8422a', '#3a2a20'],
+  },
 ]
 
 function html({ title, subtitle, stripes }) {

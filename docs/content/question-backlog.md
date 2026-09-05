@@ -42,7 +42,7 @@
 
 - done why-end-grain-boards-expensive | P2 | Why are end grain cutting boards so expensive to buy? | себестоимость-и-цена | Ответ через число операций (две склейки, шлифовка торца) и процент отхода, а не через "ручная работа"; чистый PAA-запрос с большим объёмом трафика. [ES]
 - done keystone-pricing-formula-cutting-boards | P2 | Materials + labor x2 = wholesale, x4 = retail: does this formula work for cutting boards? | себестоимость-и-цена | Почему формула занижает цену торцевой доски из-за двух склеек и повышенного отхода, с числовым примером. [ES]
-- todo | P2 | Why do my Etsy competitors sell end grain boards for $35? | себестоимость-и-цена | Разбор трёх причин (edge grain под видом торцевой, перепродажа импорта, продавец в минусе) с проверкой по фото. 
+- done etsy-competitors-35-dollar-boards | P2 | Why do my Etsy competitors sell end grain boards for $35? | себестоимость-и-цена | Разбор трёх причин (edge grain под видом торцевой, перепродажа импорта, продавец в минусе) с проверкой по фото. 
 - todo | P2 | Is making cutting boards to sell actually profitable? | масштабирование-бизнеса | Честная арифметика часов на доску (6-8 часов реального времени) и точки окупаемости инструмента как хобби-бизнеса. [ES]
 - todo | P2 | Can I cut the strips on a miter saw or bandsaw instead of a table saw? | раскрой-и-геометрия | Миттер даёт худшую перпендикулярность, бандсо - грубый рез под шлифовку; когда каждый вариант оправдан.
 - todo | P2 | Do complex patterns actually sell for more? | сложные-узоры | 3D и шеврон уводят из ценовой войны с $35-досками - единственный товар без прямого аналога у соседа по ярмарке. [ES]
