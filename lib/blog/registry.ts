@@ -48,6 +48,8 @@ import { meta as whyBoardsExpensive } from '@/content/blog/why-end-grain-boards-
 import { meta as whyBoardsExpensiveRu } from '@/content/blog/why-end-grain-boards-expensive-ru.mdx'
 import { meta as keystoneFormula } from '@/content/blog/keystone-pricing-formula-cutting-boards.mdx'
 import { meta as keystoneFormulaRu } from '@/content/blog/keystone-pricing-formula-cutting-boards-ru.mdx'
+import { meta as etsyCompetitors35 } from '@/content/blog/etsy-competitors-35-dollar-boards.mdx'
+import { meta as etsyCompetitors35Ru } from '@/content/blog/etsy-competitors-35-dollar-boards-ru.mdx'
 import type { PostMeta } from './types'
 
 /**
@@ -107,4 +109,6 @@ export const POST_METAS: readonly PostMeta[] = [
   whyBoardsExpensiveRu,
   keystoneFormula,
   keystoneFormulaRu,
+  etsyCompetitors35,
+  etsyCompetitors35Ru,
 ]
